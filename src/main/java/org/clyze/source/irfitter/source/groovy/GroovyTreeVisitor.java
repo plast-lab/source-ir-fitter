@@ -366,6 +366,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     }
 
     private static void updateFromTypeList(List<String> target, TypeListContext tlc) {
+        if (tlc == null)
+            return;
         List<? extends TypeContext> types = tlc.type();
         if (types != null)
             for (TypeContext t : types)

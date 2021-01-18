@@ -106,5 +106,8 @@ if (project.hasProperty('artifactory_user')) {
 
 release {
     failOnSnapshotDependencies = false
+    git {
+        requireBranch = 'main'
+    }
 }
 afterReleaseBuild.dependsOn publish

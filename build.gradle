@@ -41,13 +41,14 @@ dependencies {
     // Zip library, Apache 2.0
     implementation 'org.zeroturnaround:zt-zip:1.13'
 
-//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
-//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testImplementation 'commons-io:commons-io:2.8.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
 }
 
-//test {
-//    useJUnitPlatform()
-//}
+test {
+    useJUnitPlatform()
+}
 
 /**
  * Checks for dependencies that may come from mavenLocal and can harm

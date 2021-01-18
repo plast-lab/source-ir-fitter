@@ -4,6 +4,8 @@ import groovyjarjarantlr4.v4.runtime.RuleContext;
 import groovyjarjarantlr4.v4.runtime.Token;
 import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
+import java.util.function.Supplier;
+
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
@@ -41,7 +43,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     @Override
     public Void visitPackageDeclaration(PackageDeclarationContext ctx) {
         sourceFile.packageName = getQualifiedName(ctx.qualifiedName());
-        logDebug("packageName=" + sourceFile.packageName);
+        logDebug(() -> "packageName=" + sourceFile.packageName);
         return null;
     }
 
@@ -103,7 +105,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // Return types may be missing.
         ReturnTypeContext retCtx = ctx.returnType();
         String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
-        System.out.println("Groovy method: " + name + ", return type: " + retType);
+        logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
         List<JParameter> parameters = new LinkedList<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
         if (paramsCtx == null)
@@ -115,7 +117,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     String paramName = frmCtx.variableDeclaratorId().identifier().getText();
                     String paramType = getType(frmCtx.type());
                     JParameter param = new JParameter(paramName, paramType);
-                    logDebug("param: " + param);
+                    logDebug(() -> "param: " + param);
                     parameters.add(param);
                 }
             }
@@ -187,7 +189,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     public Void visitExpression(ExpressionContext ctx) {
         if (ctx == null)
             return null;
-        System.out.println("visitExpression(): " + ctx.getClass().getSimpleName());
+        logDebug(() -> "visitExpression(): " + ctx.getClass().getSimpleName());
         return super.visitExpression(ctx);
     }
 
@@ -213,9 +215,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     @Override
     public Void visitLocalVariableDeclaration(LocalVariableDeclarationContext ctx) {
-        for (JVariable jVar : processVariableDeclaration(ctx.variableDeclaration())) {
-            System.out.println("Variable: " + jVar.name);
-        }
+        for (JVariable jVar : processVariableDeclaration(ctx.variableDeclaration()))
+            logDebug(() -> "Variable: " + jVar.name);
         return null;
     }
 
@@ -238,16 +239,16 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             return null;
         PrimaryContext primary = pathExpr.primary();
         if (primary != null) {
-            logDebug("primary = " + preview(primary));
+            logDebug(() -> "primary = " + preview(primary));
             if (primary instanceof NewPrmrAltContext) {
                 NewPrmrAltContext newPAC = (NewPrmrAltContext) primary;
                 CreatorContext creator = newPAC.creator();
-                logDebug("Creator = " + preview(creator));
+                logDebug(() -> "Creator = " + preview(creator));
                 AnonymousInnerClassDeclarationContext anonDecl = creator.anonymousInnerClassDeclaration();
                 if (anonDecl != null) {
                     CreatedNameContext createdName = creator.createdName();
                     String createdNameValue = createdName.getText();
-                    logDebug("Anonymous class declaration: " + preview(anonDecl) + ", created-name = " + createdNameValue);
+                    logDebug(() -> "Anonymous class declaration: " + preview(anonDecl) + ", created-name = " + createdNameValue);
                     JType enclosingType = scope.getEnclosingType();
                     if (enclosingType == null)
                         System.out.println("TODO: anonymous classes outside class declarations");
@@ -258,7 +259,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                         Position pos = createPositionFromToken(createdName.start);
                         JType anonymousType = enclosingType.createAnonymousClass(sourceFile,
                                 superTypes, scope.getEnclosingElement(), pos, true);
-                        logDebug("Adding type [anonymous]: " + anonymousType);
+                        logDebug(() -> "Adding type [anonymous]: " + anonymousType);
                         sourceFile.jTypes.add(anonymousType);
                         processClassBody(anonymousType, anonDecl.classBody());
                     }
@@ -273,18 +274,18 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
             ClosureOrLambdaExpressionContext closureOrLambdaExpr = pathElem.closureOrLambdaExpression();
             if (closureOrLambdaExpr != null)
-                System.out.println("TODO: closureOrLambdaExpr = " + closureOrLambdaExpr.getText());
+                System.out.println("TODO: closureOrLambdaExpr = " + preview(closureOrLambdaExpr));
 
             IndexPropertyArgsContext indexPropertyArgs = pathElem.indexPropertyArgs();
             if (indexPropertyArgs != null)
-                System.out.println("TODO: indexPropertyArgs = " + indexPropertyArgs.getText());
+                System.out.println("TODO: indexPropertyArgs = " + preview(indexPropertyArgs));
 
             NamedPropertyArgsContext namedPropertyArgs = pathElem.namedPropertyArgs();
             if (namedPropertyArgs != null)
-                System.out.println("TODO: namedPropertyArgs = " + namedPropertyArgs.getText());
+                System.out.println("TODO: namedPropertyArgs = " + preview(namedPropertyArgs));
 
+            logDebug(() -> "Path element = " + preview(pathElem));
             String text = pathElem.getText();
-            logDebug("Path element = " + text);
             if (text.startsWith("."))
                 methodName = text.substring(1);
 
@@ -452,8 +453,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 startPos.getStartColumn(), endPos.getEndColumn());
     }
 
-    private void logDebug(String s) {
+    private void logDebug(Supplier<String> s) {
         if (sourceFile.debug)
-            System.out.println(s);
+            System.out.println(s.get());
     }
 }

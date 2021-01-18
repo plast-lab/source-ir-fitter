@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.source.groovy;
 
+import groovyjarjarantlr4.v4.runtime.RuleContext;
 import groovyjarjarantlr4.v4.runtime.Token;
 import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
@@ -28,7 +29,6 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     @Override
     public Void visit(ParseTree parseTree) {
-//        System.out.println("VISIT(ParseTree)");
         return null;
     }
 
@@ -41,8 +41,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     @Override
     public Void visitPackageDeclaration(PackageDeclarationContext ctx) {
         sourceFile.packageName = getQualifiedName(ctx.qualifiedName());
-        if (sourceFile.debug)
-            System.out.println("packageName=" + sourceFile.packageName);
+        logDebug("packageName=" + sourceFile.packageName);
         return null;
     }
 
@@ -116,8 +115,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     String paramName = frmCtx.variableDeclaratorId().identifier().getText();
                     String paramType = getType(frmCtx.type());
                     JParameter param = new JParameter(paramName, paramType);
-                    if (sourceFile.debug)
-                        System.out.println("param: " + param);
+                    logDebug("param: " + param);
                     parameters.add(param);
                 }
             }
@@ -182,8 +180,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     @Override
     public Void visitCommandExpression(CommandExpressionContext ctx) {
-        this.visitExpression(ctx.expression());
-        return null;
+        return ctx.expression().accept(this);
     }
 
     @Override
@@ -222,55 +219,113 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return null;
     }
 
+    /**
+     * Shows the first characters of a program fragment.
+     * @param rc    the program fragment rule context
+     * @return      the first characters
+     */
+    private static String preview(RuleContext rc) {
+        if (rc == null)
+            return null;
+        final int MAX_LEN = 100;
+        String text = rc.getText();
+        return (text.length() > MAX_LEN) ? text.substring(0, MAX_LEN) + " ..." :  text;
+    }
+
+    @Override
+    public Void visitPathExpression(PathExpressionContext pathExpr) {
+        if (pathExpr == null)
+            return null;
+        PrimaryContext primary = pathExpr.primary();
+        if (primary != null) {
+            logDebug("primary = " + preview(primary));
+            if (primary instanceof NewPrmrAltContext) {
+                NewPrmrAltContext newPAC = (NewPrmrAltContext) primary;
+                CreatorContext creator = newPAC.creator();
+                logDebug("Creator = " + preview(creator));
+                AnonymousInnerClassDeclarationContext anonDecl = creator.anonymousInnerClassDeclaration();
+                if (anonDecl != null) {
+                    CreatedNameContext createdName = creator.createdName();
+                    String createdNameValue = createdName.getText();
+                    logDebug("Anonymous class declaration: " + preview(anonDecl) + ", created-name = " + createdNameValue);
+                    JType enclosingType = scope.getEnclosingType();
+                    if (enclosingType == null)
+                        System.out.println("TODO: anonymous classes outside class declarations");
+                    else if (createdNameValue == null)
+                        System.out.println("WARNING: no created-name information for anonymous class: " + preview(anonDecl));
+                    else {
+                        List<String> superTypes = Collections.singletonList(createdNameValue);
+                        Position pos = createPositionFromToken(createdName.start);
+                        JType anonymousType = enclosingType.createAnonymousClass(sourceFile,
+                                superTypes, scope.getEnclosingElement(), pos, true);
+                        logDebug("Adding type [anonymous]: " + anonymousType);
+                        sourceFile.jTypes.add(anonymousType);
+                        processClassBody(anonymousType, anonDecl.classBody());
+                    }
+                }
+            }
+            primary.accept(this);
+        }
+        List<? extends PathElementContext> pathElems = pathExpr.pathElement();
+        String methodName = null;
+        int methodArity = -1;
+        for (PathElementContext pathElem : pathElems) {
+
+            ClosureOrLambdaExpressionContext closureOrLambdaExpr = pathElem.closureOrLambdaExpression();
+            if (closureOrLambdaExpr != null)
+                System.out.println("TODO: closureOrLambdaExpr = " + closureOrLambdaExpr.getText());
+
+            IndexPropertyArgsContext indexPropertyArgs = pathElem.indexPropertyArgs();
+            if (indexPropertyArgs != null)
+                System.out.println("TODO: indexPropertyArgs = " + indexPropertyArgs.getText());
+
+            NamedPropertyArgsContext namedPropertyArgs = pathElem.namedPropertyArgs();
+            if (namedPropertyArgs != null)
+                System.out.println("TODO: namedPropertyArgs = " + namedPropertyArgs.getText());
+
+            String text = pathElem.getText();
+            logDebug("Path element = " + text);
+            if (text.startsWith("."))
+                methodName = text.substring(1);
+
+            ArgumentsContext args = pathElem.arguments();
+            if (args != null) {
+                EnhancedArgumentListInParContext eArgList = args.enhancedArgumentListInPar();
+                if (eArgList != null) {
+                    List<? extends EnhancedArgumentListElementContext> eArgs = eArgList.enhancedArgumentListElement();
+                    if (eArgs != null) {
+                        methodArity = eArgs.size();
+                        for (EnhancedArgumentListElementContext eElem : eArgs) {
+                            ExpressionListElementContext exprListElem = eElem.expressionListElement();
+                            if (exprListElem != null)
+                                exprListElem.expression().accept(this);
+                        }
+                    }
+                }
+                if (methodArity == -1)
+                    methodArity = 0;
+            }
+            if (methodName != null && methodArity >= 0) {
+                JMethod jm = scope.getEnclosingMethod();
+                JMethodInvocation invo = new JMethodInvocation(sourceFile,
+                        createPositionFromToken(pathExpr.start), methodName,
+                        methodArity, jm, false);
+                if (jm == null)
+                    System.out.println("TODO: handle invocations outside methods");
+                else
+                    jm.invocations.add(invo);
+                methodName = null;
+                methodArity = -1;
+            }
+        }
+        return null;
+    }
+
     @Override
     public Void visitPostfixExpression(PostfixExpressionContext ctx) {
         if (ctx == null)
             return null;
-        PathExpressionContext pathExpr = ctx.pathExpression();
-        if (pathExpr != null) {
-            PrimaryContext primary = pathExpr.primary();
-            if (primary != null && sourceFile.debug)
-                System.out.println("primary = " + primary.getText());
-            List<? extends PathElementContext> pathElems = pathExpr.pathElement();
-            String methodName = null;
-            int methodArity = -1;
-            for (PathElementContext pathElem : pathElems) {
-                String text = pathElem.getText();
-//                System.out.println("pathElem = " + text);
-                if (text.startsWith("."))
-                    methodName = text.substring(1);
-                ArgumentsContext args = pathElem.arguments();
-                if (args != null) {
-                    EnhancedArgumentListInParContext eArgList = args.enhancedArgumentListInPar();
-                    if (eArgList != null) {
-                        List<? extends EnhancedArgumentListElementContext> eArgs = eArgList.enhancedArgumentListElement();
-                        if (eArgs != null) {
-                            methodArity = eArgs.size();
-                            for (EnhancedArgumentListElementContext eElem : eArgs) {
-                                ExpressionListElementContext exprListElem = eElem.expressionListElement();
-                                if (exprListElem != null)
-                                    visitExpression(exprListElem.expression());
-                            }
-                        }
-                    }
-                    if (methodArity == -1)
-                        methodArity = 0;
-                }
-                if (methodName != null && methodArity >= 0) {
-                    JMethod jm = scope.getEnclosingMethod();
-                    JMethodInvocation invo = new JMethodInvocation(sourceFile,
-                            createPositionFromToken(pathExpr.start), methodName,
-                            methodArity, jm, false);
-                    if (jm == null)
-                        System.out.println("TODO: handle invocations outside methods");
-                    else
-                        jm.invocations.add(invo);
-                    methodName = null;
-                    methodArity = -1;
-                }
-            }
-        }
-        return null;
+        return visitPathExpression(ctx.pathExpression());
     }
 
 //    @Override
@@ -355,8 +410,17 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 mp.isAbstract(), mp.isFinal(), false);
         sourceFile.jTypes.add(jt);
 
+        processClassBody(jt, classDecl.classBody());
+    }
+
+    /**
+     * Auxiliary processor for (named/anonymous) class bodies.
+     * @param jt          the source type representation
+     * @param classBody   the class body
+     */
+    private void processClassBody(JType jt, ClassBodyContext classBody) {
         scope.enterTypeScope(jt, ((JType jt0) -> {
-            for (ClassBodyDeclarationContext cDecl : classDecl.classBody().classBodyDeclaration())
+            for (ClassBodyDeclarationContext cDecl : classBody.classBodyDeclaration())
                 cDecl.memberDeclaration().accept(this);
         }));
     }
@@ -386,5 +450,10 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         Position endPos = createPositionFromToken(end);
         return new Position(startPos.getStartLine(), endPos.getEndLine(),
                 startPos.getStartColumn(), endPos.getEndColumn());
+    }
+
+    private void logDebug(String s) {
+        if (sourceFile.debug)
+            System.out.println(s);
     }
 }

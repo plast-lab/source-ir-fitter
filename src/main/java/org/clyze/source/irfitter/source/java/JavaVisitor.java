@@ -10,13 +10,11 @@ import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
 
@@ -131,7 +129,19 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             if (sourceFile.debug)
                 System.out.println("Adding field: " + srcField);
             jt.fields.add(srcField);
-            vd.getInitializer().ifPresent(l -> l.accept(this, sourceFile));
+            Optional<Expression> optInitializer = vd.getInitializer();
+            if (optInitializer != null && optInitializer.isPresent()) {
+                Expression initExpr = optInitializer.get();
+                if (fd.isStatic() && fd.isFinal() && (initExpr instanceof LiteralStringValueExpr)) {
+                    LiteralStringValueExpr s = (LiteralStringValueExpr) initExpr;
+                    String sValue = s.getValue();
+                    if (sourceFile.debug)
+                        System.out.println("Java static final field points to string constant: " + sValue);
+                    Position pos = JavaUtils.createPositionFromNode(s);
+                    sourceFile.stringConstants.add(new JStringConstant(sourceFile, pos, srcField, sValue));
+                } else
+                    initExpr.accept(this, sourceFile);
+            }
         }
     }
 
@@ -219,5 +229,4 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getTypeAsString());
     }
-
 }

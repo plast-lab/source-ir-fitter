@@ -1,6 +1,5 @@
 package org.clyze.source.irfitter.source.model;
 
-import com.github.javaparser.ast.body.TypeDeclaration;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -29,6 +28,8 @@ public class SourceFile {
     public final List<Import> imports = new LinkedList<>();
     /** List of visited types. */
     public final Set<JType> jTypes = new HashSet<>();
+    /** List of string constants that may be inlined and should be preserved. */
+    public final List<JStringConstant> stringConstants = new LinkedList<>();
     /** Debugging flag, set by command-line option. */
     public final boolean debug;
     /**
@@ -37,6 +38,7 @@ public class SourceFile {
      */
     public final boolean synthesizeTypes;
     private FileInfo cachedFileInfo = null;
+    private String cachedRelativePath = null;
 
     public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes) {
         this.topDir = topDir;
@@ -249,7 +251,7 @@ public class SourceFile {
                             recordMatch(invocationMap, "invocation", irInvo, srcInvo);
                         }
                     } else if (debug)
-                        System.out.println("WARNING: Name/arity invocation combination (" + srcName + "," + arity + ") matches " + srcCount + " source elements but " + irCount + " IR elements.");
+                        System.out.println("WARNING: name/arity invocation combination (" + srcName + "," + arity + ") matches " + srcCount + " source elements but " + irCount + " IR elements.");
                 }
             }
 
@@ -436,19 +438,21 @@ public class SourceFile {
      * @return the relative path of the source file
      */
     public String getRelativePath() {
-        try {
-            String fullPath = file.getCanonicalPath();
-            String topPath = topDir.getCanonicalPath();
-            if (fullPath.startsWith(topPath))
-                return fullPath.substring(topPath.length() + File.separator.length());
-            else {
-                System.out.println("WARNING: path " + fullPath + " not under " + topPath);
-                return fullPath;
+        if (cachedRelativePath == null) {
+            try {
+                String fullPath = file.getCanonicalPath();
+                String topPath = topDir.getCanonicalPath();
+                if (fullPath.startsWith(topPath))
+                    cachedRelativePath = fullPath.substring(topPath.length() + File.separator.length());
+                else {
+                    System.out.println("WARNING: path " + fullPath + " not under " + topPath);
+                    cachedRelativePath = fullPath;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
         }
+        return cachedRelativePath;
     }
 }
 

@@ -109,6 +109,11 @@ public class Driver extends Generator {
                 registerSymbol(srcElem.srcFile.getFileInfo().getElements(), symbol);
             }
         }
+        for (SourceFile sf : sources) {
+            Set<StringConstant> stringConstants = sf.getFileInfo().getElements().stringConstants;
+            for (JStringConstant jStrConstant : sf.stringConstants)
+                stringConstants.add(jStrConstant.getStringConstant());
+        }
 
         System.out.println("Generating JSON metadata...");
         createOutDir();

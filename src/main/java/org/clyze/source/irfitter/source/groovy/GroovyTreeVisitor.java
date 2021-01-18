@@ -270,7 +270,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
      * @return            the list of all variables declared
      */
     private List<JVariable> processVariableDeclaration(VariableDeclarationContext vDeclCtxt) {
-        List<JVariable> ret = new ArrayList<>();
+        List<JVariable> ret = new LinkedList<>();
         if (vDeclCtxt == null)
             return ret;
         String vType = getType(vDeclCtxt.type());

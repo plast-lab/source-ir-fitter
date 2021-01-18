@@ -55,7 +55,28 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     @Override
     public Void visitScriptStatement(ScriptStatementContext ssc) {
-        processScriptStatement(ssc);  // TODO: inline
+        ImportDeclarationContext importDecl = ssc.importDeclaration();
+        if (importDecl != null) {
+            boolean isStatic = importDecl.STATIC() != null;
+            boolean isAsterisk = importDecl.MUL() != null;
+            String id = getQualifiedName(importDecl.qualifiedName());
+            sourceFile.imports.add(new Import(id, isAsterisk, isStatic));
+            return null;
+        }
+
+        TypeDeclarationContext typeDecl = ssc.typeDeclaration();
+        if (typeDecl != null) {
+            GroovyModifierPack mp = new GroovyModifierPack(typeDecl.classOrInterfaceModifiersOpt());
+            processClassDeclaration(mp, typeDecl.classDeclaration());
+            return null;
+        }
+
+        MethodDeclarationContext methodDecl = ssc.methodDeclaration();
+        if (methodDecl != null) {
+            visitMethodDeclaration(methodDecl);
+            return null;
+        }
+
         return null;
     }
 
@@ -317,30 +338,6 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         StringJoiner sj = new StringJoiner(".");
         ctx.qualifiedNameElement().forEach(e -> sj.add(e.identifier().getText()));
         return sj.toString();
-    }
-
-    private void processScriptStatement(ScriptStatementContext ssc) {
-        ImportDeclarationContext importDecl = ssc.importDeclaration();
-        if (importDecl != null) {
-            boolean isStatic = importDecl.STATIC() != null;
-            boolean isAsterisk = importDecl.MUL() != null;
-            String id = getQualifiedName(importDecl.qualifiedName());
-            sourceFile.imports.add(new Import(id, isAsterisk, isStatic));
-            return;
-        }
-
-        TypeDeclarationContext typeDecl = ssc.typeDeclaration();
-        if (typeDecl != null) {
-            GroovyModifierPack mp = new GroovyModifierPack(typeDecl.classOrInterfaceModifiersOpt());
-            processClassDeclaration(mp, typeDecl.classDeclaration());
-            return;
-        }
-
-        MethodDeclarationContext methodDecl = ssc.methodDeclaration();
-        if (methodDecl != null) {
-            visitMethodDeclaration(methodDecl);
-            return;
-        }
     }
 
     private void processClassDeclaration(GroovyModifierPack mp, ClassDeclarationContext classDecl) {

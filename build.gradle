@@ -1,0 +1,110 @@
+plugins {
+    id 'application'
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.researchgate.release' version '2.6.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0'
+}
+
+group 'org.clyze'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url "http://centauri.di.uoa.gr:8081/artifactory/plast-public" }
+    maven { url 'https://dl.bintray.com/gfour/plast-lab' }
+}
+
+mainClassName = 'org.clyze.source.irfitter.Main'
+
+gradle.rootProject.ext.clueCommonVersion='3.23.7'
+gradle.rootProject.ext.commonsCliVersion='1.2'
+gradle.rootProject.ext.groovyVersion="3.0.6"
+
+def asmVersion = '9.0'
+dependencies {
+    implementation "commons-cli:commons-cli:${commonsCliVersion}"
+    implementation "org.clyze:clue-common:${clueCommonVersion}"
+    implementation "org.clyze:metadata-model:1.0.6"
+    implementation "org.clyze:code-processor:4.23.3"
+    // Bytecode parser, BSD
+    implementation group: 'org.ow2.asm', name: 'asm', version: asmVersion
+    implementation group: 'org.ow2.asm', name: 'asm-tree', version: asmVersion
+    // Java parser, Apache 2.0
+    implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.18.0'
+    // Groovy parser, Apache 2.0
+    api "org.codehaus.groovy:groovy:${groovyVersion}"
+    // Kotlin parser, Apache 2.0
+    api "org.antlr.grammars:kotlin-formal:1.0-SNAPSHOT"
+    // Dex parser, BSD
+    api 'org.smali:dexlib2:2.4.0'
+    // Zip library, Apache 2.0
+    implementation 'org.zeroturnaround:zt-zip:1.13'
+
+//    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+//    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+}
+
+//test {
+//    useJUnitPlatform()
+//}
+
+/**
+ * Checks for dependencies that may come from mavenLocal and can harm
+ * build reproducibility (e.g. for releases).
+ */
+project.afterEvaluate {
+    configurations.default
+	    .collect { it.canonicalPath }
+	.findAll { it.contains('.m2') }
+	.each { println "WARNING: build may be using mavenLocal(): ${it}" }
+}
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Version' : archiveVersion.get()
+    }
+}
+shadowJar {
+    // Set classifier to "null", to make the shadow JAR the main published artifact.
+    archiveClassifier.set(null)
+}
+
+artifacts {
+    shadowJar
+    archives sourcesJar
+    archives javadocJar
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            artifact shadowJar
+        }
+    }
+}
+
+if (project.hasProperty('artifactory_user')) {
+    publishing {
+        repositories {
+            maven {
+                credentials {
+                    username artifactory_user
+                    password artifactory_password
+                }
+                //Always publish to the public releases repo
+                url "${artifactory_contextUrl}/libs-public-release-local"
+            }
+        }
+    }
+}
+
+release {
+    failOnSnapshotDependencies = false
+}
+afterReleaseBuild.dependsOn publish

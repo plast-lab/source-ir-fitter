@@ -347,7 +347,6 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         IdentifierContext classId = classDecl.identifier();
         Position pos = createPositionFromToken(classId.start);
         JType parent = scope.getEnclosingType();
-        boolean isAnonymous = false;
         boolean isInner = parent != null && !mp.isStatic();
         String name = classId.getText();
 
@@ -356,7 +355,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         updateFromTypeList(superTypes, classDecl.is);
         JType jt = new JType(sourceFile, name, superTypes, parent, pos, scope.getEnclosingElement(), isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
-                mp.isAbstract(), mp.isFinal(), isAnonymous);
+                mp.isAbstract(), mp.isFinal(), false);
         sourceFile.jTypes.add(jt);
 
         scope.enterTypeScope(jt, ((JType jt0) -> {

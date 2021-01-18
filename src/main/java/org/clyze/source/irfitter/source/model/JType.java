@@ -129,7 +129,7 @@ public class JType extends NamedElementWithPosition<IRType> {
      * Update the id of the declaring element (assumed to be already resolved).
      */
     public void updateDeclaringSymbolId() {
-        if (declaringElement != null && declaringElement.matchId != null)
-            ((Class)symbol).setDeclaringSymbolDoopId(declaringElement.matchId);
+        String declaringSymbolId = (declaringElement != null && declaringElement.matchId != null) ? declaringElement.matchId : "";
+        ((Class)symbol).setDeclaringSymbolDoopId(declaringSymbolId);
     }
 }

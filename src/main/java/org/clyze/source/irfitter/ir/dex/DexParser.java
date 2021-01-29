@@ -44,7 +44,7 @@ public class DexParser {
                     System.err.println("ERROR: bad .dex class: " + className);
                 else {
                     String typeId = replaceSlashesWithDots(className.substring(1, className.length()-1));
-                    DexModifierPack irTypeMods = new DexModifierPack(dexClass.getAccessFlags());
+                    DexModifierPack irTypeMods = new DexModifierPack(dexClass);
                     List<String> superTypes = new LinkedList<>();
                     superTypes.add(dexClass.getSuperclass());
                     superTypes.addAll(dexClass.getInterfaces());
@@ -57,7 +57,7 @@ public class DexParser {
                         String fieldName = dexField.getName();
                         String fieldType = TypeUtils.raiseTypeId(replaceSlashesWithDots(dexField.getType()));
                         String fieldId = classPrefix + fieldType + " " + fieldName + ">";
-                        irType.fields.add(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField.getAccessFlags())));
+                        irType.fields.add(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField)));
                     }
                     for (DexBackedMethod dexMethod : dexClass.getMethods()) {
                         StringJoiner sj = new StringJoiner(",");
@@ -71,7 +71,7 @@ public class DexParser {
                         String retType = TypeUtils.raiseTypeId(replaceSlashesWithDots(dexMethod.getReturnType()));
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
-                                new DexModifierPack(dexMethod.getAccessFlags()), irTypeMods.isInterface());
+                                new DexModifierPack(dexMethod), irTypeMods.isInterface());
                         if (debug)
                             System.out.println("IR method: " + irMethod);
                         processDexInstructions(dexMethod, irMethod, debug);

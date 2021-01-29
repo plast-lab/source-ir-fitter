@@ -4,16 +4,15 @@ import com.github.javaparser.ast.*;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
+import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithAccessModifiers;
+import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithStaticModifier;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Consumer;
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
@@ -35,7 +34,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         List<String> superTypes = new LinkedList<>();
         updateFromTypes(superTypes, td.getExtendedTypes());
         updateFromTypes(superTypes, td.getImplementedTypes());
-        JType jt = recordType(td, sourceFile, superTypes);
+        JType jt = recordType(td, sourceFile, superTypes, false, td.isInterface());
         scope.enterTypeScope(jt, (jt0 -> super.visit(td, sourceFile)));
     }
 
@@ -48,19 +47,20 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(EnumDeclaration ed, SourceFile sourceFile) {
-        JType jt = recordType(ed, sourceFile, Collections.singletonList("java.lang.Enum"));
+        JType jt = recordType(ed, sourceFile, Collections.singletonList("java.lang.Enum"), true, false);
         scope.enterTypeScope(jt, (jt0 -> super.visit(ed, sourceFile)));
     }
 
     @Override
     public void visit(AnnotationDeclaration ad, SourceFile sourceFile) {
-        JType jt = recordType(ad, sourceFile, null);
+        JType jt = recordType(ad, sourceFile, null, false, true);
         scope.enterTypeScope(jt, (jt0 -> super.visit(ad, sourceFile)));
     }
 
-    private <T extends TypeDeclaration<?>>
-    JType recordType(T decl, SourceFile srcFile, List<String> superTypes) {
-        JType jt = JavaUtils.jTypeFromTypeDecl(decl, srcFile, superTypes, scope);
+    private <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
+    JType recordType(T decl, SourceFile srcFile, List<String> superTypes,
+                     boolean isEnum, boolean isInterface) {
+        JType jt = jTypeFromTypeDecl(decl, isEnum, isInterface, srcFile, superTypes, scope);
         if (srcFile.debug)
             System.out.println("Adding type: " + jt);
         srcFile.jTypes.add(jt);
@@ -107,9 +107,10 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         for (Parameter param : md.getParameters())
             parameters.add(new JParameter(param.getNameAsString(), param.getTypeAsString()));
         JType jt = scope.getEnclosingType();
-        JMethod jm = new JMethod(sourceFile, name.toString(), retType,
-                parameters, JavaUtils.createPositionFromNode(name),
-                JavaUtils.createPositionFromNode(md), jt);
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false);
+        JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
+                mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt, JavaUtils.createPositionFromNode(name));
+        jt.typeUsages.addAll(mp.getAnnotationUses());
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);
@@ -125,7 +126,11 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             String fieldType = typeOf(vd);
             String fieldName = vd.getNameAsString();
             JType jt = scope.getEnclosingType();
-            JField srcField = new JField(sourceFile, fieldType, fieldName, JavaUtils.createPositionFromNode(vd), jt);
+
+            JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false);
+            JField srcField = new JField(sourceFile, fieldType, fieldName,
+                    mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
+            jt.typeUsages.addAll(mp.getAnnotationUses());
             if (sourceFile.debug)
                 System.out.println("Adding field: " + srcField);
             jt.fields.add(srcField);
@@ -228,5 +233,20 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getTypeAsString());
+    }
+
+    private static <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
+    JType jTypeFromTypeDecl(T decl, boolean isEnum, boolean isInterface,
+                            SourceFile sourceFile, List<String> superTypes, Scope scope) {
+        SimpleName name = decl.getName();
+        JType parent = scope.getEnclosingType();
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, decl, isEnum, isInterface);
+        boolean isInner = parent != null && !mp.isStatic();
+        JType jt = new JType(sourceFile, name.toString(), superTypes, mp.getAnnotations(),
+                JavaUtils.createPositionFromNode(name), scope.getEnclosingElement(),
+                parent, isInner, mp.isPublic(), mp.isPrivate(), mp.isProtected(),
+                mp.isAbstract(), mp.isFinal(), false);
+        jt.typeUsages.addAll(mp.getAnnotationUses());
+        return jt;
     }
 }

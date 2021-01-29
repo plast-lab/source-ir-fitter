@@ -23,7 +23,7 @@ public class BytecodeParser {
         ClassNode node = new ClassNode();
         reader.accept(node, ClassReader.EXPAND_FRAMES);
         String className = replaceSlashesWithDots(node.name);
-        BytecodeModifierPack irTypeMods = new BytecodeModifierPack(node.access);
+        BytecodeModifierPack irTypeMods = new BytecodeModifierPack(node);
         List<String> superTypes = new LinkedList<>();
         superTypes.add(node.superName);
         superTypes.addAll(node.interfaces);
@@ -34,7 +34,7 @@ public class BytecodeParser {
             String fieldType0 = TypeUtils.raiseTypeId(fieldType);
             String fieldName = fNode.name;
             String fieldId = classPrefix + fieldType0 + " " + fieldName + ">";
-            irType.fields.add(new IRField(fieldId, fieldName, fieldType0, new BytecodeModifierPack(fNode.access)));
+            irType.fields.add(new IRField(fieldId, fieldName, fieldType0, new BytecodeModifierPack(fNode)));
             if (debug)
                 System.out.println("IR field: " + fieldId);
         }
@@ -50,7 +50,7 @@ public class BytecodeParser {
             String mName = mNode.name;
             String methodId = classPrefix + sig[0] + " " + mName + "(" + sj.toString() + ")>";
             IRMethod irMethod = new IRMethod(methodId, mName, sig[0], paramTypes,
-                    new BytecodeModifierPack(mNode.access), irTypeMods.isInterface());
+                    new BytecodeModifierPack(mNode), irTypeMods.isInterface());
             if (debug)
                 System.out.println("IR method: " + irMethod);
             processBytecodeInstructions(irMethod, mNode, irMethod);

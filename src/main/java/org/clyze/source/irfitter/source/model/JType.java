@@ -1,9 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
+import java.util.*;
+
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.persistent.model.Class;
@@ -17,6 +15,7 @@ public class JType extends NamedElementWithPosition<IRType> {
     public final JType parentType;
     public final NamedElementWithPosition<?> declaringElement;
     public final List<String> superTypes;
+    public final Set<String> annotationTypes;
     private final boolean isPublic;
     private final boolean isPrivate;
     private final boolean isProtected;
@@ -27,15 +26,19 @@ public class JType extends NamedElementWithPosition<IRType> {
     public final JMethod classInitializer;
     public final List<JField> fields = new LinkedList<>();
     public final List<JMethod> methods = new LinkedList<>();
+    public final List<TypeUsage> typeUsages = new LinkedList<>();
     private int anonymousClassCounter = 1;
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,
-                 JType parentType, Position pos, NamedElementWithPosition<?> declaringElement, boolean isInner, boolean isPublic,
-                 boolean isPrivate, boolean isProtected, boolean isAbstract,
-                 boolean isFinal, boolean isAnonymous) {
+                 Set<String> annotationTypes, Position pos,
+                 NamedElementWithPosition<?> declaringElement, JType parentType,
+                 boolean isInner, boolean isPublic, boolean isPrivate,
+                 boolean isProtected, boolean isAbstract, boolean isFinal,
+                 boolean isAnonymous) {
         super(srcFile, pos);
         this.name = name;
         this.superTypes = superTypes;
+        this.annotationTypes = annotationTypes;
         this.parentType = parentType;
         this.declaringElement = declaringElement;
         this.isPublic = isPublic;
@@ -46,7 +49,7 @@ public class JType extends NamedElementWithPosition<IRType> {
         this.isFinal = isFinal;
         this.isAnonymous = isAnonymous;
         // Add <clinit>() method.
-        this.classInitializer = new JMethod(srcFile, "<clinit>", "void", new ArrayList<>(0), null, null, this);
+        this.classInitializer = new JMethod(srcFile, "<clinit>", "void", new ArrayList<>(0), new HashSet<>(), null, this, null);
         this.methods.add(classInitializer);
     }
 
@@ -106,6 +109,7 @@ public class JType extends NamedElementWithPosition<IRType> {
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
             c.setSuperTypes(superTypes);
+            c.setAnnotationTypes(annotationTypes);
             symbol = c;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());

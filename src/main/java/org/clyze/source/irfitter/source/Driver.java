@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import org.clyze.doop.sarif.Generator;
 import org.clyze.doop.sarif.Result;
+import org.clyze.source.irfitter.ir.model.IRElement;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
@@ -70,12 +72,46 @@ public class Driver extends Generator {
             sf.matchTypes(idMapper, irTypes);
             unmatched += sf.reportUmatched(debug);
         }
+
+        if (debug)
+            System.out.println("* Performing fuzzy type matching for type references...");
+        for (SourceFile sf : sources) {
+            BasicMetadata bm = sf.getFileInfo().getElements();
+            for (JType jt : sf.jTypes)
+                matchTypeUsages(bm, jt, debug);
+        }
         System.out.println(unmatched + " elements not matched.");
 
         Map<String, Collection<? extends NamedElementWithPosition<?>>> flatMapping = idMapper.get();
         process(flatMapping, sarif, debug);
         if (json)
             generateJSON(flatMapping, sources, debug);
+    }
+
+    /**
+     * Match type usages against the IR types. This may not resolve all such
+     * type references, e.g. compile-time-only annotations may be missed.
+     * @param bm             the object to use to write the metadata
+     * @param jt             the type that contains the unresolved type usages
+     * @param debug          if true, show diagnostics
+     */
+    private void matchTypeUsages(BasicMetadata bm, JType jt, boolean debug) {
+        List<TypeUsage> typeUsages = jt.typeUsages;
+        if (typeUsages.isEmpty())
+            return;
+
+        Set<String> irAnnotations = jt.matchElement.mp.getAnnotations();
+        for (TypeUsage typeUsage : typeUsages) {
+            for (String irTypeId : typeUsage.getIds()) {
+                if (irAnnotations.contains(irTypeId)) {
+                    if (debug)
+                        System.out.println("Matched use for type '" + typeUsage.type + "': " + irTypeId);
+                    typeUsage.matchId = irTypeId;
+                }
+            }
+            if (typeUsage.matchId != null)
+                registerSymbol(bm, typeUsage.getUsage());
+        }
     }
 
     private void registerSymbol(BasicMetadata bm,
@@ -90,6 +126,8 @@ public class Driver extends Generator {
             bm.invocations.add((MethodInvocation) symbol);
         else if (symbol instanceof HeapAllocation)
             bm.heapAllocations.add((HeapAllocation) symbol);
+        else if (symbol instanceof Usage)
+            bm.usages.add((Usage) symbol);
         else
             System.out.println("WARNING: cannot handle symbol of type " + symbol.getClass().getName() + ": " + symbol.toJSON());
     }

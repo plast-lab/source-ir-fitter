@@ -1,11 +1,9 @@
 package org.clyze.source.irfitter.source.groovy;
 
 import groovyjarjarantlr4.v4.runtime.RuleContext;
-import groovyjarjarantlr4.v4.runtime.Token;
 import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
 import java.util.function.Supplier;
-
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
@@ -67,7 +65,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
         TypeDeclarationContext typeDecl = ssc.typeDeclaration();
         if (typeDecl != null) {
-            GroovyModifierPack mp = new GroovyModifierPack(typeDecl.classOrInterfaceModifiersOpt());
+            GroovyModifierPack mp = new GroovyModifierPack(sourceFile, typeDecl.classOrInterfaceModifiersOpt());
             processClassDeclaration(mp, typeDecl.classDeclaration());
             return null;
         }
@@ -91,7 +89,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             processFieldDeclaration(fieldCtx);
         ClassDeclarationContext classCtx = memCtx.classDeclaration();
         if (classCtx != null) {
-            GroovyModifierPack mp = new GroovyModifierPack(memCtx.modifiersOpt());
+            GroovyModifierPack mp = new GroovyModifierPack(sourceFile, memCtx.modifiersOpt());
             processClassDeclaration(mp, classCtx);
         }
         if (methCtx == null && fieldCtx == null && classCtx == null)
@@ -122,10 +120,11 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 }
             }
         }
-        Position pos = createPositionFromToken(ctx.methodName().start);
-        Position outerPos = createPositionFromTokens(ctx.start, ctx.stop);
+        Position pos = GroovyUtils.createPositionFromToken(ctx.methodName().start);
+        Position outerPos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
         JType jt = scope.getEnclosingType();
-        JMethod jm = new JMethod(sourceFile, name, retType, parameters, pos, outerPos, jt);
+        GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
+        JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos);
         if (jt == null)
             System.out.println("WARNING: top-level Groovy methods are not yet supported.");
         else {
@@ -256,7 +255,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                         System.out.println("WARNING: no created-name information for anonymous class: " + preview(anonDecl));
                     else {
                         List<String> superTypes = Collections.singletonList(createdNameValue);
-                        Position pos = createPositionFromToken(createdName.start);
+                        Position pos = GroovyUtils.createPositionFromToken(createdName.start);
                         JType anonymousType = enclosingType.createAnonymousClass(sourceFile,
                                 superTypes, scope.getEnclosingElement(), pos, true);
                         logDebug(() -> "Adding type [anonymous]: " + anonymousType);
@@ -309,7 +308,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             if (methodName != null && methodArity >= 0) {
                 JMethod jm = scope.getEnclosingMethod();
                 JMethodInvocation invo = new JMethodInvocation(sourceFile,
-                        createPositionFromToken(pathExpr.start), methodName,
+                        GroovyUtils.createPositionFromToken(pathExpr.start), methodName,
                         methodArity, jm, false);
                 if (jm == null)
                     System.out.println("TODO: handle invocations outside methods");
@@ -350,6 +349,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         List<JVariable> ret = new LinkedList<>();
         if (vDeclCtxt == null)
             return ret;
+
+        GroovyModifierPack mp = new GroovyModifierPack(sourceFile, vDeclCtxt.modifiers());
         String vType = getType(vDeclCtxt.type());
         VariableDeclaratorsContext vDeclsCtx = vDeclCtxt.variableDeclarators();
         if (vDeclsCtx != null) {
@@ -357,7 +358,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             for (VariableDeclaratorContext vDecl : vDecls) {
                 IdentifierContext vId = vDecl.variableDeclaratorId().identifier();
                 String vName = vId.getText();
-                JVariable jv = new JVariable(sourceFile, createPositionFromToken(vId.start), vName, vType);
+                JVariable jv = new JVariable(sourceFile, GroovyUtils.createPositionFromToken(vId.start), vName, vType, mp);
                 VariableInitializerContext vInit = vDecl.variableInitializer();
                 if (vInit != null) {
                     EnhancedStatementExpressionContext eStmtExpr = vInit.enhancedStatementExpression();
@@ -377,7 +378,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     private void processFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
         JType jt = scope.getEnclosingType();
         for (JVariable jVar : processVariableDeclaration(fieldDeclCtx.variableDeclaration()))
-            jt.fields.add(new JField(sourceFile, jVar.type, jVar.name, jVar.pos, jt));
+            jt.fields.add(new JField(sourceFile, jVar.type, jVar.name, jVar.mp.getAnnotations(), jVar.pos, jt));
     }
 
     @Override
@@ -398,7 +399,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     private void processClassDeclaration(GroovyModifierPack mp, ClassDeclarationContext classDecl) {
         IdentifierContext classId = classDecl.identifier();
-        Position pos = createPositionFromToken(classId.start);
+        Position pos = GroovyUtils.createPositionFromToken(classId.start);
         JType parent = scope.getEnclosingType();
         boolean isInner = parent != null && !mp.isStatic();
         String name = classId.getText();
@@ -406,9 +407,11 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         List<String> superTypes = new LinkedList<>();
         updateFromTypeList(superTypes, classDecl.scs);
         updateFromTypeList(superTypes, classDecl.is);
-        JType jt = new JType(sourceFile, name, superTypes, parent, pos, scope.getEnclosingElement(), isInner,
+        JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
+                pos, scope.getEnclosingElement(), parent, isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
                 mp.isAbstract(), mp.isFinal(), false);
+        jt.typeUsages.addAll(mp.getAnnotationUses());
         sourceFile.jTypes.add(jt);
 
         processClassBody(jt, classDecl.classBody());
@@ -439,21 +442,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return typeCtx == null ? null : Utils.simplifyType(typeCtx.getText());
     }
 
-    private Position createPositionFromToken(Token token) {
-        int startLine = token.getLine();
-        int startColumn = token.getCharPositionInLine() + 1;
-        int endColumn = startColumn + token.getText().length();
-        return new Position(startLine, startLine, startColumn, endColumn);
-    }
-
-    private Position createPositionFromTokens(Token start, Token end) {
-        Position startPos = createPositionFromToken(start);
-        Position endPos = createPositionFromToken(end);
-        return new Position(startPos.getStartLine(), endPos.getEndLine(),
-                startPos.getStartColumn(), endPos.getEndColumn());
-    }
-
-    private void logDebug(Supplier<String> s) {
+     private void logDebug(Supplier<String> s) {
         if (sourceFile.debug)
             System.out.println(s.get());
     }

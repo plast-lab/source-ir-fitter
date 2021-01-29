@@ -1,9 +1,6 @@
 package org.clyze.source.irfitter.source.kotlin;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.StringJoiner;
-import org.antlr.v4.runtime.Token;
+import java.util.*;
 import org.antlr.v4.runtime.tree.*;
 import org.clyze.source.irfitter.source.model.*;
 import org.antlr.grammars.KotlinParser.*;
@@ -33,29 +30,21 @@ public class KotlinVisitor extends Scope implements ParseTreeVisitor<Object> {
             System.out.println("Class declaration: " + name);
 
         JType parent = getEnclosingType();
-        Position pos = createPositionFromToken(classId.getSymbol());
-        KotlinModifierPack mp = new KotlinModifierPack();
-        ModifiersContext modsCtxt = cdc.modifiers();
-        if (modsCtxt != null) {
-            List<ModifierContext> mcl = modsCtxt.modifier();
-            if (mcl != null)
-                for (ModifierContext mc : mcl)
-                    mp.updateFrom(mc);
-        }
+        Position pos = KotlinUtils.createPositionFromToken(classId.getSymbol());
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, cdc.modifiers());
         boolean isAnonymous = false;
 
         List<String> superTypes = new LinkedList<>();
         DelegationSpecifiersContext delegSpecs = cdc.delegationSpecifiers();
-        if (delegSpecs != null) {
-            for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier()) {
+        if (delegSpecs != null)
+            for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier())
                 System.out.println("TODO: delegation specifier " + aDSpec.getText());
-            }
-        }
 
-        JType jt = new JType(sourceFile, name, superTypes, parent,
-                pos, getEnclosingElement(), mp.isInner(), mp.isPublic(),
+        JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
+                pos, getEnclosingElement(), parent, mp.isInner(), mp.isPublic(),
                 mp.isPrivate(), mp.isProtected(), mp.isAbstract(), mp.isFinal(),
                 isAnonymous);
+        jt.typeUsages.addAll(mp.getAnnotationUses());
         sourceFile.jTypes.add(jt);
 
         typeScope.push(jt);
@@ -112,7 +101,8 @@ public class KotlinVisitor extends Scope implements ParseTreeVisitor<Object> {
         SimpleIdentifierContext id = fDecl.simpleIdentifier();
         String fName = id.getText();
         String fType = getType(fDecl.type());
-        JField srcField = new JField(sourceFile, fType, fName, createPositionFromToken(id.start), jt);
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation());
+        JField srcField = new JField(sourceFile, fType, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (sourceFile.debug)
             System.out.println("Found source field: " + srcField);
         jt.fields.add(srcField);
@@ -139,8 +129,10 @@ public class KotlinVisitor extends Scope implements ParseTreeVisitor<Object> {
                 parameters.add(new JParameter(paramName, funType));
             }
         }
-        Position outerPos = createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
-        jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters, createPositionFromToken(fNameCtx.start), outerPos, jt));
+        Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, funMemDecl.modifiers());
+        jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters,
+                mp.getAnnotations(), outerPos, jt, KotlinUtils.createPositionFromToken(fNameCtx.start)));
     }
 
     private String getType(TypeContext typeCtx) {
@@ -197,22 +189,6 @@ public class KotlinVisitor extends Scope implements ParseTreeVisitor<Object> {
     @Override
     public Object visitErrorNode(ErrorNode errorNode) {
         return null;
-    }
-
-    // Copy of similar method in Groovy parser.
-    private Position createPositionFromToken(Token token) {
-        int startLine = token.getLine();
-        int startColumn = token.getCharPositionInLine() + 1;
-        int endColumn = startColumn + token.getText().length();
-        return new Position(startLine, startLine, startColumn, endColumn);
-    }
-
-    // Copy of similar method in Groovy parser.
-    private Position createPositionFromTokens(Token start, Token end) {
-        Position startPos = createPositionFromToken(start);
-        Position endPos = createPositionFromToken(end);
-        return new Position(startPos.getStartLine(), endPos.getEndLine(),
-                startPos.getStartColumn(), endPos.getEndColumn());
     }
 
     // Copy of similar method in Groovy parser.

@@ -1,13 +1,30 @@
 package org.clyze.source.irfitter.ir.dex;
 
 import org.clyze.source.irfitter.ir.model.IRModifierPack;
+import org.clyze.utils.TypeUtils;
 import org.jf.dexlib2.AccessFlags;
+import org.jf.dexlib2.iface.Annotation;
+import org.jf.dexlib2.iface.ClassDef;
+import org.jf.dexlib2.iface.Member;
 
+import java.util.Set;
+
+/** The modifiers of a Dex class/field/method. */
 class DexModifierPack extends IRModifierPack {
     private final int access;
 
-    DexModifierPack(int access) {
+    public DexModifierPack(ClassDef classDef) {
+        this(classDef.getAccessFlags(), classDef.getAnnotations());
+    }
+
+    public DexModifierPack(Member memberDef) {
+        this(memberDef.getAccessFlags(), memberDef.getAnnotations());
+    }
+
+    private DexModifierPack(int access, Set<? extends Annotation> annotationList) {
         this.access = access;
+        for (Annotation annotation : annotationList)
+            annotations.add(TypeUtils.raiseTypeId(annotation.getType()));
     }
 
     @Override

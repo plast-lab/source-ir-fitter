@@ -1,44 +1,43 @@
 package org.clyze.source.irfitter.source.groovy;
 
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
-import org.clyze.source.irfitter.base.ModifierPack;
+import org.clyze.source.irfitter.source.model.SourceFile;
+import org.clyze.source.irfitter.source.model.SourceModifierPack;
 
-class GroovyModifierPack extends ModifierPack {
-    private boolean isPublic = false;
-    private boolean isPrivate = false;
-    private boolean isProtected = false;
+/** Class/field/method modifiers for Groovy sources. */
+class GroovyModifierPack extends SourceModifierPack {
     private boolean isStatic = false;
-    private boolean isAbstract = false;
-    private boolean isFinal = false;
 
-    public GroovyModifierPack(ClassOrInterfaceModifiersOptContext classOrInterfaceModifiersOptContext) {
+    public GroovyModifierPack(SourceFile sourceFile, ClassOrInterfaceModifiersOptContext classOrInterfaceModifiersOptContext) {
         if (classOrInterfaceModifiersOptContext == null)
             return;
         ClassOrInterfaceModifiersContext mods = classOrInterfaceModifiersOptContext.classOrInterfaceModifiers();
         if (mods == null)
             return;
         for (ClassOrInterfaceModifierContext c : mods.classOrInterfaceModifier())
-            updateFrom(c);
+            updateFrom(sourceFile, c);
     }
 
-    public GroovyModifierPack(ModifiersOptContext modifiersOpt) {
+    public GroovyModifierPack(SourceFile sourceFile, ModifiersOptContext modifiersOpt) {
         if (modifiersOpt == null)
             return;
-        updateFrom(modifiersOpt.modifiers());
+        updateFrom(sourceFile, modifiersOpt.modifiers());
     }
 
-    public GroovyModifierPack(ModifiersContext modifiersContext) {
-        updateFrom(modifiersContext);
+    public GroovyModifierPack(SourceFile sourceFile, ModifiersContext modifiersContext) {
+        updateFrom(sourceFile, modifiersContext);
     }
 
-    private void updateFrom(ModifiersContext modifiersContext) {
+    private void updateFrom(SourceFile sourceFile, ModifiersContext modifiersContext) {
         if (modifiersContext == null)
             return;
         for (ModifierContext mc : modifiersContext.modifier())
-            updateFrom(mc.classOrInterfaceModifier());
+            updateFrom(sourceFile, mc.classOrInterfaceModifier());
     }
 
-    private void updateFrom(ClassOrInterfaceModifierContext c) {
+    private void updateFrom(SourceFile sourceFile, ClassOrInterfaceModifierContext c) {
+        if (c == null)
+            return;
         if (c.ABSTRACT() != null)
             isAbstract = true;
         else if (c.PUBLIC() != null)
@@ -51,21 +50,26 @@ class GroovyModifierPack extends ModifierPack {
             isStatic = true;
         else if (c.FINAL() != null)
             isFinal = true;
+        else {
+            AnnotationContext annotation = c.annotation();
+            if (annotation != null) {
+                AnnotationNameContext annotationName = annotation.annotationName();
+                String nameText = annotationName.getText();
+                // Trim starting "@" symbol.
+                String txt = nameText.startsWith("@") ? nameText.substring(1) : nameText;
+                registerAnnotation(sourceFile, txt, GroovyUtils.createPositionFromToken(annotationName.start));
+            }
+        }
     }
 
     @Override
     public boolean isStatic() {
-        return isStatic;
+        return this.isStatic;
     }
 
     @Override
     public boolean isInterface() {
         throw new UnsupportedOperationException("Groovy sources: isInterface() is not supported");
-    }
-
-    @Override
-    public boolean isAbstract() {
-        return isAbstract;
     }
 
     @Override
@@ -76,26 +80,6 @@ class GroovyModifierPack extends ModifierPack {
     @Override
     public boolean isSynchronized() {
         throw new UnsupportedOperationException("Groovy sources: isSynchronized() is not supported");
-    }
-
-    @Override
-    public boolean isFinal() {
-        return isFinal;
-    }
-
-    @Override
-    public boolean isPublic() {
-        return isPublic;
-    }
-
-    @Override
-    public boolean isProtected() {
-        return isProtected;
-    }
-
-    @Override
-    public boolean isPrivate() {
-        return isPrivate;
     }
 
     @Override

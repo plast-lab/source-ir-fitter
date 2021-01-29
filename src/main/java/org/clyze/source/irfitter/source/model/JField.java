@@ -1,8 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.Collection;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
+
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.persistent.model.Field;
 import org.clyze.persistent.model.Position;
@@ -16,14 +15,16 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
     /** The name of the field. */
     public final String name;
     public final JType parent;
+    public final Set<String> annotations;
     private Collection<String> cachedIds = null;
 
     public JField(SourceFile srcFile, String type, String name,
-                  Position pos, JType parent) {
+                  Set<String> annotations, Position pos, JType parent) {
         super(srcFile, pos);
         this.type = type;
         this.name = name;
         this.parent = parent;
+        this.annotations = new HashSet<>(annotations);
     }
 
     @Override
@@ -44,13 +45,15 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
     @Override
     public void initSymbolFromIRElement(IRField irField) {
         if (symbol == null) {
-            symbol = new Field(pos,
+            Field fld = new Field(pos,
                     srcFile.getRelativePath(),
                     name,
                     irField.getId(),
                     irField.type,
                     parent == null ? null : parent.getFullyQualifiedName(),
                     irField.mp.isStatic());
+            fld.setAnnotationTypes(annotations);
+            symbol = fld;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
     }

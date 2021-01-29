@@ -1,13 +1,37 @@
 package org.clyze.source.irfitter.ir.bytecode;
 
+import java.util.List;
 import org.clyze.source.irfitter.ir.model.IRModifierPack;
+import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.tree.*;
 
+/** The modifiers of a class/field/method found in Java bytecode. */
 class BytecodeModifierPack extends IRModifierPack {
-    final int access;
+    private final int access;
 
-    BytecodeModifierPack(int access) {
+    private BytecodeModifierPack(int access, List<AnnotationNode> visibleAnnotations,
+                                 List<TypeAnnotationNode> visibleTypeAnnotations) {
         this.access = access;
+        if (visibleAnnotations != null)
+            for (AnnotationNode visibleAnnotation : visibleAnnotations)
+                annotations.add(TypeUtils.raiseTypeId(visibleAnnotation.desc));
+        if (visibleTypeAnnotations != null)
+            for (TypeAnnotationNode visibleTypeAnnotation : visibleTypeAnnotations) {
+                annotations.add(TypeUtils.raiseTypeId(visibleTypeAnnotation.desc));
+            }
+    }
+
+    BytecodeModifierPack(ClassNode node) {
+        this(node.access, node.visibleAnnotations, node.visibleTypeAnnotations);
+    }
+
+    BytecodeModifierPack(FieldNode node) {
+        this(node.access, node.visibleAnnotations, node.visibleTypeAnnotations);
+    }
+
+    BytecodeModifierPack(MethodNode node) {
+        this(node.access, node.visibleAnnotations, node.visibleTypeAnnotations);
     }
 
     @Override

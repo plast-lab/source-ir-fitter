@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
+import java.util.HashSet;
 import java.util.List;
 import org.clyze.persistent.model.Position;
 
@@ -11,7 +12,8 @@ public class AnonymousClass extends JType {
     public AnonymousClass(SourceFile srcFile, List<String> superTypes,
                           JType parent, NamedElementWithPosition<?> declaringElement,
                           Position pos, boolean isInner, int n) {
-        super(srcFile, null, superTypes, parent, pos, declaringElement, isInner, false,
+        // Anonymous classes cannot have annotations, so we pass an empty set.
+        super(srcFile, null, superTypes, new HashSet<>(), pos, declaringElement, parent, isInner, false,
                 false, false, false, false, true);
         this.n = Integer.toString(n);
     }

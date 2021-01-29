@@ -21,15 +21,18 @@ implements AbstractMethod {
     public final List<JMethodInvocation> invocations = new LinkedList<>();
     /** The object allocations found in the method body. */
     public final List<JAllocation> allocations = new LinkedList<>();
+    /** The annotations found in the source code. */
+    public final Set<String> annotations;
     private Collection<String> cachedIds = null;
 
     public JMethod(SourceFile srcFile, String name, String retType,
-                   List<JParameter> parameters,
-                   Position pos, Position outerPos, JType parent) {
+                   List<JParameter> parameters, Set<String> annotations,
+                   Position outerPos, JType parent, Position pos) {
         super(srcFile, pos);
         this.name = name;
         this.retType = retType;
         this.parameters = parameters;
+        this.annotations = new HashSet<>(annotations);
         this.parent = parent;
         this.arity = parameters.size();
         this.outerPos = outerPos;
@@ -117,25 +120,17 @@ implements AbstractMethod {
                         " vs. IR types: " + Arrays.toString(pTypes));
             String returnType = irMethod.returnType;
             IRModifierPack mp = irMethod.mp;
-            boolean isStatic = mp.isStatic();
-            boolean isInterface = irMethod.isInterface;
-            boolean isAbstract = mp.isAbstract();
-            boolean isNative = mp.isNative();
-            boolean isSynchronized = mp.isSynchronized();
-            boolean isFinal = mp.isFinal();
-            boolean isSynthetic = mp.isSynthetic();
-            boolean isPublic = mp.isPublic();
-            boolean isProtected = mp.isProtected();
-            boolean isPrivate = mp.isPrivate();
             // When a class has a <clinit>() initializer but no static initializer
             // block in the sources, set the position to the type declaration.
             if ("<clinit>".equals(name) && (pos == null))
                 pos = parent.pos;
-            symbol = new Method(pos, srcFile.getRelativePath(), name,
+            Method meth = new Method(pos, srcFile.getRelativePath(), name,
                     parent.matchId, returnType, irMethod.getId(), pNames,
-                    pTypes, isStatic, isInterface, isAbstract, isNative,
-                    isSynchronized, isFinal, isSynthetic, isPublic, isProtected,
-                    isPrivate, outerPos);
+                    pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
+                    mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),
+                    mp.isPublic(), mp.isProtected(), mp.isPrivate(), outerPos);
+            meth.setAnnotationTypes(annotations);
+            symbol = meth;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
     }

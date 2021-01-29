@@ -1,19 +1,35 @@
 package org.clyze.source.irfitter.source.kotlin;
 
+import java.util.List;
 import org.antlr.grammars.KotlinParser.*;
-import org.clyze.source.irfitter.base.ModifierPack;
+import org.clyze.source.irfitter.source.model.SourceFile;
+import org.clyze.source.irfitter.source.model.SourceModifierPack;
 
-public class KotlinModifierPack extends ModifierPack {
-    private boolean isPublic = false;
-    private boolean isPrivate = false;
-    private boolean isProtected = false;
-    private boolean isAbstract = false;
-    private boolean isFinal = false;
+/** Class/field/method modifiers for Kotlin sources. */
+public class KotlinModifierPack extends SourceModifierPack {
     private boolean isInner = false;
-    private boolean isEnum = false;
-    private boolean isNative = false;
 
-    void updateFrom(ModifierContext mc) {
+    public KotlinModifierPack(SourceFile sourceFile, ModifiersContext modsCtxt) {
+        if (modsCtxt != null) {
+            List<ModifierContext> mcl = modsCtxt.modifier();
+            if (mcl != null)
+                for (ModifierContext mc : mcl)
+                    updateFrom(mc);
+            updateFrom(sourceFile, modsCtxt.annotation());
+        }
+    }
+
+    public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl) {
+        updateFrom(sourceFile, anl);
+    }
+
+    private void updateFrom(SourceFile sourceFile, List<AnnotationContext> anl) {
+        if (anl != null)
+            for (AnnotationContext ac : anl)
+                updateFrom(sourceFile, ac);
+    }
+
+    public void updateFrom(ModifierContext mc) {
         VisibilityModifierContext visModCtx = mc.visibilityModifier();
         if (visModCtx != null) {
             if (visModCtx.PUBLIC() != null)
@@ -44,6 +60,12 @@ public class KotlinModifierPack extends ModifierPack {
         }
     }
 
+    public void updateFrom(SourceFile sourceFile, AnnotationContext ac) {
+        if (ac == null)
+            return;
+        registerAnnotation(sourceFile, ac.getText(), KotlinUtils.createPositionFromToken(ac.start));
+    }
+
     @Override
     public boolean isStatic() {
         throw new UnsupportedOperationException("Kotlin sources: isStatic() is not supported");
@@ -55,43 +77,8 @@ public class KotlinModifierPack extends ModifierPack {
     }
 
     @Override
-    public boolean isAbstract() {
-        return this.isAbstract;
-    }
-
-    @Override
-    public boolean isNative() {
-        return this.isNative;
-    }
-
-    @Override
     public boolean isSynchronized() {
         throw new UnsupportedOperationException("Kotlin sources: isSynchronized() is not supported");
-    }
-
-    @Override
-    public boolean isFinal() {
-        return this.isFinal;
-    }
-
-    @Override
-    public boolean isPublic() {
-        return isPublic;
-    }
-
-    @Override
-    public boolean isProtected() {
-        return isProtected;
-    }
-
-    @Override
-    public boolean isPrivate() {
-        return isPrivate;
-    }
-
-    @Override
-    public boolean isEnum() {
-        return isEnum;
     }
 
     public boolean isInner() {

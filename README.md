@@ -13,12 +13,12 @@ This is work in progress, currently the following source languages are
 
 ## Build requirements
 
-Install the fork of the ANTLRv4 grammars to the local Maven repository:
+Install the Kotlin ANTLR grammar to the local Maven repository:
 
 ```
-git clone https://github.com/gfour/grammars-v4.git
+git clone https://github.com/antlr/grammars-v4.git
 cd grammars-v4
-mvn install
+mvn install --pl kotlin/kotlin-formal --am
 ```
 
 Then, install this program:

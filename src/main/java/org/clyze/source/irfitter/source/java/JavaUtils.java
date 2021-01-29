@@ -13,36 +13,6 @@ import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** A collection of utilities used during parsing of Java sources. */
 public class JavaUtils {
-    public static TypeDeclaration<?> getEnclosingType(Node node) {
-        if (node == null)
-            return null;
-        Optional<Node> optParent = node.getParentNode();
-        if (optParent.isPresent()) {
-            Node parent = optParent.get();
-            if (parent instanceof TypeDeclaration)
-                return (TypeDeclaration<?>) parent;
-            else
-                return getEnclosingType(parent);
-        }
-        return null;
-    }
-
-    public static <T extends TypeDeclaration<?>>
-    JType jTypeFromTypeDecl(T decl, SourceFile sourceFile, List<String> superTypes, Scope scope) {
-        SimpleName name = decl.getName();
-        JType parent = scope.getEnclosingType();
-        boolean isStatic = decl.isStatic();
-        boolean isPublic = decl.isPublic();
-        boolean isPrivate = decl.isPrivate();
-        boolean isProtected = decl.isProtected();
-        boolean isFinal = decl.hasModifier(Modifier.Keyword.FINAL);
-        boolean isAbstract = decl.hasModifier(Modifier.Keyword.ABSTRACT);
-        boolean isInner = parent != null && !isStatic;
-        return new JType(sourceFile, name.toString(), superTypes, parent,
-                createPositionFromNode(name), scope.getEnclosingElement(),
-                isInner, isPublic, isPrivate, isProtected, isAbstract, isFinal, false);
-    }
-
     public static org.clyze.persistent.model.Position createPositionFromNode(NodeWithRange<?> sn) {
         int startLine, startColumn, endLine, endColumn;
         Optional<Position> begin = sn.getBegin();

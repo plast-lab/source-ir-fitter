@@ -5,13 +5,27 @@ import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 
+/** A method invocation in the source code. */
 public class JMethodInvocation extends NamedElementWithPosition<IRMethodInvocation>
 implements AbstractMethodInvocation {
+    /** The method containing the invocation line. */
     public final JMethod parent;
+    /** The name of the invoked method. */
     public final String methodName;
+    /** The number of arguments in the call. */
     public final int arity;
+    /** True if the invocation is inside an initializer block. */
     public final boolean inIIB;
 
+    /**
+     * Create a method invocation.
+     * @param srcFile      the source file containing the invocation
+     * @param pos          the source code position
+     * @param methodName   the name of the invoked method
+     * @param arity        the number of arguments in the call
+     * @param parent       the method containing the invocation
+     * @param inIIB        true if the invocation is inside an initializer block
+     */
     public JMethodInvocation(SourceFile srcFile, Position pos,
                              String methodName, int arity, JMethod parent,
                              boolean inIIB) {

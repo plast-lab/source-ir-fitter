@@ -149,7 +149,7 @@ public class Driver extends Generator {
         }
         for (SourceFile sf : sources) {
             Set<StringConstant> stringConstants = sf.getFileInfo().getElements().stringConstants;
-            for (JStringConstant jStrConstant : sf.stringConstants)
+            for (JStringConstant<?> jStrConstant : sf.stringConstants)
                 stringConstants.add(jStrConstant.getStringConstant());
         }
 

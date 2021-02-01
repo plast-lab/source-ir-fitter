@@ -143,7 +143,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                     if (sourceFile.debug)
                         System.out.println("Java static final field points to string constant: " + sValue);
                     Position pos = JavaUtils.createPositionFromNode(s);
-                    sourceFile.stringConstants.add(new JStringConstant(sourceFile, pos, srcField, sValue));
+                    sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
                 } else
                     initExpr.accept(this, sourceFile);
             }

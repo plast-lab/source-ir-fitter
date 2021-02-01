@@ -7,6 +7,7 @@ import java.util.function.Supplier;
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
+import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.source.model.*;
 
 /**
@@ -147,7 +148,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 if (blockStatements != null) {
                     for (BlockStatementContext blockStmt : blockStatements.blockStatement()) {
                         LocalVariableDeclarationContext localVar = blockStmt.localVariableDeclaration();
-                        if (localVar != null) {
+                        if (localVar != null && sourceFile.debug) {
                             for (JVariable jVar : processVariableDeclaration(localVar.variableDeclaration()))
                                 System.out.println("TODO: local variable " + jVar.name);
                         }
@@ -363,7 +364,11 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 if (vInit != null) {
                     EnhancedStatementExpressionContext eStmtExpr = vInit.enhancedStatementExpression();
                     if (eStmtExpr != null) {
-                        visitStatementExpression(eStmtExpr.statementExpression());
+                        StatementExpressionContext stmtExpr = eStmtExpr.statementExpression();
+                        JStringConstant<JVariable> stringConstant = getInitialStringConstant(jv, stmtExpr);
+                        if (stringConstant != null)
+                            jv.initStringValue = stringConstant;
+                        visitStatementExpression(stmtExpr);
                         StandardLambdaExpressionContext lambdaExpr = eStmtExpr.standardLambdaExpression();
                         if (lambdaExpr != null)
                             System.out.println("TODO: handle lambda expressions");
@@ -375,10 +380,49 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return ret;
     }
 
+    private <T> JStringConstant<T> getInitialStringConstant(T decl, StatementExpressionContext stmtExpr) {
+        if (stmtExpr instanceof CommandExprAltContext) {
+            CommandExpressionContext cmdExpr = ((CommandExprAltContext) stmtExpr).commandExpression();
+            if (cmdExpr != null) {
+                ExpressionContext expr = cmdExpr.expression();
+                if (expr instanceof PostfixExprAltContext) {
+                    PostfixExprAltContext pExprAlt = (PostfixExprAltContext) expr;
+                    PrimaryContext primary = pExprAlt.postfixExpression().pathExpression().primary();
+                    if (primary instanceof LiteralPrmrAltContext) {
+                        LiteralContext literal = ((LiteralPrmrAltContext) primary).literal();
+                        if (literal instanceof StringLiteralAltContext) {
+                            StringLiteralContext stringLiteral = ((StringLiteralAltContext) literal).stringLiteral();
+                            String s = stringLiteral.StringLiteral().getText();
+                            // Strip single/double quotes.
+                            if ((s.startsWith("\"") && s.endsWith("\"")) ||
+                                    (s.startsWith("'") && s.endsWith("'")))
+                                s = s.substring(1, s.length() - 1);
+                            if (sourceFile.debug)
+                                System.out.println("Found string literal in initializer: " + s);
+                            Position pos = GroovyUtils.createPositionFromTokens(stringLiteral.start, stringLiteral.stop);
+                            return new JStringConstant<T>(sourceFile, pos, decl, s);
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     private void processFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
         JType jt = scope.getEnclosingType();
-        for (JVariable jVar : processVariableDeclaration(fieldDeclCtx.variableDeclaration()))
-            jt.fields.add(new JField(sourceFile, jVar.type, jVar.name, jVar.mp.getAnnotations(), jVar.pos, jt));
+        for (JVariable jVar : processVariableDeclaration(fieldDeclCtx.variableDeclaration())) {
+            ModifierPack mp = jVar.mp;
+            JField field = new JField(sourceFile, jVar.type, jVar.name, mp.getAnnotations(), jVar.pos, jt);
+            jt.fields.add(field);
+            if (mp.isStatic() && mp.isFinal()) {
+                JStringConstant<JVariable> initStringValue = jVar.initStringValue;
+                if (initStringValue != null) {
+                    System.out.println("Adding initial string constant: " + initStringValue);
+                    sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, initStringValue.pos, field, initStringValue.value));
+                }
+            }
+        }
     }
 
     @Override

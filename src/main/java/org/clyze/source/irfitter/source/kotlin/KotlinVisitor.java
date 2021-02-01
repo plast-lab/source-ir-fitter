@@ -84,11 +84,11 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                         System.out.println("ERROR: top-level companion object found.");
                         continue;
                     }
-                    String name = jt.getName() + "$";
+                    String name;
                     try {
-                        name += companionObj.simpleIdentifier().Identifier().getText();
+                        name = companionObj.simpleIdentifier().Identifier().getText();
                     } catch (Exception ignored) {
-                        name += "Companion";
+                        name = "Companion";
                     }
                     if (sourceFile.debug)
                         System.out.println("Registering companion type: " + name);

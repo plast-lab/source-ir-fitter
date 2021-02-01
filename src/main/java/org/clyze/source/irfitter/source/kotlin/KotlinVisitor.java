@@ -72,28 +72,34 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
 
     @Override
+    public Void visitCompanionObject(CompanionObjectContext companionObj) {
+        Token positionToken = companionObj.OBJECT().getSymbol();
+        JType jt = scope.getEnclosingType();
+        if (jt == null) {
+            System.out.println("ERROR: top-level companion object found.");
+            return null;
+        }
+        String name;
+        try {
+            name = companionObj.simpleIdentifier().Identifier().getText();
+        } catch (Exception ignored) {
+            name = "Companion";
+        }
+        if (sourceFile.debug)
+            System.out.println("Registering companion type: " + name);
+        visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
+                companionObj.delegationSpecifiers(), companionObj.classBody());
+        return null;
+    }
+
+    @Override
     public Void visitClassBody(ClassBodyContext cBody) {
         ClassMemberDeclarationsContext memDecls = cBody.classMemberDeclarations();
         if (memDecls != null) {
             for (ClassMemberDeclarationContext memDecl : memDecls.classMemberDeclaration()) {
                 CompanionObjectContext companionObj = memDecl.companionObject();
                 if (companionObj != null) {
-                    Token positionToken = companionObj.OBJECT().getSymbol();
-                    JType jt = scope.getEnclosingType();
-                    if (jt == null) {
-                        System.out.println("ERROR: top-level companion object found.");
-                        continue;
-                    }
-                    String name;
-                    try {
-                        name = companionObj.simpleIdentifier().Identifier().getText();
-                    } catch (Exception ignored) {
-                        name = "Companion";
-                    }
-                    if (sourceFile.debug)
-                        System.out.println("Registering companion type: " + name);
-                    visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
-                            companionObj.delegationSpecifiers(), companionObj.classBody());
+                    visitCompanionObject(companionObj);
                     continue;
                 }
                 DeclarationContext decl = memDecl.declaration();

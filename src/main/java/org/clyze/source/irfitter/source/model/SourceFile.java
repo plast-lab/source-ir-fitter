@@ -442,7 +442,7 @@ public class SourceFile {
             try {
                 String fullPath = file.getCanonicalPath();
                 String topPath = topDir.getCanonicalPath();
-                if (fullPath.startsWith(topPath))
+                if (fullPath.startsWith(topPath) && fullPath.length() > topPath.length())
                     cachedRelativePath = fullPath.substring(topPath.length() + File.separator.length());
                 else {
                     System.out.println("WARNING: path " + fullPath + " not under " + topPath);

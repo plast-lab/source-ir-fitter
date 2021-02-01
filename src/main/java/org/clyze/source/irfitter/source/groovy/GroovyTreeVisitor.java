@@ -400,7 +400,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                             if (sourceFile.debug)
                                 System.out.println("Found string literal in initializer: " + s);
                             Position pos = GroovyUtils.createPositionFromTokens(stringLiteral.start, stringLiteral.stop);
-                            return new JStringConstant<T>(sourceFile, pos, decl, s);
+                            return new JStringConstant<>(sourceFile, pos, decl, s);
                         }
                     }
                 }

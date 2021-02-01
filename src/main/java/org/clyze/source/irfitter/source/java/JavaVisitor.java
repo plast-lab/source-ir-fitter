@@ -20,7 +20,8 @@ import org.clyze.source.irfitter.source.model.*;
 /** The AST visitor that reads Java sources. */
 public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
-    Scope scope = new Scope();
+    /** The scoping object. */
+    private final Scope scope = new Scope();
 
     @Override
     public void visit(CompilationUnit n, SourceFile sourceFile) {

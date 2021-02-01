@@ -53,13 +53,13 @@ public class BytecodeParser {
                     new BytecodeModifierPack(mNode), irTypeMods.isInterface());
             if (debug)
                 System.out.println("IR method: " + irMethod);
-            processBytecodeInstructions(irMethod, mNode, irMethod);
+            processBytecodeInstructions(irMethod, mNode);
             irType.methods.add(irMethod);
         }
         return irType;
     }
 
-    private void processBytecodeInstructions(IRMethod method, MethodNode mNode, IRMethod irMethod) {
+    private void processBytecodeInstructions(IRMethod method, MethodNode mNode) {
         // First, read line-number-to-label table.
         Map<Label, Integer> indexToSourceLine = new HashMap<>();
         for (AbstractInsnNode instrNode : mNode.instructions) {

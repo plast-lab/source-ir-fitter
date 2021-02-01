@@ -44,11 +44,11 @@ public class IRMethod extends IRElement implements AbstractMethod {
         }));
     }
 
-    public IRAllocation addAllocation(String typeId, boolean inIIB, boolean isArray,
-                                      Integer sourceLine, boolean debug) {
+    public void addAllocation(String typeId, boolean inIIB, boolean isArray,
+                              Integer sourceLine, boolean debug) {
         String typeId0 = isArray ? typeId + "[]" : typeId;
         String methodId = getId();
-        return addNumberedElement(allocationCounters, allocations, methodId, "new " + typeId0,
+        addNumberedElement(allocationCounters, allocations, methodId, "new " + typeId0,
                 ((counter, elemId) -> {
                     IRAllocation irAlloc = new IRAllocation(elemId, typeId0, methodId, inIIB, isArray, sourceLine);
                     if (debug)

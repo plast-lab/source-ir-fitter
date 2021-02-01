@@ -39,7 +39,8 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
 
     @Override
     public String toString() {
-        return "field{name=" + name + ", type=" + type + ", parent=" + parent.getName() + "}";
+        String parentDesc = parent == null ? "-" : parent.getName();
+        return "field{name=" + name + ", type=" + type + ", parent=" + parentDesc + "}";
     }
 
     @Override

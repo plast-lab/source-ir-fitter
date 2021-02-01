@@ -8,8 +8,15 @@ import org.clyze.source.irfitter.source.model.SourceModifierPack;
 /** Class/field/method modifiers for Kotlin sources. */
 public class KotlinModifierPack extends SourceModifierPack {
     private boolean isInner = false;
+    private boolean isConst = false;
 
     public KotlinModifierPack(SourceFile sourceFile, ModifiersContext modsCtxt) {
+        this(sourceFile, null, modsCtxt);
+    }
+
+    public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl,
+                              ModifiersContext modsCtxt) {
+        updateFrom(sourceFile, anl);
         if (modsCtxt != null) {
             List<ModifierContext> mcl = modsCtxt.modifier();
             if (mcl != null)
@@ -19,10 +26,6 @@ public class KotlinModifierPack extends SourceModifierPack {
         }
     }
 
-    public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl) {
-        updateFrom(sourceFile, anl);
-    }
-
     private void updateFrom(SourceFile sourceFile, List<AnnotationContext> anl) {
         if (anl != null)
             for (AnnotationContext ac : anl)
@@ -30,33 +33,38 @@ public class KotlinModifierPack extends SourceModifierPack {
     }
 
     public void updateFrom(ModifierContext mc) {
-        VisibilityModifierContext visModCtx = mc.visibilityModifier();
-        if (visModCtx != null) {
-            if (visModCtx.PUBLIC() != null)
+        VisibilityModifierContext visMod = mc.visibilityModifier();
+        if (visMod != null) {
+            if (visMod.PUBLIC() != null)
                 this.isPublic = true;
-            if (visModCtx.PRIVATE() != null)
+            if (visMod.PRIVATE() != null)
                 this.isPrivate = true;
-            if (visModCtx.PROTECTED() != null)
+            if (visMod.PROTECTED() != null)
                 this.isProtected = true;
         }
-        InheritanceModifierContext inModCtx = mc.inheritanceModifier();
-        if (inModCtx != null) {
-            if (inModCtx.ABSTRACT() != null)
+        InheritanceModifierContext inMod = mc.inheritanceModifier();
+        if (inMod != null) {
+            if (inMod.ABSTRACT() != null)
                 this.isAbstract = true;
-            if (inModCtx.FINAL() != null)
+            if (inMod.FINAL() != null)
                 this.isFinal = true;
         }
-        ClassModifierContext classModCtx = mc.classModifier();
-        if (classModCtx != null) {
-            if (classModCtx.INNER() != null)
+        ClassModifierContext classMod = mc.classModifier();
+        if (classMod != null) {
+            if (classMod.INNER() != null)
                 this.isInner = true;
-            if (classModCtx.ENUM() != null)
+            if (classMod.ENUM() != null)
                 this.isEnum = true;
         }
-        FunctionModifierContext funModCtx = mc.functionModifier();
-        if (funModCtx != null) {
-            if (funModCtx.EXTERNAL() != null)
+        FunctionModifierContext funMod = mc.functionModifier();
+        if (funMod != null) {
+            if (funMod.EXTERNAL() != null)
                 this.isNative = true;
+        }
+        PropertyModifierContext propMod = mc.propertyModifier();
+        if (propMod != null) {
+            if (propMod.CONST() != null)
+                this.isConst = true;
         }
     }
 
@@ -83,5 +91,23 @@ public class KotlinModifierPack extends SourceModifierPack {
 
     public boolean isInner() {
         return this.isInner;
+    }
+
+    public boolean isConst() {
+        return this.isConst;
+    }
+
+    /** Pretty printer. */
+    @Override
+    public String toString() {
+        return "inner=" + isInner() + "," +
+                "const=" + isConst() + "," +
+                "abstract=" + isAbstract() + "," +
+                "native=" + isNative() + "," +
+                "final=" + isFinal() + "," +
+                "enum=" + isEnum() + "," +
+                "public=" + isPublic() + "," +
+                "protected=" + isProtected() + "," +
+                "private=" + isPrivate();
     }
 }

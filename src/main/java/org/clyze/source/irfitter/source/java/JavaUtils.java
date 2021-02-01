@@ -1,15 +1,8 @@
 package org.clyze.source.irfitter.source.java;
 
 import com.github.javaparser.Position;
-import com.github.javaparser.ast.Modifier;
-import com.github.javaparser.ast.Node;
-import com.github.javaparser.ast.body.TypeDeclaration;
-import com.github.javaparser.ast.expr.SimpleName;
 import com.github.javaparser.ast.nodeTypes.NodeWithRange;
 import java.util.*;
-import org.clyze.source.irfitter.source.model.JType;
-import org.clyze.source.irfitter.source.model.Scope;
-import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** A collection of utilities used during parsing of Java sources. */
 public class JavaUtils {

@@ -392,11 +392,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                         LiteralContext literal = ((LiteralPrmrAltContext) primary).literal();
                         if (literal instanceof StringLiteralAltContext) {
                             StringLiteralContext stringLiteral = ((StringLiteralAltContext) literal).stringLiteral();
-                            String s = stringLiteral.StringLiteral().getText();
-                            // Strip single/double quotes.
-                            if ((s.startsWith("\"") && s.endsWith("\"")) ||
-                                    (s.startsWith("'") && s.endsWith("'")))
-                                s = s.substring(1, s.length() - 1);
+                            String s = Utils.stripQuotes(stringLiteral.StringLiteral().getText());
                             if (sourceFile.debug)
                                 System.out.println("Found string literal in initializer: " + s);
                             Position pos = GroovyUtils.createPositionFromTokens(stringLiteral.start, stringLiteral.stop);

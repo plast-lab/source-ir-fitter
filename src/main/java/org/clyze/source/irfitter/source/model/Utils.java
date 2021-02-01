@@ -91,4 +91,18 @@ public class Utils {
         int dotIdx = type.lastIndexOf('.');
         return dotIdx >= 0 ? type.substring(dotIdx + 1) : type;
     }
+
+    /**
+     * Strips the (matching) single/double quotes around a string. If no such
+     * quotes exist, the input string is returned.
+     * @param s   the original string
+     * @return    the string without quotes
+     */
+    public static String stripQuotes(String s) {
+        if ((s.startsWith("\"") && s.endsWith("\"")) ||
+                (s.startsWith("'") && s.endsWith("'")))
+            return s.substring(1, s.length() - 1);
+        else
+            return s;
+    }
 }

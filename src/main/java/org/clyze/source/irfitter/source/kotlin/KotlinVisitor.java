@@ -2,6 +2,7 @@ package org.clyze.source.irfitter.source.kotlin;
 
 import java.util.*;
 import org.antlr.grammars.KotlinParserBaseVisitor;
+import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.*;
 import org.clyze.source.irfitter.source.model.*;
 import org.antlr.grammars.KotlinParser.*;
@@ -21,14 +22,12 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
 
     // Common functionality, shared by class and object declarations.
-    private void visitTypeDeclaration(SimpleIdentifierContext id,
+    private void visitTypeDeclaration(String name, Token positionToken,
                                       ModifiersContext mc, DelegationSpecifiersContext delegSpecs, ClassBodyContext cBody) {
-        TerminalNode idNode = id.Identifier();
-        String name = idNode.getText();
         if (sourceFile.debug)
             System.out.println("Type declaration: " + name);
         JType parent = scope.getEnclosingType();
-        Position pos = KotlinUtils.createPositionFromToken(idNode.getSymbol());
+        Position pos = KotlinUtils.createPositionFromToken(positionToken);
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, mc);
         boolean isAnonymous = false;
 
@@ -45,20 +44,29 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         jt.typeUsages.addAll(mp.getAnnotationUses());
         sourceFile.jTypes.add(jt);
 
+        if (sourceFile.debug)
+            System.out.println("Created type: " + jt);
+
         if (cBody != null)
             scope.enterTypeScope(jt, (jt0 -> visitClassBody(cBody)));
     }
 
     @Override
     public Void visitObjectDeclaration(ObjectDeclarationContext objDecl) {
-        visitTypeDeclaration(objDecl.simpleIdentifier(), objDecl.modifiers(),
+        TerminalNode idNode = objDecl.simpleIdentifier().Identifier();
+        String name = idNode.getText();
+        Token positionToken = idNode.getSymbol();
+        visitTypeDeclaration(name, positionToken, objDecl.modifiers(),
                 objDecl.delegationSpecifiers(), objDecl.classBody());
         return null;
     }
 
     @Override
     public Void visitClassDeclaration(ClassDeclarationContext cdc) {
-        visitTypeDeclaration(cdc.simpleIdentifier(), cdc.modifiers(),
+        TerminalNode idNode = cdc.simpleIdentifier().Identifier();
+        String name = idNode.getText();
+        Token positionToken = idNode.getSymbol();
+        visitTypeDeclaration(name, positionToken, cdc.modifiers(),
                 cdc.delegationSpecifiers(), cdc.classBody());
         return null;
     }
@@ -68,8 +76,24 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         ClassMemberDeclarationsContext memDecls = cBody.classMemberDeclarations();
         if (memDecls != null) {
             for (ClassMemberDeclarationContext memDecl : memDecls.classMemberDeclaration()) {
-                if (memDecl.companionObject() != null) {
-                    System.out.println("TODO: handle companion objects.");
+                CompanionObjectContext companionObj = memDecl.companionObject();
+                if (companionObj != null) {
+                    Token positionToken = companionObj.OBJECT().getSymbol();
+                    JType jt = scope.getEnclosingType();
+                    if (jt == null) {
+                        System.out.println("ERROR: top-level companion object found.");
+                        continue;
+                    }
+                    String name = jt.getName() + "$";
+                    try {
+                        name += companionObj.simpleIdentifier().Identifier().getText();
+                    } catch (Exception ignored) {
+                        name += "Companion";
+                    }
+                    if (sourceFile.debug)
+                        System.out.println("Registering companion type: " + name);
+                    visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
+                            companionObj.delegationSpecifiers(), companionObj.classBody());
                     continue;
                 }
                 DeclarationContext decl = memDecl.declaration();
@@ -91,19 +115,21 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 PropertyDeclarationContext propMemDecl = decl.propertyDeclaration();
                 if (propMemDecl != null) {
                     JType jt = scope.getEnclosingType();
+                    ModifiersContext modifiers = propMemDecl.modifiers();
                     VariableDeclarationContext vDecl = propMemDecl.variableDeclaration();
+                    ExpressionContext vExpr = propMemDecl.expression();
                     if (vDecl != null)
-                        processFieldDeclaration(jt, vDecl);
+                        processFieldDeclaration(jt, modifiers, vDecl, vExpr);
                     else {
                         MultiVariableDeclarationContext vDecls = propMemDecl.multiVariableDeclaration();
                         for (VariableDeclarationContext vDecl0 : vDecls.variableDeclaration())
-                            processFieldDeclaration(jt, vDecl0);
+                            processFieldDeclaration(jt, modifiers, vDecl0, vExpr);
                     }
                     System.out.println("TODO: fully handle property members.");
                     continue;
                 }
                 TypeAliasContext typeAlias = decl.typeAlias();
-                if (classMemDecl != null) {
+                if (typeAlias != null) {
                     System.out.println("TODO: handle type aliases.");
                 }
             }
@@ -111,22 +137,28 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         return null;
     }
 
-    private void processFieldDeclaration(JType jt, VariableDeclarationContext fDecl) {
+    private void processFieldDeclaration(JType jt, ModifiersContext modifiers,
+                                         VariableDeclarationContext fDecl,
+                                         ExpressionContext vExpr) {
         SimpleIdentifierContext id = fDecl.simpleIdentifier();
         String fName = id.getText();
         String fType = getType(fDecl.type());
-        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation());
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers);
         JField srcField = new JField(sourceFile, fType, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (sourceFile.debug)
-            System.out.println("Found source field: " + srcField);
+            System.out.println("Found source field: " + srcField + " : " + mp.toString());
         jt.fields.add(srcField);
+        if (mp.isConst() && vExpr != null) {
+            StringScanner<JField> stringScanner = new StringScanner<>(sourceFile, srcField);
+            vExpr.accept(stringScanner);
+            Collection<JStringConstant<JField>> stringConstants = stringScanner.strs;
+            if (stringConstants != null) {
+                if (sourceFile.debug)
+                    System.out.println("Field " + srcField + " is initialized by string constants: " + stringConstants);
+                sourceFile.stringConstants.addAll(stringConstants);
+            }
+        }
     }
-
-//    @Override
-//    public Void visitChildren(RuleNode ruleNode) {
-//        visitTree(ruleNode);
-//        return null;
-//    }
 
     @Override
     public Void visitFunctionDeclaration(FunctionDeclarationContext funMemDecl) {

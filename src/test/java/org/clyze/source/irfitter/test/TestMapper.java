@@ -2,6 +2,7 @@ package org.clyze.source.irfitter.test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 import org.apache.commons.io.FileUtils;
 import org.clyze.source.irfitter.Main;
@@ -35,9 +36,9 @@ public class TestMapper {
 
     void generateJson(String jarRes, String sourcesJarRes, String outDir) throws IOException {
         ClassLoader classLoader = getClass().getClassLoader();
-        String jar = classLoader.getResource(jarRes).getFile();
+        String jar = Objects.requireNonNull(classLoader.getResource(jarRes)).getFile();
         System.out.println("jar: " + jar);
-        String sourcesJar = classLoader.getResource(sourcesJarRes).getFile();
+        String sourcesJar = Objects.requireNonNull(classLoader.getResource(sourcesJarRes)).getFile();
         System.out.println("sourcesJar: " + sourcesJar);
         FileUtils.deleteDirectory(new File(outDir));
         String[] args = new String[]{"--ir", jar, "--source", sourcesJar, "--out", outDir, "--json"};

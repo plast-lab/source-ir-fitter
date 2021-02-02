@@ -102,7 +102,7 @@ public class Main {
             String dbVal = cli.getOptionValue(dbopt.getOpt());
             File db = dbVal == null ? null : new File(dbVal);
             File out = new File(cli.getOptionValue(outOpt.getOpt()));
-            (new Driver(db, out, "1.0", true)).match(irTypes, sources, debug, json, sarif);
+            (new Driver(db, out, "1.0", false)).match(irTypes, sources, debug, json, sarif);
         } catch (ParseException e) {
             e.printStackTrace();
         }

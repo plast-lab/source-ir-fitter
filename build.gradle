@@ -26,7 +26,7 @@ dependencies {
     implementation "commons-cli:commons-cli:${commonsCliVersion}"
     implementation "org.clyze:clue-common:${clueCommonVersion}"
     implementation "org.clyze:metadata-model:1.0.6"
-    implementation "org.clyze:code-processor:4.23.3"
+    implementation "org.clyze:code-processor:4.23.6"
     // Bytecode parser, BSD
     implementation group: 'org.ow2.asm', name: 'asm', version: asmVersion
     implementation group: 'org.ow2.asm', name: 'asm-tree', version: asmVersion

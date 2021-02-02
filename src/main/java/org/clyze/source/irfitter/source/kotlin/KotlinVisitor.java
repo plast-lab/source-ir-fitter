@@ -13,12 +13,22 @@ import org.clyze.persistent.model.Position;
  * https://github.com/gfour/grammars-v4/blob/master/kotlin/kotlin-formal/KotlinParser.g4
  */
 public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
+    // Taken from https://kotlinlang.org/docs/reference/packages.html
+    private static final String[] DEFAULT_IMPORTS = new String[] {
+            "kotlin", "kotlin.annotation", "kotlin.collections",
+            "kotlin.comparisons", "kotlin.io", "kotlin.ranges",
+            "kotlin.sequences", "kotlin.text", "java.lang", "kotlin.jvm",
+            "kotlin.js"
+    };
+
     private final SourceFile sourceFile;
     /** The scoping object. */
     private final Scope scope = new Scope();
 
     public KotlinVisitor(SourceFile sourceFile) {
         this.sourceFile = sourceFile;
+        for (String i : DEFAULT_IMPORTS)
+            sourceFile.imports.add(new Import(i, true, false));
     }
 
     // Common functionality, shared by class and object declarations.

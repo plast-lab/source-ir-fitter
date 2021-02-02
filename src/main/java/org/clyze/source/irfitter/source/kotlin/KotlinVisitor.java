@@ -64,6 +64,9 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     @Override
     public Void visitObjectDeclaration(ObjectDeclarationContext objDecl) {
         TerminalNode idNode = objDecl.simpleIdentifier().Identifier();
+        // This may happen when parsing fails for some source code segments.
+        if (idNode == null)
+            return null;
         String name = idNode.getText();
         Token positionToken = idNode.getSymbol();
         visitTypeDeclaration(name, positionToken, objDecl.modifiers(),

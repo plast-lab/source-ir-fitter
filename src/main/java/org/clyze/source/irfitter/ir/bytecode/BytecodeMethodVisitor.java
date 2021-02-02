@@ -7,7 +7,11 @@ import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 
+/**
+ * The visitor for bytecode methods.
+ */
 public class BytecodeMethodVisitor extends MethodVisitor {
     private final int NO_LINE = -1;
     private int lastLine = NO_LINE;
@@ -63,5 +67,12 @@ public class BytecodeMethodVisitor extends MethodVisitor {
         Integer l = indexToSourceLine.get(label);
         lastLine = l == null ? NO_LINE : l;
         super.visitLabel(label);
+    }
+
+    @Override
+    public void visitLdcInsn(Object value) {
+        if (value instanceof Type)
+            irMethod.addTypeReference(((Type) value).getClassName());
+        super.visitLdcInsn(value);
     }
 }

@@ -233,6 +233,15 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         super.visit(n, sourceFile);
     }
 
+    @Override
+    public void visit(ClassExpr classExpr, SourceFile sourceFile) {
+        Position pos = JavaUtils.createPositionFromNode(classExpr);
+        TypeUsage tu = new TypeUsage(classExpr.getTypeAsString(), pos, sourceFile);
+        if (sourceFile.debug)
+            System.out.println("Registering type usage: " + tu);
+        scope.getEnclosingType().typeUsages.add(tu);
+    }
+
     static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getTypeAsString());
     }

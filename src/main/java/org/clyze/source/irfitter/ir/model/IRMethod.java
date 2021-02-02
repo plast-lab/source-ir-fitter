@@ -1,9 +1,6 @@
 package org.clyze.source.irfitter.ir.model;
 
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -13,6 +10,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public final List<IRAllocation> allocations = new LinkedList<>();
     private final Map<String, Integer> invocationCounters = new HashMap<>();
     private final Map<String, Integer> allocationCounters = new HashMap<>();
+    private Set<String> typeReferences = null;
     public final String name;
     public final String returnType;
     public final List<String> paramTypes;
@@ -78,5 +76,24 @@ public class IRMethod extends IRElement implements AbstractMethod {
     @Override
     public String toString() {
         return getId();
+    }
+
+    /**
+     * Register a reference to a type in the method body (such as {@code C.class}).
+     * @param type  the (fully-qualified) type
+     */
+    public void addTypeReference(String type) {
+        if (typeReferences == null)
+            typeReferences = new HashSet<>();
+//        System.out.println("Found type reference to " + type + " in " + this);
+        typeReferences.add(type);
+    }
+
+    /**
+     * Get the class/interface references that exist in the method body.
+     * @return    a set of (fully-qualified) types
+     */
+    public Set<String> getTypeReferences() {
+        return typeReferences;
     }
 }

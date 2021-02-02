@@ -91,16 +91,23 @@ public class DexParser {
             for (Instruction instr : implementation.getInstructions()) {
                 switch (instr.getOpcode()) {
                     case NEW_INSTANCE: {
-                        TypeReference typeRef = (TypeReference) ((ReferenceInstruction) instr).getReference();
-                        String typeId = TypeUtils.raiseTypeId(typeRef.getType());
+                        String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
                         boolean inIIB = false;
                         Integer sourceLine = null;
                         irMethod.addAllocation(typeId, inIIB, false, sourceLine, debug);
+                        break;
+                    }
+                    case CONST_CLASS: {
+                        String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
+                        irMethod.addTypeReference(typeId);
                         break;
                     }
                 }
             }
         }
     }
-}
 
+    static String raisedJvmTypeOf(ReferenceInstruction instr) {
+        return TypeUtils.raiseTypeId(((TypeReference) instr.getReference()).getType());
+    }
+}

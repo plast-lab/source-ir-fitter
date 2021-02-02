@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
+import java.util.Arrays;
 import java.util.Collection;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.Usage;
@@ -14,6 +15,7 @@ public class TypeUsage implements FuzzyTypes {
     public final Position position;
     public final SourceFile sourceFile;
     public String matchId = null;
+    private Collection<String> cachedIds = null;
 
     public TypeUsage(String type, Position position, SourceFile sourceFile) {
         this.type = type;
@@ -38,11 +40,13 @@ public class TypeUsage implements FuzzyTypes {
 
     @Override
     public Collection<String> getIds() {
-        return resolveType(type);
+        if (cachedIds == null)
+            cachedIds = resolveType(type);
+        return cachedIds;
     }
 
     @Override
     public String toString() {
-        return "TYPE-USE: " + type + "@" + position;
+        return "TYPE-USE: " + type + "@" + sourceFile + ", " + position;
     }
 }

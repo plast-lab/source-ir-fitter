@@ -454,6 +454,11 @@ public class SourceFile {
         }
         return cachedRelativePath;
     }
+
+    @Override
+    public String toString() {
+        return this.file.getPath();
+    }
 }
 
 class NameMatch<M> {

@@ -106,52 +106,71 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
 
     @Override
+    public Void visitClassMemberDeclaration(ClassMemberDeclarationContext memDecl) {
+        CompanionObjectContext companionObj = memDecl.companionObject();
+        if (companionObj != null) {
+            visitCompanionObject(companionObj);
+            return null;
+        }
+        DeclarationContext decl = memDecl.declaration();
+        ClassDeclarationContext classMemDecl = decl.classDeclaration();
+        if (classMemDecl != null) {
+            System.out.println("TODO: handle nested classes.");
+            return null;
+        }
+        FunctionDeclarationContext funMemDecl = decl.functionDeclaration();
+        if (funMemDecl != null) {
+            visitFunctionDeclaration(funMemDecl);
+            return null;
+        }
+        ObjectDeclarationContext objMemDecl = decl.objectDeclaration();
+        if (objMemDecl != null) {
+            System.out.println("TODO: handle object members.");
+            return null;
+        }
+        PropertyDeclarationContext propMemDecl = decl.propertyDeclaration();
+        if (propMemDecl != null) {
+            return visitPropertyDeclaration(propMemDecl);
+        }
+        TypeAliasContext typeAlias = decl.typeAlias();
+        if (typeAlias != null) {
+            System.out.println("TODO: handle type aliases.");
+            return null;
+        }
+        AnonymousInitializerContext anonymousInit = memDecl.anonymousInitializer();
+        if (anonymousInit != null) {
+            System.out.println("TODO: handle anonymous initializers.");
+        }
+        SecondaryConstructorContext secondaryConstructor = memDecl.secondaryConstructor();
+        if (secondaryConstructor != null) {
+            System.out.println("TODO: handle secondary constructors.");
+        }
+        return null;
+
+    }
+
+    @Override
+    public Void visitPropertyDeclaration(PropertyDeclarationContext propMemDecl) {
+        JType jt = scope.getEnclosingType();
+        ModifiersContext modifiers = propMemDecl.modifiers();
+        VariableDeclarationContext vDecl = propMemDecl.variableDeclaration();
+        ExpressionContext vExpr = propMemDecl.expression();
+        if (vDecl != null)
+            processFieldDeclaration(jt, modifiers, vDecl, vExpr);
+        else {
+            MultiVariableDeclarationContext vDecls = propMemDecl.multiVariableDeclaration();
+            for (VariableDeclarationContext vDecl0 : vDecls.variableDeclaration())
+                processFieldDeclaration(jt, modifiers, vDecl0, vExpr);
+        }
+        return null;
+    }
+
+    @Override
     public Void visitClassBody(ClassBodyContext cBody) {
         ClassMemberDeclarationsContext memDecls = cBody.classMemberDeclarations();
         if (memDecls != null) {
-            for (ClassMemberDeclarationContext memDecl : memDecls.classMemberDeclaration()) {
-                CompanionObjectContext companionObj = memDecl.companionObject();
-                if (companionObj != null) {
-                    visitCompanionObject(companionObj);
-                    continue;
-                }
-                DeclarationContext decl = memDecl.declaration();
-                ClassDeclarationContext classMemDecl = decl.classDeclaration();
-                if (classMemDecl != null) {
-                    System.out.println("TODO: handle nested classes.");
-                    continue;
-                }
-                FunctionDeclarationContext funMemDecl = decl.functionDeclaration();
-                if (funMemDecl != null) {
-                    visitFunctionDeclaration(funMemDecl);
-                    continue;
-                }
-                ObjectDeclarationContext objMemDecl = decl.objectDeclaration();
-                if (objMemDecl != null) {
-                    System.out.println("TODO: handle object members.");
-                    continue;
-                }
-                PropertyDeclarationContext propMemDecl = decl.propertyDeclaration();
-                if (propMemDecl != null) {
-                    JType jt = scope.getEnclosingType();
-                    ModifiersContext modifiers = propMemDecl.modifiers();
-                    VariableDeclarationContext vDecl = propMemDecl.variableDeclaration();
-                    ExpressionContext vExpr = propMemDecl.expression();
-                    if (vDecl != null)
-                        processFieldDeclaration(jt, modifiers, vDecl, vExpr);
-                    else {
-                        MultiVariableDeclarationContext vDecls = propMemDecl.multiVariableDeclaration();
-                        for (VariableDeclarationContext vDecl0 : vDecls.variableDeclaration())
-                            processFieldDeclaration(jt, modifiers, vDecl0, vExpr);
-                    }
-                    System.out.println("TODO: fully handle property members.");
-                    continue;
-                }
-                TypeAliasContext typeAlias = decl.typeAlias();
-                if (typeAlias != null) {
-                    System.out.println("TODO: handle type aliases.");
-                }
-            }
+            for (ClassMemberDeclarationContext memDecl : memDecls.classMemberDeclaration())
+                visitClassMemberDeclaration(memDecl);
         }
         return null;
     }
@@ -166,16 +185,22 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         JField srcField = new JField(sourceFile, fType, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (sourceFile.debug)
             System.out.println("Found source field: " + srcField + " : " + mp.toString());
-        jt.fields.add(srcField);
-        if (mp.isConst() && vExpr != null) {
-            StringScanner<JField> stringScanner = new StringScanner<>(sourceFile, srcField);
-            vExpr.accept(stringScanner);
-            Collection<JStringConstant<JField>> stringConstants = stringScanner.strs;
-            if (stringConstants != null) {
-                if (sourceFile.debug)
-                    System.out.println("Field " + srcField + " is initialized by string constants: " + stringConstants);
-                sourceFile.stringConstants.addAll(stringConstants);
+        if (jt == null)
+            System.out.println("ERROR: top-level field found: " + srcField);
+        else
+            jt.fields.add(srcField);
+        if (vExpr != null) {
+            if (mp.isConst()) {
+                StringScanner<JField> stringScanner = new StringScanner<>(sourceFile, srcField);
+                vExpr.accept(stringScanner);
+                Collection<JStringConstant<JField>> stringConstants = stringScanner.strs;
+                if (stringConstants != null) {
+                    if (sourceFile.debug)
+                        System.out.println("Field " + srcField + " is initialized by string constants: " + stringConstants);
+                    sourceFile.stringConstants.addAll(stringConstants);
+                }
             }
+            vExpr.accept(this);
         }
     }
 
@@ -219,6 +244,73 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             sourceFile.packageName = getQualifiedName(phc.identifier());
         kfc.topLevelObject().forEach(this::visitChildren);
         return null;
+    }
+
+    private static boolean isColonColonClass(NavigationSuffixContext ctx) {
+        if (ctx == null)
+            return false;
+        MemberAccessOperatorContext accessOp = ctx.memberAccessOperator();
+        if (accessOp != null && accessOp.COLONCOLON() != null) {
+            SimpleIdentifierContext simpleId = ctx.simpleIdentifier();
+            if (simpleId != null) {
+                TerminalNode id = simpleId.Identifier();
+                return id != null && "class".equals(id.getText());
+            }
+        }
+        return false;
+    }
+
+    private static String getClassType(PostfixUnaryExpressionContext ctx) {
+        String type = getClassType(ctx.getText());
+        if (type != null)
+            return type;
+        PrimaryExpressionContext primaryExpression = ctx.primaryExpression();
+        List<PostfixUnarySuffixContext> unarySuffixList = ctx.postfixUnarySuffix();
+        if (primaryExpression != null && unarySuffixList != null) {
+            SimpleIdentifierContext simpleId = primaryExpression.simpleIdentifier();
+            if (simpleId != null) {
+                int listSize = unarySuffixList.size();
+                if (listSize > 0) {
+                    boolean isCC = isColonColonClass(unarySuffixList.get(0).navigationSuffix());
+                    // Two cases for the suffix: "'::class" or "::class.java".
+                    if ((listSize == 1 && isCC) || (listSize == 2 && isCC && ".java".equals(unarySuffixList.get(1).getText()))) {
+                        type = simpleId.getText();
+                    }
+                }
+            }
+        }
+        return type;
+    }
+
+    private static String getClassType(String text) {
+        if (text == null)
+            return null;
+        if (text.endsWith("::class"))
+            return text.substring(0, text.length() - "::class".length());
+        if (text.endsWith("::class.java"))
+            return text.substring(0, text.length() - "::class.java".length());
+        return null;
+    }
+
+    @Override
+    public Void visitPostfixUnaryExpression(PostfixUnaryExpressionContext ctx) {
+        String type = getClassType(ctx);
+        if (type != null) {
+            if (sourceFile.debug)
+                System.out.println("Encountered type reference: " + type);
+            JType jt = scope.getEnclosingType();
+            if (jt == null)
+                System.out.println("ERROR: cannot process top-level usage for type " + type);
+            else
+                jt.typeUsages.add(new TypeUsage(type, KotlinUtils.createPositionFromTokens(ctx.start, ctx.stop), sourceFile));
+        }
+        return super.visitPostfixUnaryExpression(ctx);
+    }
+
+    @Override
+    public Void visitCallableReference(CallableReferenceContext ctx) {
+        System.out.println("Callable: " + ctx.getText());
+        return super.visitCallableReference(ctx);
     }
 
     @Override

@@ -62,7 +62,7 @@ public class Driver extends Generator {
 
     public void match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                       boolean debug, boolean json, boolean sarif) {
-        System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " sources...");
+        System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         IdMapper idMapper = new IdMapper();
         int unmatched = 0;
         for (SourceFile sf : sources) {
@@ -78,6 +78,7 @@ public class Driver extends Generator {
             for (JType jt : sf.jTypes)
                 matchTypeUsages(bm, jt, debug);
         }
+
         System.out.println(unmatched + " elements not matched.");
 
         Map<String, Collection<? extends NamedElementWithPosition<?>>> flatMapping = idMapper.get();
@@ -99,9 +100,13 @@ public class Driver extends Generator {
             return;
 
         Set<String> irAnnotations = jt.matchElement.mp.getAnnotations();
+        Set<String> irClassRefs = jt.matchElement.getTypeReferences();
         for (TypeUsage typeUsage : typeUsages) {
+            if (debug)
+                System.out.println("Examining type usage: " + typeUsage);
             for (String irTypeId : typeUsage.getIds()) {
-                if (irAnnotations.contains(irTypeId)) {
+                // Match type uses against local annotation uses or the global IR types.
+                if (irAnnotations.contains(irTypeId) || irClassRefs.contains(irTypeId)) {
                     if (debug)
                         System.out.println("Matched use for type '" + typeUsage.type + "': " + irTypeId);
                     typeUsage.matchId = irTypeId;

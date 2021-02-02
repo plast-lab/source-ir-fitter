@@ -1,7 +1,9 @@
 package org.clyze.source.irfitter.source.kotlin;
 
+import java.util.LinkedList;
 import java.util.List;
 import org.antlr.grammars.KotlinParser.*;
+import org.antlr.grammars.KotlinParserBaseVisitor;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.clyze.source.irfitter.source.model.SourceModifierPack;
 
@@ -71,7 +73,22 @@ public class KotlinModifierPack extends SourceModifierPack {
     public void updateFrom(SourceFile sourceFile, AnnotationContext ac) {
         if (ac == null)
             return;
-        registerAnnotation(sourceFile, ac.getText(), KotlinUtils.createPositionFromToken(ac.start));
+        for (String annotationName : getAnnotationNames(ac))
+            registerAnnotation(sourceFile, annotationName, KotlinUtils.createPositionFromToken(ac.start));
+    }
+
+    private static List<String> getAnnotationNames(AnnotationContext ac) {
+        List<String> names = new LinkedList<>();
+        ac.accept(new KotlinParserBaseVisitor<Void>() {
+            @Override
+            public Void visitUserType(UserTypeContext ctx) {
+                for (SimpleUserTypeContext simpleUserType : ctx.simpleUserType()) {
+                    names.add(simpleUserType.simpleIdentifier().getText());
+                }
+                return null;
+            }
+        });
+        return names;
     }
 
     @Override

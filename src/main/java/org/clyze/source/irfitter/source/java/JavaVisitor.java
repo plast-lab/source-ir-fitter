@@ -206,6 +206,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             // If anonymous, add placeholder allocation, to be matched later.
             parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
         }
+        objCExpr.getArguments().forEach(p -> p.accept(this, sourceFile));
     }
 
     @Override

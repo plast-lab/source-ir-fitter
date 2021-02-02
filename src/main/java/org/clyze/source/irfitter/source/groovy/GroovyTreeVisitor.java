@@ -87,7 +87,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             visitMethodDeclaration(methCtx);
         FieldDeclarationContext fieldCtx = memCtx.fieldDeclaration();
         if (fieldCtx != null)
-            processFieldDeclaration(fieldCtx);
+            visitFieldDeclaration(fieldCtx);
         ClassDeclarationContext classCtx = memCtx.classDeclaration();
         if (classCtx != null) {
             GroovyModifierPack mp = new GroovyModifierPack(sourceFile, memCtx.modifiersOpt());
@@ -405,7 +405,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return null;
     }
 
-    private void processFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
+    @Override
+    public Void visitFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
         JType jt = scope.getEnclosingType();
         for (JVariable jVar : processVariableDeclaration(fieldDeclCtx.variableDeclaration())) {
             ModifierPack mp = jVar.mp;
@@ -419,6 +420,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 }
             }
         }
+        return null;
     }
 
     @Override

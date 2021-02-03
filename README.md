@@ -16,12 +16,10 @@ This is work in progress, currently the following source languages are
 Install the Kotlin ANTLR grammar to the local Maven repository:
 
 ```
-git clone https://github.com/antlr/grammars-v4.git
-cd grammars-v4
-mvn install --pl kotlin/kotlin-formal --am
+./gradlew installKotlinParser
 ```
 
-Then, install this program:
+Then, install the program distribution:
 
 ```
 ./gradlew installDist

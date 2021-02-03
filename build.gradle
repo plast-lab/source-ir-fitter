@@ -50,6 +50,21 @@ test {
     useJUnitPlatform()
 }
 
+task cloneSubmodule() {
+    exec {
+        commandLine 'git', 'submodule', 'update', '--init'
+        ignoreExitValue = true
+    }
+}
+task installKotlinParser() {
+    exec {
+	workingDir 'grammars-v4'
+        commandLine 'mvn', 'install', '--pl', 'kotlin/kotlin-formal', '--am'
+        ignoreExitValue = true
+    }
+}
+installKotlinParser.dependsOn cloneSubmodule
+
 /**
  * Checks for dependencies that may come from mavenLocal and can harm
  * build reproducibility (e.g. for releases).

@@ -106,13 +106,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitClassMemberDeclaration(ClassMemberDeclarationContext memDecl) {
-        CompanionObjectContext companionObj = memDecl.companionObject();
-        if (companionObj != null) {
-            visitCompanionObject(companionObj);
-            return null;
-        }
-        DeclarationContext decl = memDecl.declaration();
+    public Void visitDeclaration(DeclarationContext decl) {
         ClassDeclarationContext classMemDecl = decl.classDeclaration();
         if (classMemDecl != null) {
             System.out.println("TODO: handle nested classes.");
@@ -137,6 +131,19 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             System.out.println("TODO: handle type aliases.");
             return null;
         }
+        return null;
+    }
+
+    @Override
+    public Void visitClassMemberDeclaration(ClassMemberDeclarationContext memDecl) {
+        CompanionObjectContext companionObj = memDecl.companionObject();
+        if (companionObj != null) {
+            visitCompanionObject(companionObj);
+            return null;
+        }
+        DeclarationContext decl = memDecl.declaration();
+        if (decl != null)
+            visitDeclaration(decl);
         AnonymousInitializerContext anonymousInit = memDecl.anonymousInitializer();
         if (anonymousInit != null) {
             System.out.println("TODO: handle anonymous initializers.");

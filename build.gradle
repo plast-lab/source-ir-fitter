@@ -60,11 +60,17 @@ task cloneSubmodule() {
     }
 }
 task installKotlinParser() {
+    def stdout = new ByteArrayOutputStream()
     exec {
-	workingDir 'grammars-v4'
+        workingDir 'grammars-v4'
         commandLine 'mvn', 'install', '--pl', 'kotlin/kotlin-formal', '--am'
         ignoreExitValue = true
+        standardOutput = stdout
     }
+    String out = stdout.toString()
+    println out
+    if (out.indexOf('[ERROR]') >= 0)
+        throw new RuntimeException('Error in Maven installation of parser')
 }
 installKotlinParser.dependsOn cloneSubmodule
 

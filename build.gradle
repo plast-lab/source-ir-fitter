@@ -54,23 +54,27 @@ test {
 }
 
 task cloneSubmodule() {
-    exec {
-        commandLine 'git', 'submodule', 'update', '--init'
-        ignoreExitValue = true
+    doLast {
+        exec {
+            commandLine 'git', 'submodule', 'update', '--init'
+            ignoreExitValue = true
+        }
     }
 }
 task installKotlinParser() {
-    def stdout = new ByteArrayOutputStream()
-    exec {
-        workingDir 'grammars-v4'
-        commandLine 'mvn', 'install', '--pl', 'kotlin/kotlin-formal', '--am'
-        ignoreExitValue = true
-        standardOutput = stdout
+    doLast {
+        def stdout = new ByteArrayOutputStream()
+        exec {
+            workingDir 'grammars-v4'
+            commandLine 'mvn', 'install', '--pl', 'kotlin/kotlin-formal', '--am'
+            ignoreExitValue = true
+            standardOutput = stdout
+        }
+        String out = stdout.toString()
+        println out
+        if (out.indexOf('[ERROR]') >= 0)
+            throw new RuntimeException('Error in Maven installation of parser')
     }
-    String out = stdout.toString()
-    println out
-    if (out.indexOf('[ERROR]') >= 0)
-        throw new RuntimeException('Error in Maven installation of parser')
 }
 installKotlinParser.dependsOn cloneSubmodule
 

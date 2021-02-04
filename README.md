@@ -16,7 +16,7 @@ This is work in progress, currently the following source languages are
 Install the Kotlin ANTLR grammar to the local Maven repository:
 
 ```
-./gradlew installKotlinParser
+./install-kotlin-parser.sh
 ```
 
 Then, install the program distribution:

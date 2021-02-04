@@ -4,6 +4,7 @@ plugins {
     id 'maven-publish'
     id 'net.researchgate.release' version '2.6.0'
     id 'com.github.johnrengelman.shadow' version '5.2.0'
+//    id "com.osacky.doctor" version "0.7.0"
 }
 
 sourceCompatibility = "1.8"

@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.clyze.doop.sarif.Generator;
-import org.clyze.doop.sarif.Result;
+import org.clyze.doop.sarif.SARIFGenerator;
+import org.clyze.sarif.model.Result;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
@@ -19,9 +19,13 @@ import org.clyze.persistent.metadata.Printer;
 import org.clyze.persistent.model.*;
 import org.zeroturnaround.zip.ZipUtil;
 
-public class Driver extends Generator {
+public class Driver {
+    private final SARIFGenerator sarifGenerator;
+    private final File out;
+
     public Driver(File db, File out, String version, boolean standalone) {
-        super(db, out, version, standalone);
+        this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
+        this.out = out;
     }
 
     public static Collection<SourceFile> processSources(File topDir, File srcFile,
@@ -178,15 +182,12 @@ public class Driver extends Generator {
 
     void process(Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping,
                  boolean sarif, boolean debug) {
-        boolean metadataExist = metadataExist();
+        boolean metadataExist = sarifGenerator.metadataExist();
         if (!metadataExist) {
             if (debug)
                 System.out.println("No metadata found.");
             return;
         }
-
-        if (debug && parseOnly)
-            System.out.println("WARNING: parsing mode only.");
 
         List<Result> results = new LinkedList<>();
         AtomicInteger elements = new AtomicInteger(0);
@@ -201,12 +202,12 @@ public class Driver extends Generator {
                     continue;
                 }
                 if (sarif)
-                    processElement(metadataExist, results, symbol, elements);
+                    sarifGenerator.processElement(metadataExist, results, symbol, elements);
             }
         }
         System.out.println("Elements processed: " + elements);
 
         if (sarif)
-            generateSARIF(results);
+            sarifGenerator.generateSARIF(results);
     }
 }

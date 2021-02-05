@@ -53,7 +53,7 @@ cd $DOOP_HOME
 Then, run the code processor:
 
 ```
-build/install/source-ir-fitter/bin/source-ir-fitter --ir path/to/app.jar --source path/to/app/src --out app-out --database ${DOOP_HOME}/out/context-insensitive/app/database
+build/install/source-ir-fitter/bin/source-ir-fitter --sarif --ir path/to/app.jar --source path/to/app/src --out app-out --database ${DOOP_HOME}/out/context-insensitive/app/database
 ```
 
 Finally, run Visual Studio Code on the results:

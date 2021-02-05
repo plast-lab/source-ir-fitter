@@ -50,7 +50,7 @@ public class DexParser {
                     superTypes.addAll(dexClass.getInterfaces());
                     IRType irType = new IRType(typeId, superTypes, irTypeMods);
                     if (debug)
-                        System.out.println("IR type = " + irType);
+                        System.out.println("IR type: " + irType);
                     irTypes.add(irType);
                     String classPrefix = "<" + typeId + ": ";
                     for (DexBackedField dexField : dexClass.getFields()) {

@@ -28,6 +28,8 @@ public class BytecodeParser {
         superTypes.add(node.superName);
         superTypes.addAll(node.interfaces);
         IRType irType = new IRType(className, superTypes, irTypeMods);
+        if (debug)
+            System.out.println("IR type: " + irType);
         String classPrefix = "<" + className + ": ";
         for (FieldNode fNode : node.fields) {
             String fieldType = replaceSlashesWithDots(fNode.desc);

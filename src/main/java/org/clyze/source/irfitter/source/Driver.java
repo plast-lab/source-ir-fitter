@@ -19,18 +19,52 @@ import org.clyze.persistent.metadata.Printer;
 import org.clyze.persistent.model.*;
 import org.zeroturnaround.zip.ZipUtil;
 
+/**
+ * The main driver of the processing stages.
+ */
 public class Driver {
     private final SARIFGenerator sarifGenerator;
     private final File out;
 
-    public Driver(File db, File out, String version, boolean standalone) {
+    /**
+     * Create a new driver / processing pipeline.
+     * @param out          the output directory
+     * @param db           the database (used in SARIF mode)
+     * @param version      the results version (used in SARIF mode)
+     * @param standalone   false if to be used as a library
+     */
+    public Driver(File out, File db, String version, boolean standalone) {
         this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
         this.out = out;
     }
 
-    public static Collection<SourceFile> processSources(File topDir, File srcFile,
-                                                        boolean debug,
-                                                        boolean synthesizeTypes) {
+    /**
+     * Main entry point to read sources.
+     * @param srcFile             the source file/archive/directory
+     * @param debug               debug mode
+     * @param synthesizeTypes     if true, attempt to synthesize erased types
+     * @return                    the processed source file objects
+     */
+    public static Collection<SourceFile> readSources(File srcFile, boolean debug,
+                                                     boolean synthesizeTypes) {
+        String srcName = getName(srcFile);
+        if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
+            try {
+                File tmpDir = Files.createTempDirectory("extracted-sources").toFile();
+                tmpDir.deleteOnExit();
+                ZipUtil.unpack(srcFile, tmpDir);
+                return readSources(tmpDir, tmpDir, debug, synthesizeTypes);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return Collections.emptyList();
+            }
+        } else
+            return readSources(srcFile, srcFile, debug, synthesizeTypes);
+    }
+
+    private static Collection<SourceFile> readSources(File topDir, File srcFile,
+                                                      boolean debug,
+                                                      boolean synthesizeTypes) {
         Collection<SourceFile> sources = new LinkedList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -38,9 +72,9 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(processSources(topDir, f, debug, synthesizeTypes));
+                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes));
         } else {
-            String srcName = srcFile.getName().toLowerCase(Locale.ROOT);
+            String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
                 sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes));
@@ -50,20 +84,23 @@ public class Driver {
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
                 sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes));
-            } else if (srcName.endsWith(".jar") || srcName.endsWith(".zip")) {
-                try {
-                    File tmpDir = Files.createTempDirectory("extracted-sources").toFile();
-                    tmpDir.deleteOnExit();
-                    ZipUtil.unpack(srcFile, tmpDir);
-                    sources.addAll(processSources(tmpDir, tmpDir, debug, synthesizeTypes));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
             }
         }
         return sources;
     }
 
+    private static String getName(File srcFile) {
+        return srcFile.getName().toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Main entry point that performs IR-vs-source element matching.
+     * @param irTypes   the set of all IR types
+     * @param sources   the set of source files
+     * @param debug     debug mode
+     * @param json      if true, generate JSON metadata
+     * @param sarif     if true, generate SARIF results
+     */
     public void match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                       boolean debug, boolean json, boolean sarif) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
@@ -139,8 +176,8 @@ public class Driver {
             System.out.println("WARNING: cannot handle symbol of type " + symbol.getClass().getName() + ": " + symbol.toJSON());
     }
 
-    public void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping,
-                             Collection<SourceFile> sources, boolean debug) {
+    private void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping,
+                              Collection<SourceFile> sources, boolean debug) {
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)

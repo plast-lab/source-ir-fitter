@@ -95,14 +95,14 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(Driver.processSources(srcFile, srcFile, debug, synthesizeTypes));
+                sources.addAll(Driver.readSources(srcFile, debug, synthesizeTypes));
             }
 
             // Match information between IR and sources.
             String dbVal = cli.getOptionValue(dbopt.getOpt());
             File db = dbVal == null ? null : new File(dbVal);
             File out = new File(cli.getOptionValue(outOpt.getOpt()));
-            (new Driver(db, out, "1.0", false)).match(irTypes, sources, debug, json, sarif);
+            (new Driver(out, db, "1.0", false)).match(irTypes, sources, debug, json, sarif);
         } catch (ParseException e) {
             e.printStackTrace();
         }

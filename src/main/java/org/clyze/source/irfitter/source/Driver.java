@@ -100,7 +100,7 @@ public class Driver {
      */
     private void matchTypeUsages(BasicMetadata bm, JType jt, boolean debug) {
         List<TypeUsage> typeUsages = jt.typeUsages;
-        if (typeUsages.isEmpty())
+        if (typeUsages.isEmpty() || jt.matchElement == null)
             return;
 
         Set<String> irAnnotations = jt.matchElement.mp.getAnnotations();

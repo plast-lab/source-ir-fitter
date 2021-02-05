@@ -14,6 +14,15 @@ import org.clyze.utils.VersionInfo;
 public class Main {
 
     public static void main(String[] args) {
+        run(args);
+    }
+
+    /**
+     * Main entry point.
+     * @param args    command-line arguments
+     * @return        the result of the run
+     */
+    public static RunResult run(String[] args) {
         Options options = new Options();
 
         Option srcOpt = new Option("s", "source", true, "Sources (.zip/.jar file or directory).");
@@ -57,7 +66,7 @@ public class Main {
 
         if (args.length == 0) {
             printUsage(options);
-            return;
+            return null;
         }
         String version1 = "-" + versionOpt.getOpt();
         String version2 = "--" + versionOpt.getLongOpt();
@@ -66,10 +75,10 @@ public class Main {
         for (String arg : args)
             if (arg.equals(version1) || arg.equals(version2)) {
                 System.out.println(VersionInfo.getVersionInfo(Main.class));
-                return;
+                return null;
             } else if (arg.equals(help1) || arg.equals(help2)) {
                 printUsage(options);
-                return;
+                return null;
             }
 
         CommandLineParser parser = new GnuParser();
@@ -102,9 +111,10 @@ public class Main {
             String dbVal = cli.getOptionValue(dbopt.getOpt());
             File db = dbVal == null ? null : new File(dbVal);
             File out = new File(cli.getOptionValue(outOpt.getOpt()));
-            (new Driver(out, db, "1.0", false)).match(irTypes, sources, debug, json, sarif);
+            return (new Driver(out, db, "1.0", false)).match(irTypes, sources, debug, json, sarif);
         } catch (ParseException e) {
             e.printStackTrace();
+            return null;
         }
     }
 

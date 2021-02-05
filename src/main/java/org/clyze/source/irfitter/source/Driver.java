@@ -7,6 +7,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.clyze.doop.sarif.SARIFGenerator;
 import org.clyze.sarif.model.Result;
+import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
@@ -100,9 +101,10 @@ public class Driver {
      * @param debug     debug mode
      * @param json      if true, generate JSON metadata
      * @param sarif     if true, generate SARIF results
+     * @return          the result of the matching operation
      */
-    public void match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                      boolean debug, boolean json, boolean sarif) {
+    public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
+                           boolean debug, boolean json, boolean sarif) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         IdMapper idMapper = new IdMapper();
         int unmatched = 0;
@@ -126,6 +128,8 @@ public class Driver {
         process(flatMapping, sarif, debug);
         if (json)
             generateJSON(flatMapping, sources, debug);
+
+        return new RunResult(unmatched);
     }
 
     /**

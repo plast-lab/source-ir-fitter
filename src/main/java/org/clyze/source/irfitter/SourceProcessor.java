@@ -7,8 +7,8 @@ import org.clyze.source.irfitter.source.model.SourceFile;
 public interface SourceProcessor {
     /**
      * The main entry point for source processing.
-     * @param topDir    the top-level directory of the sources (so that full
-     *                  paths can be made relative to it)
+     * @param topDir    the source file option or top-level directory of the
+     *                  sources (so that full paths can be made relative to it)
      * @param srcFile   the Groovy source file to process
      * @param debug     if true, run extra debug code
      * @param synthesizeTypes if true, try to synthesize high-level types from source/IR types

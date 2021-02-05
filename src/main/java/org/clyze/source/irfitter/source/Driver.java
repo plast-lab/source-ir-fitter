@@ -144,7 +144,7 @@ public class Driver {
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
-                System.out.println("Processing doopId: " + doopId);
+                System.out.println("Processing id: " + doopId);
             for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
                 SymbolWithDoopId symbol = srcElem.getSymbol();
                 if (symbol == null) {
@@ -194,7 +194,8 @@ public class Driver {
 
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
-            System.out.println("Processing doopId: " + doopId);
+            if (debug)
+                System.out.println("Processing id: " + doopId);
             for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
                 SymbolWithDoopId symbol = srcElem.getSymbol();
                 if (symbol == null) {

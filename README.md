@@ -1,6 +1,6 @@
 # Source-code-to-IR mapper
 
-This program maps bytecode/dex elements (such as types, methods,
+This tool maps bytecode/dex elements (such as types, methods,
 fields, and invocations) to source elements. The input is the
 executable code (JAR/APK format) plus the original sources. The output
 is a [JSON mapping](https://github.com/clyze/metadata-model) of source
@@ -19,7 +19,7 @@ Install the Kotlin ANTLR grammar to the local Maven repository:
 ./install-kotlin-parser.sh
 ```
 
-Then, install the program distribution:
+Then, install the tool:
 
 ```
 ./gradlew installDist

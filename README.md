@@ -1,3 +1,5 @@
+[![Build Status](https://github.com/plast-lab/source-ir-fitter/workflows/Java%20CI%20with%20Gradle/badge.svg?branch=main)](https://github.com/plast-lab/source-ir-fitter/actions)
+
 # Source-code-to-IR mapper
 
 This tool maps bytecode/dex elements (such as types, methods,

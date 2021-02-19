@@ -22,7 +22,7 @@ public class SourceFile {
     public final File topDir;
     /** The parsed source file. */
     public final File file;
-    /** The package name declared in the top of the source file. */
+    /** The package name declared in the top of the source file. Default unnamed package is "". */
     public String packageName = "";
     /** The import declarations. */
     public final List<Import> imports = new LinkedList<>();

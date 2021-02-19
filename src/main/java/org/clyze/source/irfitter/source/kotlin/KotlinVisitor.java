@@ -247,8 +247,11 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public Void visitKotlinFile(KotlinFileContext kfc) {
         kfc.importList().importHeader().forEach(ihc -> ihc.accept(this));
         PackageHeaderContext phc = kfc.packageHeader();
-        if (phc != null)
-            sourceFile.packageName = getQualifiedName(phc.identifier());
+        if (phc != null) {
+            IdentifierContext identifier = phc.identifier();
+            if (identifier != null)
+                sourceFile.packageName = getQualifiedName(identifier);
+        }
         kfc.topLevelObject().forEach(this::visitChildren);
         return null;
     }

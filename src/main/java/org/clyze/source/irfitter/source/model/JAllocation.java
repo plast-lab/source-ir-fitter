@@ -1,7 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
-import org.clyze.persistent.model.HeapAllocation;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.jvm.JvmHeapAllocation;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.ir.model.IRAllocation;
 
@@ -25,11 +25,11 @@ implements AbstractAllocation {
     public void initSymbolFromIRElement(IRAllocation irAlloc) {
         if (symbol == null) {
             matchElement = irAlloc;
-            symbol = new HeapAllocation(pos, srcFile.getRelativePath(),
+            symbol = new JvmHeapAllocation(pos, srcFile.getRelativePath(),
                     irAlloc.getId(), irAlloc.allocatedTypeDoopId,
                     irAlloc.allocatingMethodDoopId, irAlloc.inIIB, irAlloc.isArray);
         } else
-            System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 
     @Override

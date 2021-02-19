@@ -1,11 +1,11 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
+import org.clyze.persistent.model.jvm.JvmMethod;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRModifierPack;
-import org.clyze.persistent.model.Method;
 import org.clyze.persistent.model.Position;
 
 /** A method in the source code. */
@@ -124,7 +124,7 @@ implements AbstractMethod {
             // block in the sources, set the position to the type declaration.
             if ("<clinit>".equals(name) && (pos == null))
                 pos = parent.pos;
-            Method meth = new Method(pos, srcFile.getRelativePath(), name,
+            JvmMethod meth = new JvmMethod(pos, srcFile.getRelativePath(), name,
                     parent.matchId, returnType, irMethod.getId(), pNames,
                     pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
                     mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),
@@ -132,7 +132,7 @@ implements AbstractMethod {
             meth.setAnnotationTypes(annotations);
             symbol = meth;
         } else
-            System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 
     /**

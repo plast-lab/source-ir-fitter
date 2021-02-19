@@ -1,9 +1,8 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
-
+import org.clyze.persistent.model.jvm.JvmField;
 import org.clyze.source.irfitter.ir.model.IRField;
-import org.clyze.persistent.model.Field;
 import org.clyze.persistent.model.Position;
 
 /**
@@ -46,7 +45,7 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
     @Override
     public void initSymbolFromIRElement(IRField irField) {
         if (symbol == null) {
-            Field fld = new Field(pos,
+            JvmField fld = new JvmField(pos,
                     srcFile.getRelativePath(),
                     name,
                     irField.getId(),
@@ -56,6 +55,6 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
             fld.setAnnotationTypes(annotations);
             symbol = fld;
         } else
-            System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 }

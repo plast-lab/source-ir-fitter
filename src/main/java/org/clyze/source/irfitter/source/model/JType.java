@@ -2,9 +2,9 @@ package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
 
+import org.clyze.persistent.model.jvm.JvmClass;
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRType;
-import org.clyze.persistent.model.Class;
 import org.clyze.persistent.model.Position;
 
 /**
@@ -105,14 +105,14 @@ public class JType extends NamedElementWithPosition<IRType> {
                 checkModifiers(doopId, "protected", mods.isProtected(), this.isProtected);
                 checkModifiers(doopId, "public", mods.isPublic(), this.isPublic);
             }
-            Class c = new Class(pos, srcFile.getRelativePath(), getName(),
+            JvmClass c = new JvmClass(pos, srcFile.getRelativePath(), getName(),
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
             c.setSuperTypes(superTypes);
             c.setAnnotationTypes(annotationTypes);
             symbol = c;
         } else
-            System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 
     private void checkModifiers(String irId, String label, boolean irValue, boolean srcValue) {
@@ -138,6 +138,6 @@ public class JType extends NamedElementWithPosition<IRType> {
             return;
         }
         String declaringSymbolId = (declaringElement != null && declaringElement.matchId != null) ? declaringElement.matchId : "";
-        ((Class)symbol).setDeclaringSymbolDoopId(declaringSymbolId);
+        ((JvmClass)symbol).setDeclaringSymbolId(declaringSymbolId);
     }
 }

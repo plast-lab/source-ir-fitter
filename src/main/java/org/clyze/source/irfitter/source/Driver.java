@@ -15,9 +15,11 @@ import org.clyze.source.irfitter.source.kotlin.KotlinProcessor;
 import org.clyze.source.irfitter.source.model.*;
 import org.clyze.persistent.metadata.Configuration;
 import org.clyze.persistent.metadata.FileInfo;
-import org.clyze.persistent.metadata.FileReporter;
 import org.clyze.persistent.metadata.Printer;
+import org.clyze.persistent.metadata.jvm.JvmFileReporter;
+import org.clyze.persistent.metadata.jvm.JvmMetadata;
 import org.clyze.persistent.model.*;
+import org.clyze.persistent.model.jvm.*;
 import org.zeroturnaround.zip.ZipUtil;
 
 /**
@@ -117,7 +119,7 @@ public class Driver {
         if (debug)
             System.out.println("* Performing fuzzy type matching for type references...");
         for (SourceFile sf : sources) {
-            BasicMetadata bm = sf.getFileInfo().getElements();
+            JvmMetadata bm = sf.getFileInfo().getElements();
             for (JType jt : sf.jTypes)
                 matchTypeUsages(bm, jt, debug);
         }
@@ -139,7 +141,7 @@ public class Driver {
      * @param jt             the type that contains the unresolved type usages
      * @param debug          if true, show diagnostics
      */
-    private void matchTypeUsages(BasicMetadata bm, JType jt, boolean debug) {
+    private void matchTypeUsages(JvmMetadata bm, JType jt, boolean debug) {
         List<TypeUsage> typeUsages = jt.typeUsages;
         if (typeUsages.isEmpty() || jt.matchElement == null)
             return;
@@ -162,18 +164,17 @@ public class Driver {
         }
     }
 
-    private void registerSymbol(BasicMetadata bm,
-                                SymbolWithDoopId symbol) {
-        if (symbol instanceof org.clyze.persistent.model.Class)
-            bm.classes.add((org.clyze.persistent.model.Class) symbol);
-        else if (symbol instanceof Field)
-            bm.fields.add((Field) symbol);
-        else if (symbol instanceof Method)
-            bm.methods.add((Method) symbol);
-        else if (symbol instanceof MethodInvocation)
-            bm.invocations.add((MethodInvocation) symbol);
-        else if (symbol instanceof HeapAllocation)
-            bm.heapAllocations.add((HeapAllocation) symbol);
+    private void registerSymbol(JvmMetadata bm, SymbolWithId symbol) {
+        if (symbol instanceof JvmClass)
+            bm.jvmClasses.add((JvmClass) symbol);
+        else if (symbol instanceof JvmField)
+            bm.jvmFields.add((JvmField) symbol);
+        else if (symbol instanceof JvmMethod)
+            bm.jvmMethods.add((JvmMethod) symbol);
+        else if (symbol instanceof JvmMethodInvocation)
+            bm.jvmInvocations.add((JvmMethodInvocation) symbol);
+        else if (symbol instanceof JvmHeapAllocation)
+            bm.jvmHeapAllocations.add((JvmHeapAllocation) symbol);
         else if (symbol instanceof Usage)
             bm.usages.add((Usage) symbol);
         else
@@ -187,7 +188,7 @@ public class Driver {
             if (debug)
                 System.out.println("Processing id: " + doopId);
             for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
-                SymbolWithDoopId symbol = srcElem.getSymbol();
+                SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);
                     continue;
@@ -206,12 +207,12 @@ public class Driver {
 
         Configuration configuration = new Configuration(new Printer(debug));
         configuration.setOutDir(out);
-        FileReporter reporter = new FileReporter(configuration);
         for (SourceFile sf : sources) {
             FileInfo fileInfo = sf.getFileInfo();
-            reporter.createReportFile(fileInfo);
+            JvmFileReporter reporter = new JvmFileReporter(configuration, fileInfo);
+            reporter.createReportFile(fileInfo.getOutputFilePath());
             if (debug)
-                reporter.printReportStats(fileInfo);
+                reporter.printReportStats();
         }
     }
 
@@ -238,7 +239,7 @@ public class Driver {
             if (debug)
                 System.out.println("Processing id: " + doopId);
             for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
-                SymbolWithDoopId symbol = srcElem.getSymbol();
+                SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);
                     continue;

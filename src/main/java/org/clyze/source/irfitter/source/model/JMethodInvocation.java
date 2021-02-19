@@ -1,7 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
-import org.clyze.persistent.model.MethodInvocation;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.jvm.JvmMethodInvocation;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 
@@ -40,11 +40,11 @@ implements AbstractMethodInvocation {
     public void initSymbolFromIRElement(IRMethodInvocation irMethodInvocation) {
         if (symbol == null) {
             matchElement = irMethodInvocation;
-            symbol = new MethodInvocation(pos, srcFile.getRelativePath(),
+            symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(),
                     methodName, irMethodInvocation.getId(),
                     irMethodInvocation.invokingMethodId, inIIB);
         } else
-            System.out.println("WARNING: symbol already initialized: " + symbol.getDoopId());
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 
     @Override

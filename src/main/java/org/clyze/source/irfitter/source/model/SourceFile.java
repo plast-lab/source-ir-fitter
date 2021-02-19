@@ -11,7 +11,7 @@ import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.persistent.metadata.FileInfo;
-import org.clyze.persistent.model.BasicMetadata;
+import org.clyze.persistent.metadata.jvm.JvmMetadata;
 
 /**
  * This is the source code representation that is responsible for matching
@@ -425,7 +425,10 @@ public class SourceFile {
     public FileInfo getFileInfo() {
         if (cachedFileInfo == null) {
             try {
-                cachedFileInfo = new SourceFileInfo(packageName, file.getName(), file.getCanonicalPath(), "", new BasicMetadata());
+                String inputName = file.getName();
+                String inputFilePath = file.getCanonicalPath();
+                JvmMetadata elements = new JvmMetadata();
+                cachedFileInfo = new FileInfo(packageName == null || "".equals(packageName) ? "" : packageName + ".", inputName, inputFilePath, "", elements);
             } catch (IOException e) {
                 e.printStackTrace();
             }

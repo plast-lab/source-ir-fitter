@@ -129,7 +129,7 @@ implements AbstractMethod {
                     pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
                     mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),
                     mp.isPublic(), mp.isProtected(), mp.isPrivate(), outerPos);
-            meth.setAnnotationTypes(annotations);
+            meth.setAnnotations(annotations);
             symbol = meth;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

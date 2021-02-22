@@ -1,7 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
 import org.clyze.persistent.model.Position;
-import org.clyze.persistent.model.StringConstant;
+import org.clyze.persistent.model.jvm.JvmStringConstant;
 
 /**
  * A string constant that can be inlined (and thus missing from the IR), so
@@ -35,13 +35,13 @@ public class JStringConstant<T> {
      * Generates the string constant metadata object, to be serialized to JSON.
      * @return  the string constant object
      */
-    public StringConstant getStringConstant() {
+    public JvmStringConstant getStringConstant() {
         if (srcElement instanceof JField) {
             JField srcField = (JField) srcElement;
             String fieldId = srcField.matchId;
             if (fieldId == null)
                 System.out.println("WARNING: string constant references unresolved field: " + srcField);
-            return new StringConstant(pos, sourceFile.getRelativePath(), fieldId, value);
+            return new JvmStringConstant(pos, sourceFile.getRelativePath(), fieldId, value);
         } else {
             System.out.println("WARNING: string constant is ignored for non-field element: " + srcElement);
             return null;

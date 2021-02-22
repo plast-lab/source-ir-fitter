@@ -109,7 +109,7 @@ public class JType extends NamedElementWithPosition<IRType> {
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
             c.setSuperTypes(superTypes);
-            c.setAnnotationTypes(annotationTypes);
+            c.setAnnotations(annotationTypes);
             symbol = c;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

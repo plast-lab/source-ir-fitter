@@ -52,7 +52,7 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
                     irField.type,
                     parent == null ? null : parent.getFullyQualifiedName(),
                     irField.mp.isStatic());
-            fld.setAnnotationTypes(annotations);
+            fld.setAnnotations(annotations);
             symbol = fld;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

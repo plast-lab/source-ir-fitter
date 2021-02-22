@@ -197,7 +197,7 @@ public class Driver {
             }
         }
         for (SourceFile sf : sources) {
-            Set<StringConstant> stringConstants = sf.getFileInfo().getElements().stringConstants;
+            Set<JvmStringConstant> stringConstants = sf.getFileInfo().getElements().jvmStringConstants;
             for (JStringConstant<?> jStrConstant : sf.stringConstants)
                 stringConstants.add(jStrConstant.getStringConstant());
         }

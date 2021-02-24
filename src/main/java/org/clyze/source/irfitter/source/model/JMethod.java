@@ -99,7 +99,7 @@ implements AbstractMethod {
         StringJoiner sj = new StringJoiner(", ");
         for (JParameter param : parameters)
             sj.add(param.toString());
-        String parentName = parent.getName();
+        String parentName = parent.getUnqualifiedName();
         String parentDesc = parentName == null ? parent.toString() : parentName;
         return "method{name=" + name + ", type=" + retType + "(" + sj.toString() + "), parent=" + parentDesc + "}";
     }
@@ -141,7 +141,7 @@ implements AbstractMethod {
      * @return   the low level name that executable code will see
      */
     public String getLowLevelName() {
-        return (name != null && name.equals(parent.getName())) ? "<init>" : name;
+        return (name != null && name.equals(parent.getUnqualifiedName())) ? "<init>" : name;
     }
 
     @Override

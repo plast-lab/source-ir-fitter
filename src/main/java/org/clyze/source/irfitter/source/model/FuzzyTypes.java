@@ -23,7 +23,7 @@ public interface FuzzyTypes {
         // Search for local/nested class declarations in the whole source file, pick first.
         String packageName = sourceFile.packageName;
         for (JType jt : sourceFile.jTypes)
-            if (!jt.isAnonymous && type.equals(jt.getName()))
+            if (!jt.isAnonymous && type.equals(jt.getUnqualifiedName()))
                 return Collections.singletonList(Utils.dotsToDollars(jt.getFullyQualifiedName(packageName)));
 
         // Search for exact import matches, pick first.

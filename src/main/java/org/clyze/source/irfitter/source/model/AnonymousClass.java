@@ -10,16 +10,25 @@ public class AnonymousClass extends JType {
     public final String n;
 
     public AnonymousClass(SourceFile srcFile, List<String> superTypes,
-                          JType parent, NamedElementWithPosition<?> declaringElement,
+                          JType parentType, NamedElementWithPosition<?> declaringElement,
                           Position pos, boolean isInner, int n) {
         // Anonymous classes cannot have annotations, so we pass an empty set.
-        super(srcFile, null, superTypes, new HashSet<>(), pos, declaringElement, parent, isInner, false,
+        super(srcFile, null, superTypes, new HashSet<>(), pos, declaringElement, parentType, isInner, false,
                 false, false, false, false, true);
         this.n = Integer.toString(n);
     }
 
     @Override
-    public String getName() {
+    public String getUnqualifiedName() {
         return n;
+    }
+
+    @Override
+    public String getSimpleName() {
+        if (parentType == null) {
+            System.err.println("ERROR: anonymous class does not have a parent type.");
+            return super.getSimpleName();
+        }
+        return parentType.getUnqualifiedName() + '$' + n;
     }
 }

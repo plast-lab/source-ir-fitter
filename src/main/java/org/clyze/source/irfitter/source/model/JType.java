@@ -53,7 +53,19 @@ public class JType extends NamedElementWithPosition<IRType> {
         this.methods.add(classInitializer);
     }
 
-    public String getName() {
+    /**
+     * Return the part of the fully-qualified name without any prefix.
+     * @return the bare unqualified type name
+     */
+    public String getUnqualifiedName() {
+        return this.name;
+    }
+
+    /**
+     * Returns a simple name to be shown to the user.
+     * @return the simple type name
+     */
+    public String getSimpleName() {
         return this.name;
     }
 
@@ -63,11 +75,11 @@ public class JType extends NamedElementWithPosition<IRType> {
 
     public String getFullyQualifiedName(String packageName) {
         Stack<String> stack = new Stack<>();
-        stack.push(getName());
+        stack.push(getUnqualifiedName());
         JType pn = parentType;
         while (pn != null) {
             stack.push("$");
-            stack.push(pn.getName());
+            stack.push(pn.getUnqualifiedName());
             pn = pn.parentType;
         }
         if (packageName != null && !packageName.equals("")) {
@@ -82,7 +94,7 @@ public class JType extends NamedElementWithPosition<IRType> {
 
     @Override
     public String toString() {
-        return "type{name=" + getName() + ", " + fields.size() + " fields, " + methods.size() + " methods}@" + pos;
+        return "type{name=" + getUnqualifiedName() + " (" + getSimpleName() + "), " + fields.size() + " fields, " + methods.size() + " methods}@" + pos;
     }
 
     @Override
@@ -105,7 +117,7 @@ public class JType extends NamedElementWithPosition<IRType> {
                 checkModifiers(doopId, "protected", mods.isProtected(), this.isProtected);
                 checkModifiers(doopId, "public", mods.isPublic(), this.isPublic);
             }
-            JvmClass c = new JvmClass(pos, srcFile.getRelativePath(), getName(),
+            JvmClass c = new JvmClass(pos, srcFile.getRelativePath(), getSimpleName(),
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
             c.setSuperTypes(superTypes);

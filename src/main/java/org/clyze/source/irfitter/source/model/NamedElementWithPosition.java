@@ -4,11 +4,11 @@ import org.clyze.source.irfitter.ir.model.IRElement;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.SymbolWithId;
 
-public abstract class NamedElementWithPosition<T extends IRElement> {
+public abstract class NamedElementWithPosition<T extends IRElement, S extends SymbolWithId> {
     public Position pos;
     public final SourceFile srcFile;
     public String matchId = null;
-    public SymbolWithId symbol = null;
+    public S symbol = null;
     public T matchElement = null;
 
     protected NamedElementWithPosition(SourceFile srcFile, Position pos) {
@@ -18,7 +18,7 @@ public abstract class NamedElementWithPosition<T extends IRElement> {
 
     public abstract void initSymbolFromIRElement(T irElement);
 
-    public SymbolWithId getSymbol() {
+    public S getSymbol() {
         return this.symbol;
     }
 }

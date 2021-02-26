@@ -19,8 +19,8 @@ public class IdMapper {
      * Merge all element information into a single mapping.
      * @return   a mapping containing the correspondence for all source elements
      */
-    public Map<String, Collection<? extends NamedElementWithPosition<?>>> get() {
-        Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping = new HashMap<>();
+    public Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> get() {
+        Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping = new HashMap<>();
         mapping.putAll(typeMap);
         mapping.putAll(fieldMap);
         mapping.putAll(methodMap);

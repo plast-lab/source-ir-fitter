@@ -8,7 +8,7 @@ import org.clyze.persistent.model.Position;
 /**
  * A source field that can be mapped to an IR field.
  */
-public class JField extends TypedNamedElementWithPosition<IRField> {
+public class JField extends TypedNamedElementWithPosition<IRField, JvmField> {
     /** The type of the field (sources, not necessarily qualified). */
     public final String type;
     /** The name of the field. */
@@ -45,15 +45,14 @@ public class JField extends TypedNamedElementWithPosition<IRField> {
     @Override
     public void initSymbolFromIRElement(IRField irField) {
         if (symbol == null) {
-            JvmField fld = new JvmField(pos,
+            symbol = new JvmField(pos,
                     srcFile.getRelativePath(),
                     name,
                     irField.getId(),
                     irField.type,
                     parent == null ? null : parent.getFullyQualifiedName(),
                     irField.mp.isStatic());
-            fld.setAnnotations(annotations);
-            symbol = fld;
+            symbol.setAnnotations(annotations);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }

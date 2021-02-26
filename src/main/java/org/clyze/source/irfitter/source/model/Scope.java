@@ -11,7 +11,7 @@ public class Scope {
     /** The stack of enclosing methods, top is closer enclosing method. */
     protected final Stack<JMethod> methodScope = new Stack<>();
     /** The stack of enclosing elements. */
-    protected final Stack<NamedElementWithPosition<?>> elementScope = new Stack<>();
+    protected final Stack<NamedElementWithPosition<?, ?>> elementScope = new Stack<>();
     /** True if the current scope is inside an initializer. */
     public boolean inInitializer = false;
 
@@ -31,7 +31,7 @@ public class Scope {
         }
     }
 
-    public NamedElementWithPosition<?> getEnclosingElement() {
+    public NamedElementWithPosition<?, ?> getEnclosingElement() {
         try {
             return elementScope.peek();
         } catch (EmptyStackException ignored) {
@@ -51,7 +51,7 @@ public class Scope {
         methodScope.pop();
     }
 
-    private <T extends NamedElementWithPosition<?>>
+    private <T extends NamedElementWithPosition<?, ?>>
     void enterElementScope(T elem, Consumer<T> elemProcessor) {
         elementScope.push(elem);
         elemProcessor.accept(elem);

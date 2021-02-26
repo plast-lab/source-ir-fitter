@@ -10,10 +10,10 @@ import org.clyze.persistent.model.Position;
 /**
  * A reference type (such as a class, enum, or interface) in the source code.
  */
-public class JType extends NamedElementWithPosition<IRType> {
+public class JType extends NamedElementWithPosition<IRType, JvmClass> {
     private final String name;
     public final JType parentType;
-    public final NamedElementWithPosition<?> declaringElement;
+    public final NamedElementWithPosition<?, ?> declaringElement;
     public final List<String> superTypes;
     public final Set<String> annotationTypes;
     private final boolean isPublic;
@@ -31,7 +31,7 @@ public class JType extends NamedElementWithPosition<IRType> {
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,
                  Set<String> annotationTypes, Position pos,
-                 NamedElementWithPosition<?> declaringElement, JType parentType,
+                 NamedElementWithPosition<?, ?> declaringElement, JType parentType,
                  boolean isInner, boolean isPublic, boolean isPrivate,
                  boolean isProtected, boolean isAbstract, boolean isFinal,
                  boolean isAnonymous) {
@@ -117,12 +117,11 @@ public class JType extends NamedElementWithPosition<IRType> {
                 checkModifiers(doopId, "protected", mods.isProtected(), this.isProtected);
                 checkModifiers(doopId, "public", mods.isPublic(), this.isPublic);
             }
-            JvmClass c = new JvmClass(pos, srcFile.getRelativePath(), getSimpleName(),
+            symbol = new JvmClass(pos, srcFile.getRelativePath(), getSimpleName(),
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
-            c.setSuperTypes(superTypes);
-            c.setAnnotations(annotationTypes);
-            symbol = c;
+            symbol.setSuperTypes(superTypes);
+            symbol.setAnnotations(annotationTypes);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
@@ -136,7 +135,7 @@ public class JType extends NamedElementWithPosition<IRType> {
     }
 
     public JType createAnonymousClass(SourceFile srcFile, List<String> superTypes,
-                                      NamedElementWithPosition<?> declaringElement,
+                                      NamedElementWithPosition<?, ?> declaringElement,
                                       Position pos, boolean isInner) {
         return new AnonymousClass(srcFile, superTypes, this, declaringElement, pos, isInner, anonymousClassCounter++);
     }
@@ -150,6 +149,6 @@ public class JType extends NamedElementWithPosition<IRType> {
             return;
         }
         String declaringSymbolId = (declaringElement != null && declaringElement.matchId != null) ? declaringElement.matchId : "";
-        ((JvmClass)symbol).setDeclaringSymbolId(declaringSymbolId);
+        symbol.setDeclaringSymbolId(declaringSymbolId);
     }
 }

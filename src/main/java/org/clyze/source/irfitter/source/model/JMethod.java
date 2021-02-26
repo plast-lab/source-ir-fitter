@@ -1,8 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
-
-import org.clyze.persistent.model.Usage;
 import org.clyze.persistent.model.jvm.JvmMethod;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -11,7 +9,7 @@ import org.clyze.source.irfitter.ir.model.IRModifierPack;
 import org.clyze.persistent.model.Position;
 
 /** A method in the source code. */
-public class JMethod extends TypedNamedElementWithPosition<IRMethod>
+public class JMethod extends TypedNamedElementWithPosition<IRMethod, JvmMethod>
 implements AbstractMethod {
     public final String name;
     private final String retType;

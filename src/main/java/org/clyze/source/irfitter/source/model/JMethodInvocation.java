@@ -6,7 +6,7 @@ import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 
 /** A method invocation in the source code. */
-public class JMethodInvocation extends NamedElementWithPosition<IRMethodInvocation>
+public class JMethodInvocation extends NamedElementWithPosition<IRMethodInvocation, JvmMethodInvocation>
 implements AbstractMethodInvocation {
     /** The method containing the invocation line. */
     public final JMethod parent;

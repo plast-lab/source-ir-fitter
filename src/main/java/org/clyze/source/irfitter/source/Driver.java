@@ -135,7 +135,7 @@ public class Driver {
 
         System.out.println(unmatched + " elements not matched.");
 
-        Map<String, Collection<? extends NamedElementWithPosition<?>>> flatMapping = idMapper.get();
+        Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
         process(flatMapping, sarif, debug);
         if (json)
             generateJSON(flatMapping, sources, debug);
@@ -190,13 +190,13 @@ public class Driver {
             System.out.println("WARNING: cannot handle symbol of type " + symbol.getClass().getName() + ": " + symbol.toJSON());
     }
 
-    private void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping,
+    private void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
                               Collection<SourceFile> sources, boolean debug) {
-        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?>>> entry : mapping.entrySet()) {
+        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
                 System.out.println("Processing id: " + doopId);
-            for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
+            for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);
@@ -231,7 +231,7 @@ public class Driver {
                 System.out.println("Creating new output directory: " + out);
     }
 
-    void process(Map<String, Collection<? extends NamedElementWithPosition<?>>> mapping,
+    void process(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
                  boolean sarif, boolean debug) {
         boolean metadataExist = sarifGenerator.metadataExist();
         if (!metadataExist) {
@@ -243,11 +243,11 @@ public class Driver {
         List<Result> results = new LinkedList<>();
         AtomicInteger elements = new AtomicInteger(0);
 
-        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?>>> entry : mapping.entrySet()) {
+        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
                 System.out.println("Processing id: " + doopId);
-            for (NamedElementWithPosition<?> srcElem : entry.getValue()) {
+            for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);

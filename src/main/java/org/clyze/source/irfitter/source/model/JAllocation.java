@@ -8,7 +8,7 @@ import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.ir.model.IRAllocation;
 
 /** An object allocation site in the source code. */
-public class JAllocation extends NamedElementWithPosition<IRAllocation>
+public class JAllocation extends NamedElementWithPosition<IRAllocation, JvmHeapAllocation>
 implements AbstractAllocation, UsageGen {
     public final String simpleType;
 
@@ -48,7 +48,7 @@ implements AbstractAllocation, UsageGen {
     public Usage getUsage() {
         if (symbol == null)
             return null;
-        JvmHeapAllocation alloc = (JvmHeapAllocation) symbol;
-        return new Usage(symbol.getPosition(), symbol.getSourceFileName(), alloc.getAllocatedTypeId(), UsageKind.TYPE);
+        return new Usage(symbol.getPosition(), symbol.getSourceFileName(),
+                symbol.getAllocatedTypeId(), UsageKind.TYPE);
     }
 }

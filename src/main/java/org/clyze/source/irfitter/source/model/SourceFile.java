@@ -368,7 +368,7 @@ public class SourceFile {
         }
     }
 
-    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends NamedElementWithPosition<IR_ELEM_T>>
+    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends NamedElementWithPosition<IR_ELEM_T, ?>>
     void recordMatch(Map<String, Collection<SRC_ELEM_T>> mapping, String kind, IR_ELEM_T irElem,
                      SRC_ELEM_T srcElem) {
         String id = irElem.getId();

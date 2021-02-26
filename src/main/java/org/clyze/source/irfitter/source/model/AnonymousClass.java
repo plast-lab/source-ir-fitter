@@ -10,7 +10,7 @@ public class AnonymousClass extends JType {
     public final String n;
 
     public AnonymousClass(SourceFile srcFile, List<String> superTypes,
-                          JType parentType, NamedElementWithPosition<?> declaringElement,
+                          JType parentType, NamedElementWithPosition<?, ?> declaringElement,
                           Position pos, boolean isInner, int n) {
         // Anonymous classes cannot have annotations, so we pass an empty set.
         super(srcFile, null, superTypes, new HashSet<>(), pos, declaringElement, parentType, isInner, false,

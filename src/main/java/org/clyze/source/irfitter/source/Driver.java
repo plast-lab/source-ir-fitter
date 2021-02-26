@@ -120,8 +120,17 @@ public class Driver {
             System.out.println("* Performing fuzzy type matching for type references...");
         for (SourceFile sf : sources) {
             JvmMetadata bm = sf.getFileInfo().getElements();
-            for (JType jt : sf.jTypes)
+            for (JType jt : sf.jTypes) {
                 matchTypeUsages(bm, jt, debug);
+                for (JMethod jm : jt.methods) {
+                    List<JAllocation> allocations = jm.allocations;
+                    for (JAllocation allocation : allocations) {
+                        Usage usage = allocation.getUsage();
+                        if (usage != null)
+                            registerSymbol(bm, usage);
+                    }
+                }
+            }
         }
 
         System.out.println(unmatched + " elements not matched.");

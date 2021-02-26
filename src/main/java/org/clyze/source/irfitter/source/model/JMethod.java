@@ -1,6 +1,8 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
+
+import org.clyze.persistent.model.Usage;
 import org.clyze.persistent.model.jvm.JvmMethod;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;

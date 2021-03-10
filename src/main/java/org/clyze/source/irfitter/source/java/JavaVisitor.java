@@ -11,9 +11,12 @@ import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
 
@@ -32,17 +35,22 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(ClassOrInterfaceDeclaration td, SourceFile sourceFile) {
-        List<String> superTypes = new LinkedList<>();
-        updateFromTypes(superTypes, td.getExtendedTypes());
-        updateFromTypes(superTypes, td.getImplementedTypes());
+        List<TypeUsage> superTypeUsages = new LinkedList<>();
+        updateFromTypes(superTypeUsages, td.getExtendedTypes(), sourceFile);
+        updateFromTypes(superTypeUsages, td.getImplementedTypes(), sourceFile);
+        List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
         JType jt = recordType(td, sourceFile, superTypes, false, td.isInterface());
+        jt.typeUsages.addAll(superTypeUsages);
         scope.enterTypeScope(jt, (jt0 -> super.visit(td, sourceFile)));
     }
 
-    static void updateFromTypes(List<String> types, NodeList<ClassOrInterfaceType> nl) {
+    static void updateFromTypes(List<TypeUsage> types, NodeList<ClassOrInterfaceType> nl,
+                                SourceFile sourceFile) {
         if (nl != null)
             for (ClassOrInterfaceType t : nl) {
-                types.add(t.getNameAsString());
+                SimpleName name = t.getName();
+                Position pos = JavaUtils.createPositionFromNode(name);
+                types.add(new TypeUsage(name.asString(), pos, sourceFile));
             }
     }
 
@@ -127,12 +135,13 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     public void visit(FieldDeclaration fd, SourceFile sourceFile) {
 //        fd.getModifiers().forEach(p -> p.accept(this, sourceFile));
         for (VariableDeclarator vd : fd.getVariables()) {
-            String fieldType = typeOf(vd);
+            TypeUsage fieldType = typeOf(vd, sourceFile);
             String fieldName = vd.getNameAsString();
             JType jt = scope.getEnclosingType();
+            jt.typeUsages.add(fieldType);
 
             JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false);
-            JField srcField = new JField(sourceFile, fieldType, fieldName,
+            JField srcField = new JField(sourceFile, fieldType.type, fieldName,
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
             jt.typeUsages.addAll(mp.getAnnotationUses());
             if (sourceFile.debug)
@@ -189,10 +198,13 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         JMethod parentMethod = scope.getEnclosingMethod();
         Optional<NodeList<BodyDeclaration<?>>> anonymousClassBody = objCExpr.getAnonymousClassBody();
         boolean isAnonymousClassDecl = anonymousClassBody.isPresent();
-        String simpleType = Utils.getSimpleType(typeOf(objCExpr));
+        TypeUsage typeUsage = typeOf(objCExpr, sourceFile);
+        JType enclosingType = scope.getEnclosingType();
+        enclosingType.typeUsages.add(typeUsage);
+        String simpleType = Utils.getSimpleType(typeUsage.type);
         if (isAnonymousClassDecl) {
             List<String> superTypes = Collections.singletonList(simpleType);
-            JType anonymousType = scope.getEnclosingType().createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
+            JType anonymousType = enclosingType.createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
             if (sourceFile.debug)
                 System.out.println("Adding type [anonymous]: " + anonymousType);
             sourceFile.jTypes.add(anonymousType);
@@ -245,8 +257,10 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         scope.getEnclosingType().typeUsages.add(tu);
     }
 
-    static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
-        return Utils.simplifyType(node.getTypeAsString());
+    static TypeUsage typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node, SourceFile sourceFile) {
+        Type type = node.getType();
+        Position pos = JavaUtils.createPositionFromNode(type);
+        return new TypeUsage(Utils.simplifyType(type.asString()), pos, sourceFile);
     }
 
     private static <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>

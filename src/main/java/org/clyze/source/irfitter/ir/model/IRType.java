@@ -34,6 +34,9 @@ public class IRType extends IRElement {
             Set<String> typeReferences = method.getTypeReferences();
             if (typeReferences != null)
                 ret.addAll(typeReferences);
+            Set<String> sigTypeReferences = method.getSigTypeReferences();
+            if (sigTypeReferences != null)
+                ret.addAll(sigTypeReferences);
         }
         return ret;
     }

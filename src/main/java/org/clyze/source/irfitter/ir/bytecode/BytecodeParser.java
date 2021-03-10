@@ -3,7 +3,6 @@ package org.clyze.source.irfitter.ir.bytecode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.ClassReader;
@@ -72,6 +71,9 @@ public class BytecodeParser {
         }
         // Read the method again to map bytecode offsets to source positions.
         mNode.accept(new BytecodeMethodVisitor(method, indexToSourceLine, debug));
+        // Parse method descriptor to discover type uses.
+        for (String sigType : TypeUtils.raiseSignature(mNode.desc))
+            method.addSigTypeReference(sigType);
     }
 
     public void processClass(List<IRType> irTypes, InputStream is) {

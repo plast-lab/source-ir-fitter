@@ -72,6 +72,8 @@ public class DexParser {
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
                                 new DexModifierPack(dexMethod), irTypeMods.isInterface());
+                        paramTypes.forEach(irMethod::addSigTypeReference);
+                        irMethod.addSigTypeReference(retType);
                         if (debug)
                             System.out.println("IR method: " + irMethod);
                         processDexInstructions(dexMethod, irMethod, debug);

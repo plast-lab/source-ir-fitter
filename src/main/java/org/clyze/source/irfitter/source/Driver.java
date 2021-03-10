@@ -156,13 +156,13 @@ public class Driver {
             return;
 
         Set<String> irAnnotations = jt.matchElement.mp.getAnnotations();
-        Set<String> irClassRefs = jt.matchElement.getTypeReferences();
+        Set<String> irTypeRefs = jt.matchElement.getTypeReferences();
         for (TypeUsage typeUsage : typeUsages) {
             if (debug)
                 System.out.println("Examining type usage: " + typeUsage);
             for (String irTypeId : typeUsage.getIds()) {
                 // Match type uses against local annotation uses or the global IR types.
-                if (irAnnotations.contains(irTypeId) || irClassRefs.contains(irTypeId)) {
+                if (irAnnotations.contains(irTypeId) || irTypeRefs.contains(irTypeId)) {
                     if (debug)
                         System.out.println("Matched use for type '" + typeUsage.type + "': " + irTypeId);
                     typeUsage.matchId = irTypeId;

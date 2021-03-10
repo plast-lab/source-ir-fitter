@@ -215,7 +215,9 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public Void visitFunctionDeclaration(FunctionDeclarationContext funMemDecl) {
         SimpleIdentifierContext fNameCtx = funMemDecl.simpleIdentifier();
         String fName = fNameCtx.getText();
-        String retType = getType(funMemDecl.type());
+        TypeContext fmdType = funMemDecl.type();
+        String retType = getType(fmdType);
+        TypeUsage retTypeUsage = fmdType == null ? null : new TypeUsage(retType, KotlinUtils.createPositionFromTokens(fmdType.start, fmdType.stop), sourceFile);
         List<JParameter> parameters = new LinkedList<>();
         FunctionValueParametersContext funParamsCtx = funMemDecl.functionValueParameters();
         if (funParamsCtx != null) {
@@ -224,7 +226,8 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 TypeContext funTypeCtx = funParam.type();
                 String paramName = funParam.simpleIdentifier().getText();
                 String funType = getType(funTypeCtx);
-                parameters.add(new JParameter(paramName, funType));
+                Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
+                parameters.add(new JParameter(paramName, funType, paramPos));
             }
         }
         Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
@@ -232,10 +235,12 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         JType jt = scope.getEnclosingType();
         if (jt == null)
             System.out.println("TODO: top-level function " + fName);
-        else
+        else {
             jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters,
                     mp.getAnnotations(), outerPos, jt,
                     KotlinUtils.createPositionFromToken(fNameCtx.start)));
+            Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        }
         return null;
     }
 

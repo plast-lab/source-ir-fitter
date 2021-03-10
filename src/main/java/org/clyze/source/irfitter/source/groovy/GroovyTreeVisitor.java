@@ -104,6 +104,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // Return types may be missing.
         ReturnTypeContext retCtx = ctx.returnType();
         String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
+        TypeUsage retTypeUsage = retCtx == null ? null : new TypeUsage(retType, GroovyUtils.createPositionFromTokens(retCtx.start, retCtx.stop), sourceFile);
         logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
         List<JParameter> parameters = new LinkedList<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
@@ -115,7 +116,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 for (FormalParameterContext frmCtx : paramsListCtx.formalParameter()) {
                     String paramName = frmCtx.variableDeclaratorId().identifier().getText();
                     String paramType = getType(frmCtx.type());
-                    JParameter param = new JParameter(paramName, paramType);
+                    Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
+                    JParameter param = new JParameter(paramName, paramType, paramPos);
                     logDebug(() -> "param: " + param);
                     parameters.add(param);
                 }
@@ -126,6 +128,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JType jt = scope.getEnclosingType();
         GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
         JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos);
+        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
         if (jt == null)
             System.out.println("WARNING: top-level Groovy methods are not yet supported.");
         else {

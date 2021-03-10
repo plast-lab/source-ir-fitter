@@ -70,12 +70,14 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(ConstructorDeclaration cd, SourceFile sourceFile) {
-        visit(cd, "void", sourceFile, (cd0 -> super.visit(cd, sourceFile)));
+        visit(cd, "void", null, sourceFile, (cd0 -> super.visit(cd, sourceFile)));
     }
 
     @Override
     public void visit(MethodDeclaration md, SourceFile sourceFile) {
-        visit(md, md.getTypeAsString(), sourceFile, (md0 -> super.visit(md, sourceFile)));
+        String retType = md.getTypeAsString();
+        TypeUsage retTypeUsage = new TypeUsage(retType, JavaUtils.createPositionFromNode(md.getType()), sourceFile);
+        visit(md, retType, retTypeUsage, sourceFile, (md0 -> super.visit(md, sourceFile)));
     }
 
 //    @Override
@@ -101,17 +103,18 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     private <T extends CallableDeclaration<?>>
-    void visit(CallableDeclaration<T> md, String retType, SourceFile sourceFile,
+    void visit(CallableDeclaration<T> md, String retType, TypeUsage retTypeUsage, SourceFile sourceFile,
                Consumer<CallableDeclaration<T>> methodProcessor) {
         SimpleName name = md.getName();
         List<JParameter> parameters = new LinkedList<>();
         for (Parameter param : md.getParameters())
-            parameters.add(new JParameter(param.getNameAsString(), param.getTypeAsString()));
+            parameters.add(new JParameter(param.getNameAsString(), param.getTypeAsString(), JavaUtils.createPositionFromNode(param)));
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt, JavaUtils.createPositionFromNode(name));
         jt.typeUsages.addAll(mp.getAnnotationUses());
+        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);

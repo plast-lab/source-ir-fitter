@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
+import org.clyze.utils.TypeUtils;
 
 public class IRMethod extends IRElement implements AbstractMethod {
     public final List<IRMethodInvocation> invocations = new LinkedList<>();
@@ -11,6 +12,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
     private final Map<String, Integer> invocationCounters = new HashMap<>();
     private final Map<String, Integer> allocationCounters = new HashMap<>();
     private Set<String> typeReferences = null;
+    private Set<String> sigTypeReferences = null;
     public final String name;
     public final String returnType;
     public final List<String> paramTypes;
@@ -95,5 +97,26 @@ public class IRMethod extends IRElement implements AbstractMethod {
      */
     public Set<String> getTypeReferences() {
         return typeReferences;
+    }
+
+    /**
+     * Register a reference to a type in the method signature.
+     * @param type  the (fully-qualified) type
+     */
+    public void addSigTypeReference(String type) {
+        if (type.equals("void") || TypeUtils.isPrimitiveType(type))
+            return;
+        if (sigTypeReferences == null)
+            sigTypeReferences = new HashSet<>();
+//        System.out.println("Found signature type reference to " + type + " in " + this);
+        sigTypeReferences.add(type);
+    }
+
+    /**
+     * Get the class/interface references that exist in the method signature.
+     * @return    a set of (fully-qualified) types
+     */
+    public Set<String> getSigTypeReferences() {
+        return sigTypeReferences;
     }
 }

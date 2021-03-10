@@ -114,8 +114,7 @@ public class SourceFile {
                 JMethod srcMethod = srcMatch.methods.get(0);
                 IRMethod irMethod = irMatch.methods.get(0);
                 recordMatch(methodMap, "method", irMethod, srcMethod);
-            }
-            else
+            } else
                 matchMethodsWithSameNameArity(methodMap, srcMatch, irMatch);
         }
 

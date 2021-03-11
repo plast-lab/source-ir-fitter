@@ -1,12 +1,12 @@
 package org.clyze.source.irfitter.ir.model;
 
+import java.util.*;
+
 import org.clyze.source.irfitter.base.ModifierPack;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
+/**
+ * A low-level representation of a type.
+ */
 public class IRType extends IRElement {
     public final List<String> superTypes;
     public final List<IRField> fields = new LinkedList<>();
@@ -24,22 +24,11 @@ public class IRType extends IRElement {
         return getId();
     }
 
-    /**
-     * Gathers all references to types in this type.
-     * @return the set of all type references as fully-qualified types
-     */
-    public Set<String> getTypeReferences() {
-        Set<String> ret = new HashSet<>();
-        for (IRMethod method : methods) {
-            Set<String> typeReferences = method.getTypeReferences();
-            if (typeReferences != null)
-                ret.addAll(typeReferences);
-            Set<String> sigTypeReferences = method.getSigTypeReferences();
-            if (sigTypeReferences != null)
-                ret.addAll(sigTypeReferences);
-        }
+    @Override
+    public void addReferencedTypesTo(Collection<String> target) {
+        addTypeRefs(target, fields);
+        addTypeRefs(target, methods);
         if (superTypes != null)
-            ret.addAll(superTypes);
-        return ret;
+            target.addAll(superTypes);
     }
 }

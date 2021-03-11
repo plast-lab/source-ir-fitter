@@ -122,4 +122,16 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public Set<String> getSigTypeReferences() {
         return sigTypeReferences;
     }
+
+    @Override
+    public void addReferencedTypesTo(Collection<String> target) {
+        Set<String> typeReferences = getTypeReferences();
+        if (typeReferences != null)
+            target.addAll(typeReferences);
+        Set<String> sigTypeReferences = getSigTypeReferences();
+        if (sigTypeReferences != null)
+            target.addAll(sigTypeReferences);
+        addTypeRefs(target, invocations);
+        addTypeRefs(target, allocations);
+    }
 }

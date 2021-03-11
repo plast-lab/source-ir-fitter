@@ -2,6 +2,9 @@ package org.clyze.source.irfitter.ir.model;
 
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 
+/**
+ * A low-level representation of a method invocation site.
+ */
 public class IRMethodInvocation extends IRElement implements AbstractMethodInvocation {
     public final String invokingMethodId;
     public final String methodName;

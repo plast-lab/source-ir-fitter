@@ -4,6 +4,8 @@ import groovyjarjarantlr4.v4.runtime.RuleContext;
 import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
@@ -128,7 +130,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JType jt = scope.getEnclosingType();
         GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
         JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos);
-        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        registerMethodSigTypeUsages(ctx, jt, retType, retTypeUsage, parameters);
+
         if (jt == null)
             System.out.println("WARNING: top-level Groovy methods are not yet supported.");
         else {
@@ -137,6 +140,23 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         }
 
         return null;
+    }
+
+    private void registerMethodSigTypeUsages(MethodDeclarationContext ctx, JType jt,
+                                             String retType, TypeUsage retTypeUsage,
+                                             List<JParameter> parameters) {
+        // Signature return/parameter types.
+        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        // Thrown exception types.
+        QualifiedClassNameListContext thrownQTypes = ctx.qualifiedClassNameList();
+        if (thrownQTypes != null)
+            for (AnnotatedQualifiedClassNameContext thrownQType : thrownQTypes.annotatedQualifiedClassName())
+                addTypeUsageFromQClassName(jt.typeUsages, thrownQType.qualifiedClassName());
+    }
+
+    private void addTypeUsageFromQClassName(List<TypeUsage> target, QualifiedClassNameContext qClassName) {
+        if (qClassName != null)
+            target.add(new TypeUsage(qClassName.getText(), GroovyUtils.createPositionFromTokens(qClassName.start, qClassName.stop), sourceFile));
     }
 
     @Override
@@ -264,6 +284,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                                 superTypes, scope.getEnclosingElement(), pos, true);
                         logDebug(() -> "Adding type [anonymous]: " + anonymousType);
                         sourceFile.jTypes.add(anonymousType);
+                        anonymousType.typeUsages.add(new TypeUsage(createdNameValue, GroovyUtils.createPositionFromTokens(createdName.start, createdName.stop), sourceFile));
                         processClassBody(anonymousType, anonDecl.classBody());
                     }
                 }
@@ -449,14 +470,16 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         boolean isInner = parent != null && !mp.isStatic();
         String name = classId.getText();
 
-        List<String> superTypes = new LinkedList<>();
-        updateFromTypeList(superTypes, classDecl.scs);
-        updateFromTypeList(superTypes, classDecl.is);
+        List<TypeUsage> superTypeUsages = new LinkedList<>();
+        addTypeUsagesInTypeList(superTypeUsages, classDecl.scs);
+        addTypeUsagesInTypeList(superTypeUsages, classDecl.is);
+        List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
                 mp.isAbstract(), mp.isFinal(), false);
         jt.typeUsages.addAll(mp.getAnnotationUses());
+        jt.typeUsages.addAll(superTypeUsages);
         sourceFile.jTypes.add(jt);
 
         processClassBody(jt, classDecl.classBody());
@@ -474,13 +497,26 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         }));
     }
 
-    private static void updateFromTypeList(List<String> target, TypeListContext tlc) {
+    private void addTypeUsagesInTypeList(List<TypeUsage> target, TypeListContext tlc) {
         if (tlc == null)
             return;
         List<? extends TypeContext> types = tlc.type();
         if (types != null)
             for (TypeContext t : types)
-                target.add(t.getText());
+                addTypeUsagesInType(target, t);
+    }
+
+    private void addTypeUsagesInType(List<TypeUsage> target, TypeContext t) {
+        if (t == null)
+            return;
+        ClassOrInterfaceTypeContext classOrIntfType = t.classOrInterfaceType();
+        if (classOrIntfType != null) {
+            addTypeUsageFromQClassName(target, classOrIntfType.qualifiedClassName());
+            TypeArgumentsContext typeArgs = classOrIntfType.typeArguments();
+            if (typeArgs != null)
+                for (TypeArgumentContext typeArg : typeArgs.typeArgument())
+                    addTypeUsagesInType(target, typeArg.type());
+        }
     }
 
     private static String getType(TypeContext typeCtx) {

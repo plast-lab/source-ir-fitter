@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.ir.model;
 
+import java.util.Collection;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.source.model.Utils;
 
@@ -42,5 +43,11 @@ public class IRAllocation extends IRElement implements AbstractAllocation {
     @Override
     public String toString() {
         return getId() + "@" + getSourceLine();
+    }
+
+    @Override
+    public void addReferencedTypesTo(Collection<String> target) {
+        if (allocatedTypeDoopId != null)
+            target.add(allocatedTypeDoopId);
     }
 }

@@ -11,6 +11,7 @@ import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
+import com.github.javaparser.ast.type.ReferenceType;
 import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
@@ -123,6 +124,9 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt, JavaUtils.createPositionFromNode(name));
         jt.typeUsages.addAll(mp.getAnnotationUses());
         Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        for (ReferenceType thrownException : md.getThrownExceptions())
+            jt.typeUsages.add(new TypeUsage(thrownException.asString(), JavaUtils.createPositionFromNode(thrownException), sourceFile));
+
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);

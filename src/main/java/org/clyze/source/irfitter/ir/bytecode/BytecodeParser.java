@@ -74,6 +74,9 @@ public class BytecodeParser {
         // Parse method descriptor to discover type uses.
         for (String sigType : TypeUtils.raiseSignature(mNode.desc))
             method.addSigTypeReference(sigType);
+        // Exceptions also introduce type uses.
+        for (String excType : mNode.exceptions)
+            method.addSigTypeReference(replaceSlashesWithDots(excType));
     }
 
     public void processClass(List<IRType> irTypes, InputStream is) {

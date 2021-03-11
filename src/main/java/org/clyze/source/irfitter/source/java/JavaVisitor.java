@@ -96,7 +96,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
      */
     private void addTypeUsagesFromType(Collection<TypeUsage> target, Type type,
                                        SourceFile sourceFile) {
-        if (type.isPrimitiveType())
+        if (type.isPrimitiveType() || type.isVoidType())
             return;
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
@@ -119,8 +119,6 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             System.err.println("WARNING: unknown type usages are not yet recorded.");
         else if (type.isVarType())
             System.err.println("WARNING: var-type usages are not yet recorded.");
-        else if (type.isVoidType())
-            System.err.println("WARNING: void type usages are not yet recorded.");
         else if (type.isWildcardType()) {
             WildcardType wType = ((WildcardType)type);
             wType.getExtendedType().ifPresent(refType -> addTypeUsagesFromType(target, refType, sourceFile));

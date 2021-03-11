@@ -2,6 +2,7 @@ package org.clyze.source.irfitter.source.model;
 
 import org.clyze.utils.TypeUtils;
 
+import java.util.Collection;
 import java.util.List;
 
 /** Utilities. */
@@ -111,21 +112,18 @@ public class Utils {
     /**
      * Record type references found in method signatures.
      * @param jt              the type that will record the type usages
-     * @param retType         the return type
-     * @param retTypeUsage    the return type usage (may be null)
-     * @param parameters      the method parameters
+     * @param retTypeUsages   the type usages found in the return type (may be null)
+     * @param paramTypeUsages the type usages found in the parameter types
      * @param sourceFile      the source file object
      */
-    public static void addSigTypeRefs(JType jt, String retType, TypeUsage retTypeUsage,
-                                      List<JParameter> parameters, SourceFile sourceFile) {
-        for (JParameter jParam : parameters) {
-            String jpType = jParam.type;
-            if (!TypeUtils.isPrimitiveType(jpType))
-                jt.typeUsages.add(new TypeUsage(jpType, jParam.position, sourceFile));
-        }
-        if (retTypeUsage != null && !TypeUtils.isPrimitiveType(retType))
-            jt.typeUsages.add(retTypeUsage);
-
+    public static void addSigTypeRefs(JType jt, Collection<TypeUsage> retTypeUsages,
+                                      Collection<TypeUsage> paramTypeUsages) {
+        if (paramTypeUsages != null)
+            jt.typeUsages.addAll(paramTypeUsages);
+        if (retTypeUsages != null)
+            for (TypeUsage retTypeUsage : retTypeUsages)
+                if (!TypeUtils.isPrimitiveType(retTypeUsage.type))
+                    jt.typeUsages.add(retTypeUsage);
     }
 
 }

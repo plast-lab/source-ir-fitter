@@ -106,9 +106,12 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // Return types may be missing.
         ReturnTypeContext retCtx = ctx.returnType();
         String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
-        TypeUsage retTypeUsage = retCtx == null ? null : new TypeUsage(retType, GroovyUtils.createPositionFromTokens(retCtx.start, retCtx.stop), sourceFile);
+        Collection<TypeUsage> retTypeUsages = new HashSet<>();
+        if (retCtx != null)
+            addTypeUsagesInType(retTypeUsages, retCtx.type());
         logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
         List<JParameter> parameters = new LinkedList<>();
+        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
         if (paramsCtx == null)
             System.err.println("WARNING: no formal parameters for " + name);
@@ -117,7 +120,9 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             if (paramsListCtx != null) {
                 for (FormalParameterContext frmCtx : paramsListCtx.formalParameter()) {
                     String paramName = frmCtx.variableDeclaratorId().identifier().getText();
-                    String paramType = getType(frmCtx.type());
+                    TypeContext frmType = frmCtx.type();
+                    String paramType = getType(frmType);
+                    addTypeUsagesInType(paramTypeUsages, frmType);
                     Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
                     JParameter param = new JParameter(paramName, paramType, paramPos);
                     logDebug(() -> "param: " + param);
@@ -130,7 +135,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JType jt = scope.getEnclosingType();
         GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
         JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos);
-        registerMethodSigTypeUsages(ctx, jt, retType, retTypeUsage, parameters);
+        registerMethodSigTypeUsages(ctx, jt, retTypeUsages, paramTypeUsages);
 
         if (jt == null)
             System.out.println("WARNING: top-level Groovy methods are not yet supported.");
@@ -143,10 +148,10 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     }
 
     private void registerMethodSigTypeUsages(MethodDeclarationContext ctx, JType jt,
-                                             String retType, TypeUsage retTypeUsage,
-                                             List<JParameter> parameters) {
+                                             Collection<TypeUsage> retTypeUsages,
+                                             Collection<TypeUsage> paramTypeUsages) {
         // Signature return/parameter types.
-        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         // Thrown exception types.
         QualifiedClassNameListContext thrownQTypes = ctx.qualifiedClassNameList();
         if (thrownQTypes != null)
@@ -154,7 +159,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 addTypeUsageFromQClassName(jt.typeUsages, thrownQType.qualifiedClassName());
     }
 
-    private void addTypeUsageFromQClassName(List<TypeUsage> target, QualifiedClassNameContext qClassName) {
+    private void addTypeUsageFromQClassName(Collection<TypeUsage> target, QualifiedClassNameContext qClassName) {
         if (qClassName != null)
             target.add(new TypeUsage(qClassName.getText(), GroovyUtils.createPositionFromTokens(qClassName.start, qClassName.stop), sourceFile));
     }
@@ -506,7 +511,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 addTypeUsagesInType(target, t);
     }
 
-    private void addTypeUsagesInType(List<TypeUsage> target, TypeContext t) {
+    private void addTypeUsagesInType(Collection<TypeUsage> target, TypeContext t) {
         if (t == null)
             return;
         ClassOrInterfaceTypeContext classOrIntfType = t.classOrInterfaceType();

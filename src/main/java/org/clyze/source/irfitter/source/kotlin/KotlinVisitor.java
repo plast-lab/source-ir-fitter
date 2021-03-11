@@ -10,7 +10,7 @@ import org.clyze.persistent.model.Position;
 
 /**
  * The AST visitor that reads Kotlin sources.
- * https://github.com/gfour/grammars-v4/blob/master/kotlin/kotlin-formal/KotlinParser.g4
+ * https://github.com/antlr/grammars-v4/blob/master/kotlin/kotlin-formal/KotlinParser.g4
  */
 public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     // Taken from https://kotlinlang.org/docs/reference/packages.html
@@ -109,7 +109,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public Void visitDeclaration(DeclarationContext decl) {
         ClassDeclarationContext classMemDecl = decl.classDeclaration();
         if (classMemDecl != null) {
-            System.out.println("TODO: handle nested classes.");
+            System.out.println("WARNING: nested classes are not yet supported.");
             return null;
         }
         FunctionDeclarationContext funMemDecl = decl.functionDeclaration();
@@ -119,7 +119,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         }
         ObjectDeclarationContext objMemDecl = decl.objectDeclaration();
         if (objMemDecl != null) {
-            System.out.println("TODO: handle object members.");
+            System.out.println("WARNING: object members are not yet supported.");
             return null;
         }
         PropertyDeclarationContext propMemDecl = decl.propertyDeclaration();
@@ -128,7 +128,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         }
         TypeAliasContext typeAlias = decl.typeAlias();
         if (typeAlias != null) {
-            System.out.println("TODO: handle type aliases.");
+            System.out.println("WARNING: type aliases are not yet supported.");
             return null;
         }
         return null;
@@ -146,14 +146,13 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             visitDeclaration(decl);
         AnonymousInitializerContext anonymousInit = memDecl.anonymousInitializer();
         if (anonymousInit != null) {
-            System.out.println("TODO: handle anonymous initializers.");
+            System.out.println("WARNING: anonymous initializers are not yet supported.");
         }
         SecondaryConstructorContext secondaryConstructor = memDecl.secondaryConstructor();
         if (secondaryConstructor != null) {
-            System.out.println("TODO: handle secondary constructors.");
+            System.out.println("WARNING: secondary constructors are not yet supported.");
         }
         return null;
-
     }
 
     @Override
@@ -217,8 +216,10 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String fName = fNameCtx.getText();
         TypeContext fmdType = funMemDecl.type();
         String retType = getType(fmdType);
-        TypeUsage retTypeUsage = fmdType == null ? null : new TypeUsage(retType, KotlinUtils.createPositionFromTokens(fmdType.start, fmdType.stop), sourceFile);
+        Collection<TypeUsage> retTypeUsages = new HashSet<>();
+        addTypeUsagesInType(retTypeUsages, fmdType);
         List<JParameter> parameters = new LinkedList<>();
+        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FunctionValueParametersContext funParamsCtx = funMemDecl.functionValueParameters();
         if (funParamsCtx != null) {
             for (FunctionValueParameterContext funParamCtx : funParamsCtx.functionValueParameter()) {
@@ -228,6 +229,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 String funType = getType(funTypeCtx);
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
                 parameters.add(new JParameter(paramName, funType, paramPos));
+                addTypeUsagesInType(paramTypeUsages, funTypeCtx);
             }
         }
         Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
@@ -239,7 +241,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters,
                     mp.getAnnotations(), outerPos, jt,
                     KotlinUtils.createPositionFromToken(fNameCtx.start)));
-            Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+            Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         }
         return null;
     }
@@ -369,5 +371,41 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         StringJoiner sj = new StringJoiner(".");
         ctx.simpleIdentifier().forEach(e -> sj.add(e.getText()));
         return sj.toString();
+    }
+
+    private void addTypeUsagesInType(Collection<TypeUsage> target, TypeContext t) {
+        if (t == null)
+            return;
+        addTypeUsagesInParenType(target, t.parenthesizedType());
+        addTypeUsagesInNullableType(target, t.nullableType());
+        addTypeUsagesInRefType(target, t.typeReference());
+    }
+    private void addTypeUsagesInParenType(Collection<TypeUsage> target, ParenthesizedTypeContext t) {
+        if (t != null)
+            addTypeUsagesInType(target, t.type());
+    }
+    private void addTypeUsagesInNullableType(Collection<TypeUsage> target, NullableTypeContext t) {
+        if (t != null) {
+            addTypeUsagesInParenType(target, t.parenthesizedType());
+            addTypeUsagesInRefType(target, t.typeReference());
+        }
+    }
+    private void addTypeUsagesInRefType(Collection<TypeUsage> target, TypeReferenceContext t) {
+        if (t != null) {
+            UserTypeContext userType = t.userType();
+            if (userType != null) {
+                List<SimpleUserTypeContext> simpleUserTypes = userType.simpleUserType();
+                if (simpleUserTypes != null)
+                    for (SimpleUserTypeContext simpleUserType : simpleUserTypes) {
+                        SimpleIdentifierContext simpleId = simpleUserType.simpleIdentifier();
+                        if (simpleId != null)
+                            target.add(new TypeUsage(simpleId.getText(), KotlinUtils.createPositionFromTokens(simpleId.start, simpleId.stop), sourceFile));
+                        TypeArgumentsContext typeArgs = simpleUserType.typeArguments();
+                        if (typeArgs != null)
+                            System.err.println("WARNING: type arguments are not supported yet.");
+                    }
+
+            }
+        }
     }
 }

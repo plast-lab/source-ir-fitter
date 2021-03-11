@@ -10,9 +10,7 @@ import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
 import com.github.javaparser.ast.stmt.IfStmt;
 import com.github.javaparser.ast.stmt.Statement;
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
-import com.github.javaparser.ast.type.ReferenceType;
-import com.github.javaparser.ast.type.Type;
+import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
 import java.util.function.Consumer;
@@ -85,8 +83,50 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     @Override
     public void visit(MethodDeclaration md, SourceFile sourceFile) {
         String retType = md.getTypeAsString();
-        TypeUsage retTypeUsage = new TypeUsage(retType, JavaUtils.createPositionFromNode(md.getType()), sourceFile);
-        visit(md, retType, retTypeUsage, sourceFile, (md0 -> super.visit(md, sourceFile)));
+        Collection<TypeUsage> retTypeUsages = new HashSet<>();
+        addTypeUsagesFromType(retTypeUsages, md.getType(), sourceFile);
+        visit(md, retType, retTypeUsages, sourceFile, (md0 -> super.visit(md, sourceFile)));
+    }
+
+    /**
+     * Helper method that recursively traverses a type and records all type usages.
+     * @param target        the collection to populate
+     * @param type          the type to traverse
+     * @param sourceFile    the source file object
+     */
+    private void addTypeUsagesFromType(Collection<TypeUsage> target, Type type,
+                                       SourceFile sourceFile) {
+        if (type.isPrimitiveType())
+            return;
+        if (type.isClassOrInterfaceType()) {
+            ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
+            SimpleName name = classOrIntf.getName();
+            TypeUsage tu = new TypeUsage(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
+            target.add(tu);
+            classOrIntf.getTypeArguments().ifPresent(nl -> {
+                for (Type typeArg : nl)
+                    addTypeUsagesFromType(target, typeArg, sourceFile);
+            });
+        } else if (type.isArrayType())
+            addTypeUsagesFromType(target, ((ArrayType) type).getComponentType(), sourceFile);
+        else if (type.isIntersectionType())
+            System.err.println("WARNING: intersection type usages are not yet recorded.");
+        else if (type.isTypeParameter())
+            System.err.println("WARNING: type parameter usages are not yet recorded.");
+        else if (type.isUnionType())
+            System.err.println("WARNING: union type usages are not yet recorded.");
+        else if (type.isUnknownType())
+            System.err.println("WARNING: unknown type usages are not yet recorded.");
+        else if (type.isVarType())
+            System.err.println("WARNING: var-type usages are not yet recorded.");
+        else if (type.isVoidType())
+            System.err.println("WARNING: void type usages are not yet recorded.");
+        else if (type.isWildcardType()) {
+            WildcardType wType = ((WildcardType)type);
+            wType.getExtendedType().ifPresent(refType -> addTypeUsagesFromType(target, refType, sourceFile));
+            wType.getSuperType().ifPresent(refType -> addTypeUsagesFromType(target, refType, sourceFile));
+        } else
+            System.err.println("WARNING: unknown type usage for element: " + type.getClass().getSimpleName());
     }
 
 //    @Override
@@ -112,21 +152,23 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     private <T extends CallableDeclaration<?>>
-    void visit(CallableDeclaration<T> md, String retType, TypeUsage retTypeUsage, SourceFile sourceFile,
-               Consumer<CallableDeclaration<T>> methodProcessor) {
+    void visit(CallableDeclaration<T> md, String retType, Collection<TypeUsage> retTypeUsages,
+               SourceFile sourceFile, Consumer<CallableDeclaration<T>> methodProcessor) {
         SimpleName name = md.getName();
         List<JParameter> parameters = new LinkedList<>();
-        for (Parameter param : md.getParameters())
+        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
+        for (Parameter param : md.getParameters()) {
+            addTypeUsagesFromType(paramTypeUsages, param.getType(), sourceFile);
             parameters.add(new JParameter(param.getNameAsString(), param.getTypeAsString(), JavaUtils.createPositionFromNode(param)));
+        }
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt, JavaUtils.createPositionFromNode(name));
         jt.typeUsages.addAll(mp.getAnnotationUses());
-        Utils.addSigTypeRefs(jt, retType, retTypeUsage, parameters, sourceFile);
+        Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         for (ReferenceType thrownException : md.getThrownExceptions())
-            jt.typeUsages.add(new TypeUsage(thrownException.asString(), JavaUtils.createPositionFromNode(thrownException), sourceFile));
-
+            addTypeUsagesFromType(jt.typeUsages, thrownException, sourceFile);
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);

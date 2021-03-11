@@ -6,6 +6,9 @@ import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.utils.TypeUtils;
 
+/**
+ * A low-level representation of a method.
+ */
 public class IRMethod extends IRElement implements AbstractMethod {
     public final List<IRMethodInvocation> invocations = new LinkedList<>();
     public final List<IRAllocation> allocations = new LinkedList<>();
@@ -104,7 +107,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
      * @param type  the (fully-qualified) type
      */
     public void addSigTypeReference(String type) {
-        if (type.equals("void") || TypeUtils.isPrimitiveType(type))
+        if (TypeUtils.isPrimitiveType(type))
             return;
         if (sigTypeReferences == null)
             sigTypeReferences = new HashSet<>();

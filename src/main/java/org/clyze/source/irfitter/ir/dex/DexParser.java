@@ -46,8 +46,8 @@ public class DexParser {
                     String typeId = replaceSlashesWithDots(className.substring(1, className.length()-1));
                     DexModifierPack irTypeMods = new DexModifierPack(dexClass);
                     List<String> superTypes = new LinkedList<>();
-                    superTypes.add(dexClass.getSuperclass());
-                    superTypes.addAll(dexClass.getInterfaces());
+                    superTypes.add(raiseLowLevelType(dexClass.getSuperclass()));
+                    dexClass.getInterfaces().forEach(intf -> superTypes.add(raiseLowLevelType(intf)));
                     IRType irType = new IRType(typeId, superTypes, irTypeMods);
                     if (debug)
                         System.out.println("IR type: " + irType);
@@ -55,7 +55,7 @@ public class DexParser {
                     String classPrefix = "<" + typeId + ": ";
                     for (DexBackedField dexField : dexClass.getFields()) {
                         String fieldName = dexField.getName();
-                        String fieldType = TypeUtils.raiseTypeId(replaceSlashesWithDots(dexField.getType()));
+                        String fieldType = raiseLowLevelType(dexField.getType());
                         String fieldId = classPrefix + fieldType + " " + fieldName + ">";
                         irType.fields.add(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField)));
                     }
@@ -63,12 +63,12 @@ public class DexParser {
                         StringJoiner sj = new StringJoiner(",");
                         List<String> paramTypes = new LinkedList<>();
                         for (String pType : dexMethod.getParameterTypes()) {
-                            String paramType = TypeUtils.raiseTypeId(replaceSlashesWithDots(pType));
+                            String paramType = raiseLowLevelType(pType);
                             sj.add(paramType);
                             paramTypes.add(paramType);
                         }
                         String mName = dexMethod.getName();
-                        String retType = TypeUtils.raiseTypeId(replaceSlashesWithDots(dexMethod.getReturnType()));
+                        String retType = raiseLowLevelType(dexMethod.getReturnType());
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
                                 new DexModifierPack(dexMethod), irTypeMods.isInterface());
@@ -111,5 +111,14 @@ public class DexParser {
 
     static String raisedJvmTypeOf(ReferenceInstruction instr) {
         return TypeUtils.raiseTypeId(((TypeReference) instr.getReference()).getType());
+    }
+
+    /**
+     * Helper method to simultaneously raise a type and replace slashes with dots.
+     * @param desc   the low-level type string
+     * @return       the fully-qualified Java type
+     */
+    private static String raiseLowLevelType(String desc) {
+        return TypeUtils.raiseTypeId(replaceSlashesWithDots(desc));
     }
 }

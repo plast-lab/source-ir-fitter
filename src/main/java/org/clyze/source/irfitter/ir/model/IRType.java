@@ -25,7 +25,7 @@ public class IRType extends IRElement {
     }
 
     /**
-     * Gathers all references to types in method bodies.
+     * Gathers all references to types in this type.
      * @return the set of all type references as fully-qualified types
      */
     public Set<String> getTypeReferences() {
@@ -38,6 +38,8 @@ public class IRType extends IRElement {
             if (sigTypeReferences != null)
                 ret.addAll(sigTypeReferences);
         }
+        if (superTypes != null)
+            ret.addAll(superTypes);
         return ret;
     }
 }

@@ -15,9 +15,14 @@ import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.utils.TypeUtils;
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.dexbacked.*;
+import org.jf.dexlib2.dexbacked.value.DexBackedArrayEncodedValue;
+import org.jf.dexlib2.dexbacked.value.DexBackedTypeEncodedValue;
+import org.jf.dexlib2.iface.Annotation;
+import org.jf.dexlib2.iface.AnnotationElement;
 import org.jf.dexlib2.iface.instruction.Instruction;
 import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
 import org.jf.dexlib2.iface.reference.TypeReference;
+import org.jf.dexlib2.iface.value.EncodedValue;
 
 import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
 
@@ -74,6 +79,11 @@ public class DexParser {
                                 new DexModifierPack(dexMethod), irTypeMods.isInterface());
                         paramTypes.forEach(irMethod::addSigTypeReference);
                         irMethod.addSigTypeReference(retType);
+                        for (Annotation annotation : dexMethod.getAnnotations()) {
+                            String annType = raiseLowLevelType(annotation.getType());
+                            irMethod.addSigTypeReference(annType);
+                            processSpecialAnnotations(annotation, annType, irMethod);
+                        }
                         if (debug)
                             System.out.println("IR method: " + irMethod);
                         processDexInstructions(dexMethod, irMethod, debug);
@@ -84,6 +94,18 @@ public class DexParser {
         } catch (IOException ex) {
             ex.printStackTrace();
         }
+    }
+
+    private void processSpecialAnnotations(Annotation annotation, String annType, IRMethod irMethod) {
+        if (annType.equals("dalvik.annotation.Throws"))
+            for (AnnotationElement annElem : annotation.getElements())
+                if (annElem.getName().equals("value")) {
+                    EncodedValue encAnnValue = annElem.getValue();
+                    if (encAnnValue instanceof DexBackedArrayEncodedValue)
+                        for (EncodedValue encodedValue : ((DexBackedArrayEncodedValue) encAnnValue).getValue())
+                            if (encodedValue instanceof DexBackedTypeEncodedValue)
+                                irMethod.addSigTypeReference(((DexBackedTypeEncodedValue) encodedValue).getValue());
+                }
     }
 
     private void processDexInstructions(DexBackedMethod dexMethod,

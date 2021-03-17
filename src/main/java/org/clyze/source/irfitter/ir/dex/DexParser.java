@@ -128,6 +128,9 @@ public class DexParser {
                     }
                 }
             }
+            for (DexBackedTryBlock tryBlock : implementation.getTryBlocks())
+                for (DexBackedExceptionHandler handler : tryBlock.getExceptionHandlers())
+                    irMethod.addTypeReference(raiseLowLevelType(handler.getExceptionType()));
         }
     }
 

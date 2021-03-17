@@ -3,6 +3,7 @@ package org.clyze.source.irfitter.source.java;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithAccessModifiers;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithStaticModifier;
@@ -36,6 +37,18 @@ public class JavaModifierPack extends SourceModifierPack {
         this.isEnum = isEnum;
         this.isInterface = isInterface;
         registerAnnotations(decl.getAnnotations(), sourceFile);
+    }
+
+    /**
+     * Generate a modifier pack from a parameter declaration.
+     * @param sourceFile    the source file containing the declaration
+     * @param param         the source code parameter
+     */
+    public JavaModifierPack(SourceFile sourceFile, Parameter param) {
+        this.isFinal = param.isFinal();
+        this.isStatic = false;
+        this.isSynchronized = false;
+        registerAnnotations(param.getAnnotations(), sourceFile);
     }
 
     /**

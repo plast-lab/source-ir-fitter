@@ -183,6 +183,8 @@ public class Driver {
             }
             if (typeUsage.matchId != null)
                 registerSymbol(bm, typeUsage.getUsage());
+            else if (debug)
+                System.out.println("Type usage could not be resolved: " + typeUsage);
         }
     }
 

@@ -4,10 +4,7 @@ import java.util.Map;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.utils.TypeUtils;
-import org.objectweb.asm.Label;
-import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.Type;
+import org.objectweb.asm.*;
 
 /**
  * The visitor for bytecode methods.
@@ -74,5 +71,12 @@ public class BytecodeMethodVisitor extends MethodVisitor {
         if (value instanceof Type)
             irMethod.addTypeReference(((Type) value).getClassName());
         super.visitLdcInsn(value);
+    }
+
+    @Override
+    public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
+        if (type != null)
+            irMethod.addTypeReference(TypeUtils.replaceSlashesWithDots(type));
+        super.visitTryCatchBlock(start, end, handler, type);
     }
 }

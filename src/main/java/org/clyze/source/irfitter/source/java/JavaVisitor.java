@@ -6,10 +6,7 @@ import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.nodeTypes.NodeWithType;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithAccessModifiers;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithStaticModifier;
-import com.github.javaparser.ast.stmt.BlockStmt;
-import com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt;
-import com.github.javaparser.ast.stmt.IfStmt;
-import com.github.javaparser.ast.stmt.Statement;
+import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
@@ -110,6 +107,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             SimpleName name = classOrIntf.getName();
             TypeUsage tu = new TypeUsage(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
             target.add(tu);
+            if (sourceFile.debug)
+                System.out.println("Added type usage: " + tu);
             classOrIntf.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
                     addTypeUsagesFromType(target, typeArg, sourceFile);
@@ -305,6 +304,22 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         if (sourceFile.debug)
             System.out.println("Registering type usage: " + tu);
         scope.getEnclosingType().typeUsages.add(tu);
+    }
+
+    @Override
+    public void visit(final CatchClause cc, SourceFile sourceFile) {
+        visit(cc.getParameter(), sourceFile);
+        visit(cc.getBody(), sourceFile);
+    }
+
+    @Override
+    public void visit(Parameter param, SourceFile sourceFile) {
+        JType jt = scope.getEnclosingType();
+        if (jt != null) {
+            addTypeUsagesFromType(jt.typeUsages, param.getType(), sourceFile);
+            jt.typeUsages.addAll(new JavaModifierPack(sourceFile, param).getAnnotationUses());
+        } else
+            System.err.println("WARNING: found parameter outside type: " + param);
     }
 
     static TypeUsage typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node, SourceFile sourceFile) {

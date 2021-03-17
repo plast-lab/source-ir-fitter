@@ -15,6 +15,7 @@ import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.utils.TypeUtils;
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.dexbacked.*;
+import org.jf.dexlib2.dexbacked.reference.DexBackedMethodReference;
 import org.jf.dexlib2.dexbacked.value.DexBackedArrayEncodedValue;
 import org.jf.dexlib2.dexbacked.value.DexBackedTypeEncodedValue;
 import org.jf.dexlib2.iface.Annotation;
@@ -117,6 +118,7 @@ public class DexParser {
                     case NEW_INSTANCE: {
                         String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
                         boolean inIIB = false;
+                        // TODO: read source line
                         Integer sourceLine = null;
                         irMethod.addAllocation(typeId, inIIB, false, sourceLine, debug);
                         break;
@@ -124,6 +126,25 @@ public class DexParser {
                     case CONST_CLASS: {
                         String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
                         irMethod.addTypeReference(typeId);
+                        break;
+                    }
+                    case INVOKE_DIRECT:
+                    case INVOKE_VIRTUAL:
+                    case INVOKE_STATIC:
+                    case INVOKE_INTERFACE:
+                    case INVOKE_SUPER:
+                    case INVOKE_DIRECT_RANGE:
+                    case INVOKE_VIRTUAL_RANGE:
+                    case INVOKE_STATIC_RANGE:
+                    case INVOKE_INTERFACE_RANGE:
+                    case INVOKE_SUPER_RANGE: {
+                        DexBackedMethodReference mRef = (DexBackedMethodReference) ((ReferenceInstruction)instr).getReference();
+                        int arity = mRef.getParameterTypes().size();
+                        String methodName = mRef.getName();
+                        String invokedMethodId = TypeUtils.raiseTypeId(mRef.getDefiningClass()) + '.' + methodName;
+                        // TODO: read source line
+                        Integer sourceLine = null;
+                        irMethod.addInvocation(irMethod.getId(), methodName, arity, invokedMethodId, sourceLine, debug);
                         break;
                     }
                 }

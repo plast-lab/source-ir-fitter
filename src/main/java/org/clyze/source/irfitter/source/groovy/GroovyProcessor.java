@@ -11,8 +11,8 @@ import org.clyze.source.irfitter.source.model.SourceFile;
 /** This class handles Groovy source processing. */
 public class GroovyProcessor implements SourceProcessor {
     @Override
-    public SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes) {
-        SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes);
+    public SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy) {
+        SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy);
         try {
             GroovyLangLexer gll = new GroovyLangLexer(CharStreams.fromFile(srcFile));
             CommonTokenStream tokens = new CommonTokenStream(gll);

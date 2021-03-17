@@ -37,14 +37,17 @@ public class SourceFile {
      * types will be combined into a single more informative representation.
      */
     public final boolean synthesizeTypes;
+    /** If true, enable experimental/best-effort heuristics that may lose information. */
+    private final boolean lossy;
     private FileInfo cachedFileInfo = null;
     private String cachedRelativePath = null;
 
-    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes) {
+    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes, boolean lossy) {
         this.topDir = topDir;
         this.file = file;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
+        this.lossy = lossy;
     }
 
     /**
@@ -148,14 +151,22 @@ public class SourceFile {
                         List<JAllocation> srcAllocs = srcEntry.getValue();
                         List<IRAllocation> irAllocs = irEntry.getValue();
                         int srcSize = srcAllocs.size();
-                        if (srcSize == irAllocs.size()) {
+                        int irSize = irAllocs.size();
+                        if (srcSize == irSize) {
                             for (int i = 0; i < srcSize; i++) {
                                 IRAllocation irAlloc = irAllocs.get(i);
                                 JAllocation srcAlloc = srcAllocs.get(i);
                                 recordMatch(allocationMap, "allocation", irAlloc, srcAlloc);
                             }
-                        } else
-                            System.out.println("WARNING: cannot match allocations of type " + simpleType);
+                        } else if (lossy) {
+                            if (debug) {
+                                System.out.println("WARNING: cannot match allocations of type " + simpleType + ":");
+                                System.out.println("Source allocations (" + srcSize + "):\n" + srcAllocs);
+                                System.out.println("IR allocations (" + irSize + "):\n" + irAllocs);
+                                System.out.println("Attempting matching by line number...");
+                            }
+                            matchSameLineFirstAllocations(allocationMap, srcAllocs, irAllocs);
+                        }
                     }
                 }
             }
@@ -178,6 +189,37 @@ public class SourceFile {
                         recordMatch(allocationMap, "allocation", irAlloc, fakeSrcAlloc);
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * If there is only one source allocation in this line, match it with the
+     * first IR allocation in this same line.
+     * @param allocationMap  the allocation map to update
+     * @param srcAllocs      the source code allocations
+     * @param irAllocs       the IR allocations
+     */
+    private void matchSameLineFirstAllocations(Map<String, Collection<JAllocation>> allocationMap,
+                                               List<JAllocation> srcAllocs, List<IRAllocation> irAllocs) {
+        Map<Long, List<JAllocation>> srcAllocsPerLine = new HashMap<>();
+        for (JAllocation srcAlloc : srcAllocs)
+            srcAllocsPerLine.computeIfAbsent(srcAlloc.pos.getStartLine(), (k -> new ArrayList<>())).add(srcAlloc);
+        Map<Long, Collection<IRAllocation>> irAllocsPerLine = new HashMap<>();
+        for (IRAllocation irAlloc : irAllocs) {
+            Integer sourceLine = irAlloc.getSourceLine();
+            if (sourceLine != null)
+                irAllocsPerLine.computeIfAbsent(sourceLine.longValue(), (k -> new ArrayList<>())).add(irAlloc);
+        }
+        for (Map.Entry<Long, List<JAllocation>> entry : srcAllocsPerLine.entrySet()) {
+            List<JAllocation> lineAllocs = entry.getValue();
+            if (lineAllocs.size() == 1) {
+                Collection<IRAllocation> irAllocations = irAllocsPerLine.get(entry.getKey());
+                if (irAllocations != null)
+                    for (IRAllocation irAlloc : irAllocations) {
+                        recordMatch(allocationMap, "allocation", irAlloc, lineAllocs.get(0));
+                        break;
+                    }
             }
         }
     }

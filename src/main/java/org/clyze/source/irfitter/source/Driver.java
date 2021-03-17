@@ -53,28 +53,29 @@ public class Driver {
      * @param srcFile             the source file/archive/directory
      * @param debug               debug mode
      * @param synthesizeTypes     if true, attempt to synthesize erased types
+     * @param lossy               if true, enable lossy heuristics
      * @return                    the processed source file objects
      */
     public static Collection<SourceFile> readSources(File srcFile, boolean debug,
-                                                     boolean synthesizeTypes) {
+                                                     boolean synthesizeTypes, boolean lossy) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = Files.createTempDirectory("extracted-sources").toFile();
                 tmpDir.deleteOnExit();
                 ZipUtil.unpack(srcFile, tmpDir);
-                return readSources(tmpDir, tmpDir, debug, synthesizeTypes);
+                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, debug, synthesizeTypes);
+            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy);
     }
 
     private static Collection<SourceFile> readSources(File topDir, File srcFile,
-                                                      boolean debug,
-                                                      boolean synthesizeTypes) {
+                                                      boolean debug, boolean synthesizeTypes,
+                                                      boolean lossy) {
         Collection<SourceFile> sources = new LinkedList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -82,18 +83,18 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes));
+                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
             }
         }
         return sources;

@@ -55,6 +55,9 @@ public class Main {
         Option jsonOpt = new Option("j", "json", false, "Enable JSON output.");
         options.addOption(jsonOpt);
 
+        Option lossyOpt = new Option("l", "lossy", false, "Enable lossy heuristics.");
+        options.addOption(lossyOpt);
+
         Option synthOpt = new Option(null, "synthesize-types", false, "Synthesize types from partial source/IR information.");
         options.addOption(synthOpt);
 
@@ -88,6 +91,7 @@ public class Main {
             boolean sarif = cli.hasOption(sarifOpt.getLongOpt());
             boolean json = cli.hasOption(jsonOpt.getOpt());
             boolean synthesizeTypes = cli.hasOption(synthOpt.getLongOpt());
+            boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
 
@@ -104,7 +108,7 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(Driver.readSources(srcFile, debug, synthesizeTypes));
+                sources.addAll(Driver.readSources(srcFile, debug, synthesizeTypes, lossy));
             }
 
             // Match information between IR and sources.

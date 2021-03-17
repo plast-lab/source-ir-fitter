@@ -12,7 +12,8 @@ public interface SourceProcessor {
      * @param srcFile   the Groovy source file to process
      * @param debug     if true, run extra debug code
      * @param synthesizeTypes if true, try to synthesize high-level types from source/IR types
+     * @param lossy     if true, enable lossy heuristics
      * @return          the source file object
      */
-    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes);
+    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy);
 }

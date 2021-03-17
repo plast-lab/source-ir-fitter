@@ -1,6 +1,7 @@
 package org.clyze.source.irfitter.source.groovy;
 
 import groovyjarjarantlr4.v4.runtime.RuleContext;
+import groovyjarjarantlr4.v4.runtime.Token;
 import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
 import java.util.function.Supplier;
@@ -161,7 +162,14 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     private void addTypeUsageFromQClassName(Collection<TypeUsage> target, QualifiedClassNameContext qClassName) {
         if (qClassName != null)
-            target.add(new TypeUsage(qClassName.getText(), GroovyUtils.createPositionFromTokens(qClassName.start, qClassName.stop), sourceFile));
+            addTypeUsageFromName(target, qClassName.getText(), qClassName.start, qClassName.stop);
+    }
+
+    private void addTypeUsageFromName(Collection<TypeUsage> target, String name, Token start, Token stop) {
+        TypeUsage tu = new TypeUsage(name, GroovyUtils.createPositionFromTokens(start, stop), sourceFile);
+        if (sourceFile.debug)
+            System.out.println("Adding type usage: " + tu);
+        target.add(tu);
     }
 
     @Override
@@ -437,7 +445,11 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     @Override
     public Void visitFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
         JType jt = scope.getEnclosingType();
-        for (JVariable jVar : processVariableDeclaration(fieldDeclCtx.variableDeclaration())) {
+        VariableDeclarationContext varDecl = fieldDeclCtx.variableDeclaration();
+        Collection<TypeUsage> typeUsages = new ArrayList<>();
+        addTypeUsagesInType(typeUsages, varDecl.type());
+        jt.typeUsages.addAll(typeUsages);
+        for (JVariable jVar : processVariableDeclaration(varDecl)) {
             ModifierPack mp = jVar.mp;
             JField field = new JField(sourceFile, jVar.type, jVar.name, mp.getAnnotations(), jVar.pos, jt);
             jt.fields.add(field);
@@ -516,6 +528,9 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             return;
         ClassOrInterfaceTypeContext classOrIntfType = t.classOrInterfaceType();
         if (classOrIntfType != null) {
+            QualifiedStandardClassNameContext stdClassName = classOrIntfType.qualifiedStandardClassName();
+            if (stdClassName != null)
+                addTypeUsageFromName(target, stdClassName.getText(), stdClassName.start, stdClassName.stop);
             addTypeUsageFromQClassName(target, classOrIntfType.qualifiedClassName());
             TypeArgumentsContext typeArgs = classOrIntfType.typeArguments();
             if (typeArgs != null)

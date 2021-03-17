@@ -15,7 +15,6 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
 
@@ -113,9 +112,10 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             System.err.println("WARNING: intersection type usages are not yet recorded.");
         else if (type.isTypeParameter())
             System.err.println("WARNING: type parameter usages are not yet recorded.");
-        else if (type.isUnionType())
-            System.err.println("WARNING: union type usages are not yet recorded.");
-        else if (type.isUnknownType())
+        else if (type.isUnionType()) {
+            UnionType uType = (UnionType) type;
+            uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsagesFromType(target, refType, sourceFile)));
+        } else if (type.isUnknownType())
             System.err.println("WARNING: unknown type usages are not yet recorded.");
         else if (type.isVarType())
             System.err.println("WARNING: var-type usages are not yet recorded.");

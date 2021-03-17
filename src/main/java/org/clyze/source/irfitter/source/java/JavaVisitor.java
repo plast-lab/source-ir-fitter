@@ -84,6 +84,18 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         visit(md, retType, retTypeUsages, sourceFile, (md0 -> super.visit(md, sourceFile)));
     }
 
+    @Override
+    public void visit(VariableDeclarationExpr vDecl, SourceFile sourceFile) {
+        JType jt = scope.getEnclosingType();
+        if (jt == null) {
+            System.err.println("ERROR: variable declaration outside type: " + vDecl.getRange());
+            return;
+        }
+        jt.typeUsages.addAll((new JavaModifierPack(sourceFile, vDecl.getAnnotations())).getAnnotationUses());
+        for (VariableDeclarator variable : vDecl.getVariables())
+            addTypeUsagesFromType(jt.typeUsages, variable.getType(), sourceFile);
+    }
+
     /**
      * Helper method that recursively traverses a type and records all type usages.
      * @param target        the collection to populate

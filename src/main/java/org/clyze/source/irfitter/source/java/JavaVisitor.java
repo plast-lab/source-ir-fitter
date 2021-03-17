@@ -182,15 +182,14 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(FieldDeclaration fd, SourceFile sourceFile) {
-//        fd.getModifiers().forEach(p -> p.accept(this, sourceFile));
         for (VariableDeclarator vd : fd.getVariables()) {
-            TypeUsage fieldType = typeOf(vd, sourceFile);
-            String fieldName = vd.getNameAsString();
+            Collection<TypeUsage> fieldTypeUsages = new ArrayList<>();
+            addTypeUsagesFromType(fieldTypeUsages, vd.getType(), sourceFile);
             JType jt = scope.getEnclosingType();
-            jt.typeUsages.add(fieldType);
+            jt.typeUsages.addAll(fieldTypeUsages);
 
             JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false);
-            JField srcField = new JField(sourceFile, fieldType.type, fieldName,
+            JField srcField = new JField(sourceFile, typeOf(vd), vd.getNameAsString(),
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
             jt.typeUsages.addAll(mp.getAnnotationUses());
             if (sourceFile.debug)
@@ -247,10 +246,11 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         JMethod parentMethod = scope.getEnclosingMethod();
         Optional<NodeList<BodyDeclaration<?>>> anonymousClassBody = objCExpr.getAnonymousClassBody();
         boolean isAnonymousClassDecl = anonymousClassBody.isPresent();
-        TypeUsage typeUsage = typeOf(objCExpr, sourceFile);
+        Collection<TypeUsage> typeUsages = new ArrayList<>();
+        addTypeUsagesFromType(typeUsages, objCExpr.getType(), sourceFile);
         JType enclosingType = scope.getEnclosingType();
-        enclosingType.typeUsages.add(typeUsage);
-        String simpleType = Utils.getSimpleType(typeUsage.type);
+        enclosingType.typeUsages.addAll(typeUsages);
+        String simpleType = Utils.getSimpleType(typeOf(objCExpr));
         if (isAnonymousClassDecl) {
             List<String> superTypes = Collections.singletonList(simpleType);
             JType anonymousType = enclosingType.createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
@@ -322,10 +322,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             System.err.println("WARNING: found parameter outside type: " + param);
     }
 
-    static TypeUsage typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node, SourceFile sourceFile) {
-        Type type = node.getType();
-        Position pos = JavaUtils.createPositionFromNode(type);
-        return new TypeUsage(Utils.simplifyType(type.asString()), pos, sourceFile);
+    private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
+        return Utils.simplifyType(node.getType().asString());
     }
 
     private static <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>

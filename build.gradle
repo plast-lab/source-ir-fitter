@@ -23,7 +23,7 @@ mainClassName = 'org.clyze.source.irfitter.Main'
 
 gradle.rootProject.ext.clueCommonVersion='3.23.7'
 gradle.rootProject.ext.commonsCliVersion='1.2'
-gradle.rootProject.ext.groovyVersion="3.0.6"
+gradle.rootProject.ext.groovyVersion="3.0.7"
 
 def asmVersion = '9.0'
 dependencies {

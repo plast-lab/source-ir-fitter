@@ -174,8 +174,7 @@ public class SourceFile {
                     Integer line = irAlloc.getSourceLine();
                     if (line != null) {
                         Position pos = new Position(line, line, 0, 0);
-                        JAllocation fakeSrcAlloc = new JAllocation(this, pos, irAlloc.getSimpleType());
-                        srcMethod.allocations.add(fakeSrcAlloc);
+                        JAllocation fakeSrcAlloc = srcMethod.addAllocation(this, pos, irAlloc.getSimpleType());
                         recordMatch(allocationMap, "allocation", irAlloc, fakeSrcAlloc);
                     }
                 }

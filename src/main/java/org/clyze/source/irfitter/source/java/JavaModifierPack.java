@@ -1,6 +1,7 @@
 package org.clyze.source.irfitter.source.java;
 
 import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithAccessModifiers;
@@ -34,7 +35,22 @@ public class JavaModifierPack extends SourceModifierPack {
         this.isSynchronized = decl.hasModifier(Modifier.Keyword.SYNCHRONIZED);
         this.isEnum = isEnum;
         this.isInterface = isInterface;
-        for (AnnotationExpr annotationExpr : decl.getAnnotations()) {
+        registerAnnotations(decl.getAnnotations(), sourceFile);
+    }
+
+    /**
+     * Generate a modifier pack from a list of annotations.
+     * @param sourceFile    the source file containing the declaration
+     * @param annotations   the annotations list
+     */
+    public JavaModifierPack(SourceFile sourceFile, NodeList<AnnotationExpr> annotations) {
+        this.isStatic = false;
+        this.isSynchronized = false;
+        registerAnnotations(annotations, sourceFile);
+    }
+
+    private void registerAnnotations(NodeList<AnnotationExpr> annotations, SourceFile sourceFile) {
+        for (AnnotationExpr annotationExpr : annotations) {
             String annotationType = annotationExpr.getName().toString();
             registerAnnotation(sourceFile, annotationType, JavaUtils.createPositionFromNode(annotationExpr));
         }

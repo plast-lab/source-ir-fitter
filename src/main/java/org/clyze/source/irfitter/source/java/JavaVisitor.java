@@ -97,6 +97,10 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                                        SourceFile sourceFile) {
         if (type.isPrimitiveType() || type.isVoidType())
             return;
+
+        // Add all annotation type usages.
+        target.addAll((new JavaModifierPack(sourceFile, type.getAnnotations())).getAnnotationUses());
+
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
             SimpleName name = classOrIntf.getName();

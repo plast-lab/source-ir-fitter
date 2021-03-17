@@ -114,7 +114,6 @@ public class Utils {
      * @param jt              the type that will record the type usages
      * @param retTypeUsages   the type usages found in the return type (may be null)
      * @param paramTypeUsages the type usages found in the parameter types
-     * @param sourceFile      the source file object
      */
     public static void addSigTypeRefs(JType jt, Collection<TypeUsage> retTypeUsages,
                                       Collection<TypeUsage> paramTypeUsages) {

@@ -101,6 +101,10 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         // Add all annotation type usages.
         target.addAll((new JavaModifierPack(sourceFile, type.getAnnotations())).getAnnotationUses());
 
+        // Nothing else to do for unknown types.
+        if (type.isUnknownType())
+            return;
+
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
             SimpleName name = classOrIntf.getName();
@@ -119,9 +123,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         else if (type.isUnionType()) {
             UnionType uType = (UnionType) type;
             uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsagesFromType(target, refType, sourceFile)));
-        } else if (type.isUnknownType())
-            System.err.println("WARNING: unknown type usages are not yet recorded.");
-        else if (type.isVarType())
+        } else if (type.isVarType())
             System.err.println("WARNING: var-type usages are not yet recorded.");
         else if (type.isWildcardType()) {
             WildcardType wType = ((WildcardType)type);

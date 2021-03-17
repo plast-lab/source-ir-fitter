@@ -1,15 +1,13 @@
 package org.clyze.source.irfitter.source.model;
 
 import org.clyze.persistent.model.Position;
-import org.clyze.persistent.model.Usage;
-import org.clyze.persistent.model.UsageKind;
 import org.clyze.persistent.model.jvm.JvmHeapAllocation;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.ir.model.IRAllocation;
 
 /** An object allocation site in the source code. */
 public class JAllocation extends NamedElementWithPosition<IRAllocation, JvmHeapAllocation>
-implements AbstractAllocation, UsageGen {
+implements AbstractAllocation {
     public final String simpleType;
 
     /**
@@ -42,13 +40,5 @@ implements AbstractAllocation, UsageGen {
     @Override
     public String toString() {
         return "new " + simpleType + "()";
-    }
-
-    @Override
-    public Usage getUsage() {
-        if (symbol == null)
-            return null;
-        return new Usage(symbol.getPosition(), symbol.getSourceFileName(),
-                symbol.getAllocatedTypeId(), UsageKind.TYPE);
     }
 }

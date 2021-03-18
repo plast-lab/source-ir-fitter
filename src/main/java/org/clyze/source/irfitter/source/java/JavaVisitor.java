@@ -210,8 +210,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             Optional<Expression> optInitializer = vd.getInitializer();
             if (optInitializer != null && optInitializer.isPresent()) {
                 Expression initExpr = optInitializer.get();
-                if (fd.isStatic() && fd.isFinal() && (initExpr instanceof LiteralStringValueExpr)) {
-                    LiteralStringValueExpr s = (LiteralStringValueExpr) initExpr;
+                if (fd.isStatic() && fd.isFinal() && (initExpr instanceof StringLiteralExpr)) {
+                    StringLiteralExpr s = (StringLiteralExpr) initExpr;
                     String sValue = s.getValue();
                     if (sourceFile.debug)
                         System.out.println("Java static final field points to string constant: " + sValue);

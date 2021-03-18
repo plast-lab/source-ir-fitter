@@ -337,6 +337,16 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             System.err.println("WARNING: found parameter outside type: " + param);
     }
 
+    @Override
+    public void visit(CastExpr castExpr, SourceFile sourceFile) {
+        JType jt = scope.getEnclosingType();
+        if (jt != null)
+            addTypeUsagesFromType(jt.typeUsages, castExpr.getType(), sourceFile);
+        else
+            System.err.println("WARNING: found cast outside type: " + castExpr);
+        super.visit(castExpr, sourceFile);
+    }
+
     private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getType().asString());
     }

@@ -115,8 +115,12 @@ public class DexParser {
         if (implementation != null) {
             for (Instruction instr : implementation.getInstructions()) {
                 switch (instr.getOpcode()) {
-                    case NEW_INSTANCE: {
+                    case NEW_INSTANCE:
+                    case NEW_ARRAY:
+                    case FILLED_NEW_ARRAY:
+                    case FILLED_NEW_ARRAY_RANGE: {
                         String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
+                        // TODO: support initializer blocks
                         boolean inIIB = false;
                         // TODO: read source line
                         Integer sourceLine = null;

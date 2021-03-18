@@ -289,6 +289,28 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     @Override
+    public void visit(ArrayCreationExpr arrayCreationExpr, SourceFile sourceFile) {
+        JType jt = scope.getEnclosingType();
+        if (jt == null) {
+            System.out.println("ERROR: array creation found outside type");
+            return;
+        }
+
+        for (ArrayCreationLevel level : arrayCreationExpr.getLevels())
+            jt.typeUsages.addAll((new JavaModifierPack(sourceFile, level.getAnnotations())).getAnnotationUses());
+
+        JMethod parentMethod = scope.getEnclosingMethod();
+        if (parentMethod == null)
+            System.out.println("TODO: array creation in initializers");
+        else {
+            Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
+            parentMethod.addAllocation(sourceFile, pos, arrayCreationExpr.createdType().asString());
+        }
+
+        arrayCreationExpr.getInitializer().ifPresent(initializer -> initializer.accept(this, sourceFile));
+    }
+
+    @Override
     public void visit(MethodCallExpr call, SourceFile sourceFile) {
         int arity = call.getArguments().size();
         Position pos = JavaUtils.createPositionFromNode(call);

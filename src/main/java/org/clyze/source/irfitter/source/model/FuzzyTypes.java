@@ -12,6 +12,11 @@ import java.util.stream.Collectors;
 public interface FuzzyTypes {
     SourceFile getSourceFile();
 
+    /**
+     * Given a simple type, compute possible fully-qualified names.
+     * @param type  the source-level type
+     * @return      a collection of possible fully-qualified type names
+     */
     default Collection<String> resolveType(String type) {
         SourceFile sourceFile = getSourceFile();
         if (type == null)

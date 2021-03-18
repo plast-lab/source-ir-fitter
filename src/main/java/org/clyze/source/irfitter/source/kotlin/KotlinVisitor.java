@@ -2,6 +2,7 @@ package org.clyze.source.irfitter.source.kotlin;
 
 import java.util.*;
 import org.antlr.grammars.KotlinParserBaseVisitor;
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
 import org.antlr.v4.runtime.tree.*;
 import org.clyze.source.irfitter.source.model.*;
@@ -13,12 +14,14 @@ import org.clyze.persistent.model.Position;
  * https://github.com/antlr/grammars-v4/blob/master/kotlin/kotlin-formal/KotlinParser.g4
  */
 public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
-    // Taken from https://kotlinlang.org/docs/reference/packages.html
     private static final String[] DEFAULT_IMPORTS = new String[] {
+            // Taken from https://kotlinlang.org/docs/reference/packages.html
             "kotlin", "kotlin.annotation", "kotlin.collections",
             "kotlin.comparisons", "kotlin.io", "kotlin.ranges",
             "kotlin.sequences", "kotlin.text", "java.lang", "kotlin.jvm",
-            "kotlin.js"
+            "kotlin.js",
+            // Used in the implementation
+            "java.util"
     };
 
     private final SourceFile sourceFile;
@@ -33,7 +36,9 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
 
     // Common functionality, shared by class and object declarations.
     private void visitTypeDeclaration(String name, Token positionToken,
-                                      ModifiersContext mc, DelegationSpecifiersContext delegSpecs, ClassBodyContext cBody) {
+                                      ModifiersContext mc, DelegationSpecifiersContext delegSpecs,
+                                      PrimaryConstructorContext primaryConstr,
+                                      ClassBodyContext cBody) {
         if (sourceFile.debug)
             System.out.println("Type declaration: " + name);
         JType parent = scope.getEnclosingType();
@@ -41,24 +46,36 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, mc);
         boolean isAnonymous = false;
 
-        if (delegSpecs != null)
-            for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier())
-                System.out.println("TODO: delegation specifier " + aDSpec.getText());
-
-        // TODO: super types
+        Set<TypeUsage> delegTypeUsages = new HashSet<>();
         List<String> superTypes = new LinkedList<>();
+        if (delegSpecs != null)
+            for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier()) {
+                delegTypeUsages.addAll((new KotlinModifierPack(sourceFile, aDSpec.annotation())).getAnnotationUses());
+                DelegationSpecifierContext dSpec = aDSpec.delegationSpecifier();
+                UserTypeContext dSpecType = dSpec.userType();
+                if (dSpecType != null) {
+                    addTypeUsagesInUserType(delegTypeUsages, dSpecType);
+                    superTypes.add(getType(dSpecType));
+                }
+            }
+
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, mp.isInner(), mp.isPublic(),
                 mp.isPrivate(), mp.isProtected(), mp.isAbstract(), mp.isFinal(),
                 isAnonymous);
         jt.typeUsages.addAll(mp.getAnnotationUses());
+        jt.typeUsages.addAll(delegTypeUsages);
         sourceFile.jTypes.add(jt);
 
         if (sourceFile.debug)
             System.out.println("Created type: " + jt);
 
-        if (cBody != null)
-            scope.enterTypeScope(jt, (jt0 -> visitClassBody(cBody)));
+        scope.enterTypeScope(jt, (jt0 -> {
+            if (primaryConstr != null)
+                visitPrimaryConstructor(primaryConstr);
+            if (cBody != null)
+                visitClassBody(cBody);
+        }));
     }
 
     @Override
@@ -70,7 +87,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String name = idNode.getText();
         Token positionToken = idNode.getSymbol();
         visitTypeDeclaration(name, positionToken, objDecl.modifiers(),
-                objDecl.delegationSpecifiers(), objDecl.classBody());
+                objDecl.delegationSpecifiers(), null, objDecl.classBody());
         return null;
     }
 
@@ -80,7 +97,32 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String name = idNode.getText();
         Token positionToken = idNode.getSymbol();
         visitTypeDeclaration(name, positionToken, cdc.modifiers(),
-                cdc.delegationSpecifiers(), cdc.classBody());
+                cdc.delegationSpecifiers(), cdc.primaryConstructor(), cdc.classBody());
+        return null;
+    }
+
+    @Override
+    public Void visitPrimaryConstructor(PrimaryConstructorContext primaryConstr) {
+        ClassParametersContext classParams = primaryConstr.classParameters();
+        if (classParams != null)
+            for (ClassParameterContext classParam : classParams.classParameter()) {
+                JType jt = scope.getEnclosingType();
+                if (jt == null)
+                    System.out.println("ERROR: primary constructor class parameter outside type: " + classParam.getText());
+                else {
+                    TypeContext fType = classParam.type();
+                    System.out.println("fType=" + fType.getText());
+                    SimpleIdentifierContext fId = classParam.simpleIdentifier();
+                    String fName = fId.getText();
+                    Set<String> annotations = (new KotlinModifierPack(sourceFile, classParam.modifiers())).getAnnotations();
+                    Position pos = KotlinUtils.createPositionFromTokens(fId.start, fId.stop);
+                    JField srcField = new JField(sourceFile, getType(fType), fName, annotations, pos, jt);
+                    if (sourceFile.debug)
+                        System.out.println("Adding field: " + srcField);
+                    jt.fields.add(srcField);
+                    addTypeUsagesInType(jt.typeUsages, fType);
+                }
+            }
         return null;
     }
 
@@ -101,31 +143,26 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         if (sourceFile.debug)
             System.out.println("Registering companion type: " + name);
         visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
-                companionObj.delegationSpecifiers(), companionObj.classBody());
+                companionObj.delegationSpecifiers(), null, companionObj.classBody());
         return null;
     }
 
     @Override
     public Void visitDeclaration(DeclarationContext decl) {
         ClassDeclarationContext classMemDecl = decl.classDeclaration();
-        if (classMemDecl != null) {
-            System.out.println("WARNING: nested classes are not yet supported.");
-            return null;
-        }
+        if (classMemDecl != null)
+            return visitClassDeclaration(classMemDecl);
         FunctionDeclarationContext funMemDecl = decl.functionDeclaration();
-        if (funMemDecl != null) {
-            visitFunctionDeclaration(funMemDecl);
-            return null;
-        }
+        if (funMemDecl != null)
+            return visitFunctionDeclaration(funMemDecl);
         ObjectDeclarationContext objMemDecl = decl.objectDeclaration();
         if (objMemDecl != null) {
             System.out.println("WARNING: object members are not yet supported.");
             return null;
         }
         PropertyDeclarationContext propMemDecl = decl.propertyDeclaration();
-        if (propMemDecl != null) {
+        if (propMemDecl != null)
             return visitPropertyDeclaration(propMemDecl);
-        }
         TypeAliasContext typeAlias = decl.typeAlias();
         if (typeAlias != null) {
             System.out.println("WARNING: type aliases are not yet supported.");
@@ -157,6 +194,8 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
 
     @Override
     public Void visitPropertyDeclaration(PropertyDeclarationContext propMemDecl) {
+        if (sourceFile.debug)
+            System.out.println("Visiting property declaration: " + propMemDecl);
         JType jt = scope.getEnclosingType();
         ModifiersContext modifiers = propMemDecl.modifiers();
         VariableDeclarationContext vDecl = propMemDecl.variableDeclaration();
@@ -186,15 +225,20 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                                          ExpressionContext vExpr) {
         SimpleIdentifierContext id = fDecl.simpleIdentifier();
         String fName = id.getText();
-        String fType = getType(fDecl.type());
+        TypeContext fType = fDecl.type();
+        String fTypeName = getType(fType);
+        if (sourceFile.debug)
+            System.out.println("Visiting field declaration: " + fTypeName + " " + fName);
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers);
-        JField srcField = new JField(sourceFile, fType, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
+        JField srcField = new JField(sourceFile, fTypeName, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (sourceFile.debug)
             System.out.println("Found source field: " + srcField + " : " + mp.toString());
         if (jt == null)
             System.out.println("ERROR: top-level field found: " + srcField);
-        else
+        else {
             jt.fields.add(srcField);
+            addTypeUsagesInType(jt.typeUsages, fType);
+        }
         if (vExpr != null) {
             if (mp.isConst()) {
                 StringScanner<JField> stringScanner = new StringScanner<>(sourceFile, srcField);
@@ -246,7 +290,12 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         return null;
     }
 
-    private String getType(TypeContext typeCtx) {
+    /**
+     * Simplify a type string.
+     * @param typeCtx   a parse node that contains a type string
+     * @return          the simplified type
+     */
+    private String getType(ParserRuleContext typeCtx) {
         return typeCtx == null ? null : Utils.simplifyType(typeCtx.getText());
     }
 
@@ -379,6 +428,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         addTypeUsagesInParenType(target, t.parenthesizedType());
         addTypeUsagesInNullableType(target, t.nullableType());
         addTypeUsagesInRefType(target, t.typeReference());
+
     }
     private void addTypeUsagesInParenType(Collection<TypeUsage> target, ParenthesizedTypeContext t) {
         if (t != null)
@@ -390,22 +440,25 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             addTypeUsagesInRefType(target, t.typeReference());
         }
     }
-    private void addTypeUsagesInRefType(Collection<TypeUsage> target, TypeReferenceContext t) {
-        if (t != null) {
-            UserTypeContext userType = t.userType();
-            if (userType != null) {
-                List<SimpleUserTypeContext> simpleUserTypes = userType.simpleUserType();
-                if (simpleUserTypes != null)
-                    for (SimpleUserTypeContext simpleUserType : simpleUserTypes) {
-                        SimpleIdentifierContext simpleId = simpleUserType.simpleIdentifier();
-                        if (simpleId != null)
-                            target.add(new TypeUsage(simpleId.getText(), KotlinUtils.createPositionFromTokens(simpleId.start, simpleId.stop), sourceFile));
-                        TypeArgumentsContext typeArgs = simpleUserType.typeArguments();
-                        if (typeArgs != null)
-                            System.err.println("WARNING: type arguments are not supported yet.");
-                    }
-
-            }
+    private void addTypeUsagesInUserType(Collection<TypeUsage> target, UserTypeContext userType) {
+        if (userType != null) {
+            List<SimpleUserTypeContext> simpleUserTypes = userType.simpleUserType();
+            if (simpleUserTypes != null)
+                for (SimpleUserTypeContext simpleUserType : simpleUserTypes) {
+                    SimpleIdentifierContext simpleId = simpleUserType.simpleIdentifier();
+                    if (simpleId != null)
+                        target.add(new TypeUsage(simpleId.getText(), KotlinUtils.createPositionFromTokens(simpleId.start, simpleId.stop), sourceFile));
+                    TypeArgumentsContext typeArgs = simpleUserType.typeArguments();
+                    if (typeArgs != null)
+                        for (TypeProjectionContext typeProj : typeArgs.typeProjection())
+                            addTypeUsagesInType(target, typeProj.type());
+                }
         }
+
+    }
+
+    private void addTypeUsagesInRefType(Collection<TypeUsage> target, TypeReferenceContext t) {
+        if (t != null)
+            addTypeUsagesInUserType(target, t.userType());
     }
 }

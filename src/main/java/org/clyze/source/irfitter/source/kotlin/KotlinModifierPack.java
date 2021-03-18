@@ -16,6 +16,10 @@ public class KotlinModifierPack extends SourceModifierPack {
         this(sourceFile, null, modsCtxt);
     }
 
+    public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl) {
+        this(sourceFile, anl, null);
+    }
+
     public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl,
                               ModifiersContext modsCtxt) {
         updateFrom(sourceFile, anl);

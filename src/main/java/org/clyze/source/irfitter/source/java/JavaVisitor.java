@@ -92,8 +92,11 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             return;
         }
         jt.typeUsages.addAll((new JavaModifierPack(sourceFile, vDecl.getAnnotations())).getAnnotationUses());
-        for (VariableDeclarator variable : vDecl.getVariables())
+        for (VariableDeclarator variable : vDecl.getVariables()) {
             addTypeUsagesFromType(jt.typeUsages, variable.getType(), sourceFile);
+            Optional<Expression> initializer = variable.getInitializer();
+            initializer.ifPresent(expression -> expression.accept(this, sourceFile));
+        }
     }
 
     /**

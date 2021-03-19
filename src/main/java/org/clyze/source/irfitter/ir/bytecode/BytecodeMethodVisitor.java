@@ -13,7 +13,6 @@ public class BytecodeMethodVisitor extends MethodVisitor {
     private final int NO_LINE = -1;
     private int lastLine = NO_LINE;
     private final IRMethod irMethod;
-    private final String methodId;
     private final Map<Label, Integer> indexToSourceLine;
     private final boolean debug;
 
@@ -22,7 +21,6 @@ public class BytecodeMethodVisitor extends MethodVisitor {
         this.irMethod = irMethod;
         this.indexToSourceLine = indexToSourceLine;
         this.debug = debug;
-        this.methodId = irMethod.getId();
     }
 
     @Override
@@ -49,7 +47,7 @@ public class BytecodeMethodVisitor extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
         int arity = TypeUtils.raiseSignature(descriptor).size() - 1;
         String invokedMethodId = TypeUtils.replaceSlashesWithDots(owner) + "." + name;
-        IRMethodInvocation irInvo = irMethod.addInvocation(methodId, name, arity, invokedMethodId, getLastLine(), debug);
+        IRMethodInvocation irInvo = irMethod.addInvocation(name, arity, invokedMethodId, getLastLine(), debug);
         if (debug)
             System.out.println("IR invocation: " + irInvo);
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
@@ -78,5 +76,21 @@ public class BytecodeMethodVisitor extends MethodVisitor {
         if (type != null)
             irMethod.addTypeReference(TypeUtils.replaceSlashesWithDots(type));
         super.visitTryCatchBlock(start, end, handler, type);
+    }
+
+    @Override
+    public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+            addFieldAccess(owner, name, descriptor, true);
+        } else if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+            addFieldAccess(owner, name, descriptor, false);
+        }
+        super.visitFieldInsn(opcode, owner, name, descriptor);
+    }
+
+    private void addFieldAccess(String owner, String name, String descriptor, boolean read) {
+        String fieldType = TypeUtils.raiseTypeId(descriptor);
+        String fieldId = "<" + TypeUtils.replaceSlashesWithDots(owner) + ": " + fieldType + " " + name + ">";
+        irMethod.addFieldAccess(fieldId, name, fieldType, read, debug);
     }
 }

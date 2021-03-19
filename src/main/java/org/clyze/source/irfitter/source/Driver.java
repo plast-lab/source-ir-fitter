@@ -35,6 +35,8 @@ public class Driver {
 
     private final SARIFGenerator sarifGenerator;
     private final File out;
+    /** If true, enable debug reports. */
+    private final boolean debug;
 
     /**
      * Create a new driver / processing pipeline.
@@ -42,10 +44,12 @@ public class Driver {
      * @param db           the database (used in SARIF mode)
      * @param version      the results version (used in SARIF mode)
      * @param standalone   false if to be used as a library
+     * @param debug        debug mode
      */
-    public Driver(File out, File db, String version, boolean standalone) {
+    public Driver(File out, File db, String version, boolean standalone, boolean debug) {
         this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
         this.out = out;
+        this.debug = debug;
     }
 
     /**
@@ -108,13 +112,12 @@ public class Driver {
      * Main entry point that performs IR-vs-source element matching.
      * @param irTypes   the set of all IR types
      * @param sources   the set of source files
-     * @param debug     debug mode
      * @param json      if true, generate JSON metadata
      * @param sarif     if true, generate SARIF results
      * @return          the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                           boolean debug, boolean json, boolean sarif) {
+                           boolean json, boolean sarif) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         IdMapper idMapper = new IdMapper();
         int unmatched = 0;
@@ -132,19 +135,20 @@ public class Driver {
         }
 
         if (debug)
-            System.out.println("* Performing fuzzy type matching for type references...");
+            System.out.println("* Performing fuzzy type matching for type/field references...");
         for (SourceFile sf : sources) {
             JvmMetadata bm = sf.getFileInfo().getElements();
-            for (JType jt : sf.jTypes)
-                matchTypeUsages(allIrTypes, bm, jt, debug);
+            for (JType jt : sf.jTypes) {
+                matchTypeUsages(allIrTypes, bm, jt);
+            }
         }
 
         System.out.println(unmatched + " elements not matched.");
 
         Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
-        process(flatMapping, sarif, debug);
+        process(flatMapping, sarif);
         if (json)
-            generateJSON(flatMapping, sources, debug);
+            generateJSON(flatMapping, sources);
 
         return new RunResult(unmatched);
     }
@@ -155,9 +159,8 @@ public class Driver {
      * @param allIrTypes     the set of all IR types found
      * @param bm             the object to use to write the metadata
      * @param jt             the type that contains the unresolved type usages
-     * @param debug          if true, show diagnostics
      */
-    private void matchTypeUsages(Set<String> allIrTypes, JvmMetadata bm, JType jt, boolean debug) {
+    private void matchTypeUsages(Set<String> allIrTypes, JvmMetadata bm, JType jt) {
         List<TypeUsage> typeUsages = jt.typeUsages;
         if (typeUsages.isEmpty() || jt.matchElement == null)
             return;
@@ -172,14 +175,14 @@ public class Driver {
             for (String irTypeId : irTypeIds) {
                 // Match type uses against local annotation uses or the global IR types.
                 if (irAnnotations.contains(irTypeId) || irTypeRefs.contains(irTypeId))
-                    matchTypeUsage(typeUsage, irTypeId, debug);
+                    matchTypeUsage(typeUsage, irTypeId);
             }
             if (typeUsage.matchId == null) {
                 if (debug)
                     System.out.println("Type usage still unresolved, trying slow global matching: " + typeUsage + " with type ids = " + irTypeIds);
                 for (String irTypeId : irTypeIds) {
                     if (allIrTypes.contains(irTypeId) || BOXED_REPRESENTATIONS.contains(irTypeId))
-                        matchTypeUsage(typeUsage, irTypeId, debug);
+                        matchTypeUsage(typeUsage, irTypeId);
                 }
             }
             if (typeUsage.matchId != null)
@@ -189,7 +192,7 @@ public class Driver {
         }
     }
 
-    private void matchTypeUsage(TypeUsage typeUsage, String irTypeId, boolean debug) {
+    private void matchTypeUsage(TypeUsage typeUsage, String irTypeId) {
         if (debug)
             System.out.println("Matched use for type '" + typeUsage.type + "': " + irTypeId);
         typeUsage.matchId = irTypeId;
@@ -213,7 +216,7 @@ public class Driver {
     }
 
     private void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
-                              Collection<SourceFile> sources, boolean debug) {
+                              Collection<SourceFile> sources) {
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
@@ -254,7 +257,7 @@ public class Driver {
     }
 
     void process(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
-                 boolean sarif, boolean debug) {
+                 boolean sarif) {
         boolean metadataExist = sarifGenerator.metadataExist();
         if (!metadataExist) {
             if (debug)

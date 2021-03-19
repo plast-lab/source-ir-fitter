@@ -21,6 +21,7 @@ implements AbstractMethod {
     public final List<JMethodInvocation> invocations = new LinkedList<>();
     /** The object allocations found in the method body. */
     public final List<JAllocation> allocations = new LinkedList<>();
+    public final List<JFieldAccess> fieldAccesses = new LinkedList<>();
     /** The annotations found in the source code. */
     public final Set<String> annotations;
     private Collection<String> cachedIds = null;

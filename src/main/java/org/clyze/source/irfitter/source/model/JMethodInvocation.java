@@ -65,7 +65,6 @@ implements AbstractMethodInvocation {
     @Override
     public String getId() {
         String parentDesc = parent == null ? "{}" : (parent.matchId == null ? parent.toString() : parent.matchId);
-        String posDesc = pos == null ? "unknown" : pos.toString();
-        return "method: [parent:" + parentDesc + "]/" + methodName + ":" + arity + "@" + posDesc;
+        return "method: [parent:" + parentDesc + "]/" + methodName + ":" + arity + getLocation();
     }
 }

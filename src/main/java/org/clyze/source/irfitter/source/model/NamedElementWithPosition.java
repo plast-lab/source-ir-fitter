@@ -21,4 +21,12 @@ public abstract class NamedElementWithPosition<T extends IRElement, S extends Sy
     public S getSymbol() {
         return this.symbol;
     }
+
+    /**
+     * Pretty printer for location (source-file + position).
+     * @return a string representation of the location of this element
+     */
+    protected String getLocation() {
+        return "@" + srcFile.file.getPath() + ":" + pos;
+    }
 }

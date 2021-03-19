@@ -94,7 +94,7 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
 
     @Override
     public String toString() {
-        return "type{name=" + getUnqualifiedName() + " (" + getSimpleName() + "), " + fields.size() + " fields, " + methods.size() + " methods}@" + pos;
+        return "type{name=" + getUnqualifiedName() + " (" + getSimpleName() + "), " + fields.size() + " fields, " + methods.size() + " methods}" + getLocation();
     }
 
     @Override

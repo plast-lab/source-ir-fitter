@@ -12,8 +12,10 @@ import org.clyze.utils.TypeUtils;
 public class IRMethod extends IRElement implements AbstractMethod {
     public final List<IRMethodInvocation> invocations = new LinkedList<>();
     public final List<IRAllocation> allocations = new LinkedList<>();
+    public final List<IRFieldAccess> fieldAccesses = new ArrayList<>();
     private final Map<String, Integer> invocationCounters = new HashMap<>();
     private final Map<String, Integer> allocationCounters = new HashMap<>();
+    private final Map<String, Integer> fieldAccessCounters = new HashMap<>();
     private Set<String> typeReferences = null;
     private Set<String> sigTypeReferences = null;
     public final String name;
@@ -34,9 +36,10 @@ public class IRMethod extends IRElement implements AbstractMethod {
         this.isInterface = isInterface;
     }
 
-    public IRMethodInvocation addInvocation(String methodId, String methodName,
-                                            int arity, String invokedMethodId,
+    public IRMethodInvocation addInvocation(String methodName, int arity,
+                                            String invokedMethodId,
                                             Integer sourceLine, boolean debug) {
+        String methodId = getId();
         return addNumberedElement(invocationCounters, invocations, methodId, invokedMethodId,
                 ((counter, elemId) -> {
                     IRMethodInvocation irInvo = new IRMethodInvocation(elemId, methodId,
@@ -57,6 +60,17 @@ public class IRMethod extends IRElement implements AbstractMethod {
                     if (debug)
                         System.out.println("Found IR allocation: " + irAlloc);
                     return irAlloc;
+                }));
+    }
+
+    public IRFieldAccess addFieldAccess(String fieldId, String fieldName, String fieldType, boolean read, boolean debug) {
+        String key = fieldName + (read ? "+R" : "+W");
+        return addNumberedElement(fieldAccessCounters, fieldAccesses, getId(), key,
+                ((counter, elemId) -> {
+                    IRFieldAccess irFieldAccess = new IRFieldAccess(elemId, fieldId, fieldName, fieldType, read);
+                    if (debug)
+                        System.out.println("Found IR field " + (read ? "read" : "write") + ": " + irFieldAccess.getId());
+                    return irFieldAccess;
                 }));
     }
 

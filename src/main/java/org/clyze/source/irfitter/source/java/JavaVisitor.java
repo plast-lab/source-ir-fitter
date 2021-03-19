@@ -369,6 +369,47 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         super.visit(castExpr, sourceFile);
     }
 
+    @Override
+    public void visit(AssignExpr assignExpr, SourceFile sourceFile) {
+        Expression target = assignExpr.getTarget();
+        if (target instanceof FieldAccessExpr) {
+            FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
+            // Any field accesses in the "scope" should be reads.
+            fieldAcc.getScope().accept(this, sourceFile);
+            // Record the final field as a "write".
+            visitFieldAccess(fieldAcc, false, sourceFile);
+        } else
+            target.accept(this, sourceFile);
+        assignExpr.getValue().accept(this, sourceFile);
+    }
+
+    private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read, SourceFile sourceFile) {
+        SimpleName name = fieldAccess.getName();
+        String fieldName = name.asString();
+        Position pos = JavaUtils.createPositionFromNode(name);
+        if (sourceFile.debug)
+            System.out.println("Field access [" + (read ? "read" : "write") + "]: " + fieldName + "@" + sourceFile + ":" + pos);
+        JMethod parentMethod = scope.getEnclosingMethod();
+        if (parentMethod == null)
+            System.out.println("ERROR: field access outside method.");
+        else
+            parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, read, fieldName));
+        JType jt = scope.getEnclosingType();
+        if (jt == null)
+            System.out.println("ERROR: field access outside method.");
+        else
+            fieldAccess.getTypeArguments().ifPresent(nl -> {
+                for (Type typeArg : nl)
+                    addTypeUsagesFromType(jt.typeUsages, typeArg, sourceFile);
+            });
+    }
+
+    @Override
+    public void visit(FieldAccessExpr fieldAccess, SourceFile sourceFile) {
+        // This method is assumed to only find reads and be overridden when visiting field writes.
+        visitFieldAccess(fieldAccess, true, sourceFile);
+    }
+
     private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getType().asString());
     }

@@ -148,7 +148,7 @@ public class DexParser {
                         String invokedMethodId = TypeUtils.raiseTypeId(mRef.getDefiningClass()) + '.' + methodName;
                         // TODO: read source line
                         Integer sourceLine = null;
-                        irMethod.addInvocation(irMethod.getId(), methodName, arity, invokedMethodId, sourceLine, debug);
+                        irMethod.addInvocation(methodName, arity, invokedMethodId, sourceLine, debug);
                         break;
                     }
                 }

@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
-
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
@@ -16,6 +15,9 @@ import org.clyze.persistent.metadata.jvm.JvmMetadata;
 /**
  * This is the source code representation that is responsible for matching
  * source elements against IR elements.
+ *
+ * Many elements are matched inside groups (e.g. field accesses are grouped by
+ * name) for more precise matching and to localize matching failures.
  */
 public class SourceFile {
     /** A parent directory that should be used to form relative paths. */
@@ -127,6 +129,57 @@ public class SourceFile {
         // After methods have been matched, match method invocations and allocations.
         matchInvocations(idMapper, srcMethods);
         matchAllocations(idMapper.allocationMap, srcMethods);
+        matchFieldAccesses(idMapper.fieldAccessMap, srcMethods);
+    }
+
+    private void matchFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, List<JMethod> srcMethods) {
+        for (JMethod srcMethod : srcMethods) {
+            if (srcMethod.matchId == null)
+                continue;
+            IRMethod irMethod = srcMethod.matchElement;
+            // Group accesses by field name.
+            Map<String, List<JFieldAccess>> srcAccessesByName = new HashMap<>();
+            for (JFieldAccess srcFieldAcc : srcMethod.fieldAccesses)
+                srcAccessesByName.computeIfAbsent(srcFieldAcc.fieldName, (x) -> new ArrayList<>()).add(srcFieldAcc);
+            if (srcAccessesByName.size() == 0)
+                continue;
+            Map<String, List<IRFieldAccess>> irAccessesByName = new HashMap<>();
+            for (IRFieldAccess irFieldAcc : irMethod.fieldAccesses)
+                irAccessesByName.computeIfAbsent(irFieldAcc.fieldName, (x) -> new ArrayList<>()).add(irFieldAcc);
+            if (irAccessesByName.size() == 0)
+                continue;
+            if (debug) {
+                System.out.println("Field accesses by name (IR/SRC): " + irAccessesByName.size() + "/" + srcAccessesByName.size() + " in " + srcMethod);
+                srcAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
+                irAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
+            }
+            for (Map.Entry<String, List<JFieldAccess>> srcEntry : srcAccessesByName.entrySet()) {
+                String fieldName = srcEntry.getKey();
+                List<IRFieldAccess> irAccesses = irAccessesByName.get(fieldName);
+                if (irAccesses == null)
+                    continue;
+                List<JFieldAccess> srcAccesses = srcEntry.getValue();
+                int srcSize = srcAccesses.size();
+                int irSize = irAccesses.size();
+                if (srcSize == irSize && srcSize > 0) {
+                    if (debug)
+                        System.out.println("Matching " + srcSize + " '" + fieldName + "' field accesses in " + srcMethod + " with " + irMethod);
+                    for (int i = 0; i < srcSize; i++) {
+                        IRFieldAccess irAccess = irAccesses.get(i);
+                        JFieldAccess srcAccess = srcAccesses.get(i);
+                        boolean irRead = irAccess.read;
+                        boolean srcRead = srcAccess.read;
+                        if (irRead == srcRead)
+                            recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
+                        else {
+                            System.out.println("WARNING: incompatible field accesses found, aborting matching for field '" + fieldName + "' (IR/SRC 'read'): " + irRead + "/" + srcRead);
+                            break;
+                        }
+                    }
+                } else if (debug)
+                    System.out.println("Field accesses ignored: (IR=" + irSize+ "/SRC=" + srcSize + ") in " + srcMethod);
+            }
+        }
     }
 
     private void matchAllocations(Map<String, Collection<JAllocation>> allocationMap,

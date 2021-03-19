@@ -39,6 +39,6 @@ implements AbstractAllocation {
 
     @Override
     public String toString() {
-        return "new " + simpleType + "() @ " + (srcFile.file.getAbsolutePath() + ":" + pos);
+        return "new " + simpleType + "() " + getLocation();
     }
 }

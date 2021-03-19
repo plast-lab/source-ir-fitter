@@ -14,6 +14,7 @@ public class IdMapper {
     public final Map<String, Collection<JMethod>> methodMap = new HashMap<>();
     public final Map<String, Collection<JMethodInvocation>> invocationMap = new HashMap<>();
     public final Map<String, Collection<JAllocation>> allocationMap = new HashMap<>();
+    public final Map<String, Collection<JFieldAccess>> fieldAccessMap = new HashMap<>();
 
     /**
      * Merge all element information into a single mapping.
@@ -26,6 +27,7 @@ public class IdMapper {
         mapping.putAll(methodMap);
         mapping.putAll(invocationMap);
         mapping.putAll(allocationMap);
+        mapping.putAll(fieldAccessMap);
         return mapping;
     }
 }

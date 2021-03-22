@@ -31,7 +31,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public KotlinVisitor(SourceFile sourceFile) {
         this.sourceFile = sourceFile;
         for (String i : DEFAULT_IMPORTS)
-            sourceFile.imports.add(new Import(i, true, false));
+            sourceFile.imports.add(new Import(null, i, true, false));
     }
 
     // Common functionality, shared by class and object declarations.
@@ -111,7 +111,6 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     System.out.println("ERROR: primary constructor class parameter outside type: " + classParam.getText());
                 else {
                     TypeContext fType = classParam.type();
-                    System.out.println("fType=" + fType.getText());
                     SimpleIdentifierContext fId = classParam.simpleIdentifier();
                     String fName = fId.getText();
                     Set<String> annotations = (new KotlinModifierPack(sourceFile, classParam.modifiers())).getAnnotations();
@@ -408,7 +407,8 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             int dotIdx = importName.lastIndexOf('.');
             isStatic = dotIdx >= 0 && importName.length() > dotIdx && Character.isLowerCase(importName.charAt(dotIdx + 1));
         }
-        Import srcImport = new Import(importName, isAsterisk, isStatic);
+        Position pos = KotlinUtils.createPositionFromTokens(ihc.start, ihc.stop);
+        Import srcImport = new Import(pos, importName, isAsterisk, isStatic);
         if (sourceFile.debug)
             System.out.println("Found source import: " + srcImport);
         sourceFile.imports.add(srcImport);

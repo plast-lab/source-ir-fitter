@@ -122,6 +122,7 @@ public class Driver {
         IdMapper idMapper = new IdMapper();
         int unmatched = 0;
         for (SourceFile sf : sources) {
+            addImportUsages(sf.getFileInfo().getElements(), sf);
             System.out.println("==> Matching elements in " + sf.getRelativePath());
             sf.matchTypes(idMapper, irTypes);
             unmatched += sf.reportUmatched(debug);
@@ -151,6 +152,17 @@ public class Driver {
             generateJSON(flatMapping, sources);
 
         return new RunResult(unmatched);
+    }
+
+    /**
+     * Update the metadata with the usages calculated from "import" statements.
+     * @param bm   the metadata to update
+     * @param sf   the source file
+     */
+    private void addImportUsages(JvmMetadata bm, SourceFile sf) {
+        for (Import imp : sf.imports)
+            if (!imp.isAsterisk && !imp.isStatic)
+                bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), imp.name, UsageKind.TYPE));
     }
 
     /**

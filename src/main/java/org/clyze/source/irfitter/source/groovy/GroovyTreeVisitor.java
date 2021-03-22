@@ -27,7 +27,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // Add default imports.
         String[] defaultPackages = new String[] { "groovy.lang", "groovy.util" , "java.lang" , "java.util" , "java.net" , "java.io" };
         for (String defaultPackage : defaultPackages)
-            sourceFile.imports.add(new Import(defaultPackage, true, false));
+            sourceFile.imports.add(new Import(null, defaultPackage, true, false));
     }
 
     @Override
@@ -62,7 +62,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             boolean isStatic = importDecl.STATIC() != null;
             boolean isAsterisk = importDecl.MUL() != null;
             String id = getQualifiedName(importDecl.qualifiedName());
-            sourceFile.imports.add(new Import(id, isAsterisk, isStatic));
+            Position pos = GroovyUtils.createPositionFromTokens(importDecl.start, importDecl.stop);
+            sourceFile.imports.add(new Import(pos, id, isAsterisk, isStatic));
             return null;
         }
 

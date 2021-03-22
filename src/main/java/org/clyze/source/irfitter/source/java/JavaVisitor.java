@@ -24,7 +24,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     @Override
     public void visit(CompilationUnit n, SourceFile sourceFile) {
         // Add default Java imports.
-        sourceFile.imports.add(new Import("java.lang", true, false));
+        sourceFile.imports.add(new Import(null, "java.lang", true, false));
         super.visit(n, sourceFile);
     }
 
@@ -233,7 +233,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(final ImportDeclaration id, final SourceFile sourceFile) {
-        sourceFile.imports.add(new Import(id.getNameAsString(), id.isAsterisk(), id.isStatic()));
+        Position pos = JavaUtils.createPositionFromNode(id);
+        sourceFile.imports.add(new Import(pos, id.getNameAsString(), id.isAsterisk(), id.isStatic()));
     }
 
     @Override

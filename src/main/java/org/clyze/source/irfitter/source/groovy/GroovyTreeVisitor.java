@@ -6,7 +6,6 @@ import groovyjarjarantlr4.v4.runtime.tree.*;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
@@ -301,8 +300,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                         processClassBody(anonymousType, anonDecl.classBody());
                     }
                 }
-            }
-            primary.accept(this);
+            } else
+	            primary.accept(this);
         }
         List<? extends PathElementContext> pathElems = pathExpr.pathElement();
         String methodName = null;

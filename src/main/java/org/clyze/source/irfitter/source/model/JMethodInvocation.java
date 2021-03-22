@@ -40,7 +40,7 @@ implements AbstractMethodInvocation {
     public void initSymbolFromIRElement(IRMethodInvocation irMethodInvocation) {
         if (symbol == null) {
             matchElement = irMethodInvocation;
-            symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(),
+            symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(), true,
                     methodName, irMethodInvocation.getId(),
                     irMethodInvocation.invokingMethodId, inIIB);
         } else

@@ -240,6 +240,7 @@ public class SourceFile {
                         Position pos = new Position(line, line, 0, 0);
                         JAllocation fakeSrcAlloc = srcMethod.addAllocation(this, pos, irAlloc.getSimpleType());
                         recordMatch(allocationMap, "allocation", irAlloc, fakeSrcAlloc);
+                        fakeSrcAlloc.setSource(false);
                     }
                 }
             }
@@ -361,6 +362,7 @@ public class SourceFile {
                         JMethodInvocation fakeSrcInvo = new JMethodInvocation(this, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB);
                         srcMethod.invocations.add(fakeSrcInvo);
                         recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
+                        fakeSrcInvo.setSource(false);
                     }
                 }
             }

@@ -117,7 +117,7 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
                 checkModifiers(doopId, "protected", mods.isProtected(), this.isProtected);
                 checkModifiers(doopId, "public", mods.isPublic(), this.isPublic);
             }
-            symbol = new JvmClass(pos, srcFile.getRelativePath(), getSimpleName(),
+            symbol = new JvmClass(pos, srcFile.getRelativePath(), true, getSimpleName(),
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
             symbol.setSuperTypes(superTypes);

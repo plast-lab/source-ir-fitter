@@ -28,8 +28,8 @@ public class TypeUsage implements FuzzyTypes {
      */
     public Usage getUsage() {
         if (matchId == null)
-            System.out.println("ERROR: Usage not matched: " + toString());
-        return new Usage(position, sourceFile.getRelativePath(), matchId, UsageKind.TYPE);
+            System.out.println("ERROR: Type usage not matched: " + toString());
+        return new Usage(position, sourceFile.getRelativePath(), true, matchId, UsageKind.TYPE);
     }
 
     @Override

@@ -125,7 +125,7 @@ implements AbstractMethod {
             // block in the sources, set the position to the type declaration.
             if ("<clinit>".equals(name) && (pos == null))
                 pos = parent.pos;
-            JvmMethod meth = new JvmMethod(pos, srcFile.getRelativePath(), name,
+            JvmMethod meth = new JvmMethod(pos, srcFile.getRelativePath(), true, name,
                     parent.matchId, returnType, irMethod.getId(), pNames,
                     pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
                     mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),

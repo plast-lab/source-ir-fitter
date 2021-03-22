@@ -41,7 +41,7 @@ public class JStringConstant<T> {
             String fieldId = srcField.matchId;
             if (fieldId == null)
                 System.out.println("WARNING: string constant references unresolved field: " + srcField);
-            return new JvmStringConstant(pos, sourceFile.getRelativePath(), fieldId, value);
+            return new JvmStringConstant(pos, sourceFile.getRelativePath(), true, fieldId, value);
         } else {
             System.out.println("WARNING: string constant is ignored for non-field element: " + srcElement);
             return null;

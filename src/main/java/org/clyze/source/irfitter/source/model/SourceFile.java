@@ -110,7 +110,7 @@ public class SourceFile {
             String srcMethodName = srcEntry.getKey();
             NameMatch<IRMethod> irMatch = irOverloading.get(srcMethodName);
             if (irMatch == null) {
-                if (!"<clinit>".equals(srcMethodName))
+                if (!JInit.isInitName(srcMethodName))
                     System.out.println("WARNING: method " + srcMethodName + "() does not match any bytecode methods: " + srcMatch.methods);
                 continue;
             }
@@ -238,9 +238,11 @@ public class SourceFile {
                     Integer line = irAlloc.getSourceLine();
                     if (line != null) {
                         Position pos = new Position(line, line, 0, 0);
-                        JAllocation fakeSrcAlloc = srcMethod.addAllocation(this, pos, irAlloc.getSimpleType());
-                        recordMatch(allocationMap, "allocation", irAlloc, fakeSrcAlloc);
-                        fakeSrcAlloc.setSource(false);
+                        JAllocation approxSrcAlloc = srcMethod.addAllocation(this, pos, irAlloc.getSimpleType());
+                        if (debug)
+                            System.out.println("Adding approximate allocation: " + approxSrcAlloc);
+                        recordMatch(allocationMap, "allocation", irAlloc, approxSrcAlloc);
+                        approxSrcAlloc.symbol.setSource(false);
                     }
                 }
             }
@@ -358,11 +360,11 @@ public class SourceFile {
                     Integer line = irInvo.getSourceLine();
                     if (line != null) {
                         Position pos = new Position(line, line, 0, 0);
-                        boolean inIIB = "<init>".equals(irMethod.name) || "<clinit>".equals(irMethod.name);
+                        boolean inIIB = "<init>".equals(irMethod.name) || JInit.isInitName(irMethod.name);
                         JMethodInvocation fakeSrcInvo = new JMethodInvocation(this, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB);
                         srcMethod.invocations.add(fakeSrcInvo);
                         recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
-                        fakeSrcInvo.setSource(false);
+                        fakeSrcInvo.symbol.setSource(false);
                     }
                 }
             }
@@ -500,9 +502,9 @@ public class SourceFile {
                         System.out.println("Unmatched field: " + jf.toString());
                 }
             for (JMethod jm : jt.methods)
-                // <clinit>() methods are optimistically created for sources and
+                // Some methods are optimistically created for sources and
                 // may not really exist in IR, so ignore their match failures
-                if (jm.matchId == null && !"<clinit>".equals(jm.name)) {
+                if (jm.matchId == null && !jm.isSpecialInitializer()) {
                     unmatched++;
                     if (debug) {
                         System.out.println("Unmatched method: " + jm.toString());

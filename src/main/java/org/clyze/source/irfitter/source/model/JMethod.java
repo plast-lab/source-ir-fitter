@@ -102,7 +102,7 @@ implements AbstractMethod {
             sj.add(param.toString());
         String parentName = parent.getUnqualifiedName();
         String parentDesc = parentName == null ? parent.toString() : parentName;
-        return "method{name=" + name + ", type=" + retType + "(" + sj.toString() + "), parent=" + parentDesc + "}";
+        return "method{name=" + name + ", type=" + retType + "(" + sj.toString() + "), parent=" + parentDesc + ", low-level-name=" + getLowLevelName() + "}";
     }
 
     @Override
@@ -123,7 +123,7 @@ implements AbstractMethod {
             IRModifierPack mp = irMethod.mp;
             // When a class has a <clinit>() initializer but no static initializer
             // block in the sources, set the position to the type declaration.
-            if ("<clinit>".equals(name) && (pos == null))
+            if (JInit.CLINIT.equals(name) && (pos == null))
                 pos = parent.pos;
             JvmMethod meth = new JvmMethod(pos, srcFile.getRelativePath(), true, name,
                     parent.matchId, returnType, irMethod.getId(), pNames,
@@ -190,5 +190,13 @@ implements AbstractMethod {
             allocations.add(alloc);
         }
         return alloc;
+    }
+
+    /**
+     * Helper method to filter out some special initializer methods.
+     * @return true if this is a special initializer method
+     */
+    public boolean isSpecialInitializer() {
+        return false;
     }
 }

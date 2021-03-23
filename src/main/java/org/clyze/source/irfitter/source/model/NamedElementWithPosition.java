@@ -23,19 +23,6 @@ public abstract class NamedElementWithPosition<T extends IRElement, S extends Sy
     }
 
     /**
-     * Set the "source" flag on the matched symbol. This will fail if no
-     * matching symbol has already been configured.
-     * @param source   true if the symbol is to be characterized as "source",
-     *                 false otherwise
-     */
-    public void setSource(boolean source) {
-        if (symbol == null)
-            System.out.println("ERROR: cannot set 'source' attribute for null symbol.");
-        else
-            this.symbol.setSource(source);
-    }
-
-    /**
      * Pretty printer for location (source-file + position).
      * @return a string representation of the location of this element
      */

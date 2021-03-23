@@ -51,6 +51,12 @@ public class Scope {
         methodScope.pop();
     }
 
+    public void enterInitializerScope(JInit initializer, Consumer<JMethod> scopeProcessor) {
+        this.inInitializer = true;
+        enterMethodScope(initializer, scopeProcessor);
+        this.inInitializer = false;
+    }
+
     private <T extends NamedElementWithPosition<?, ?>>
     void enterElementScope(T elem, Consumer<T> elemProcessor) {
         elementScope.push(elem);

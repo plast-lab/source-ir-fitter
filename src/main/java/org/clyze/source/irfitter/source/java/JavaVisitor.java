@@ -156,17 +156,20 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
 
     @Override
     public void visit(InitializerDeclaration init, SourceFile sourceFile) {
-        scope.inInitializer = true;
-        if (init.isStatic()) {
-            JMethod clinit = scope.getEnclosingType().classInitializer;
-            Position outerPos = JavaUtils.createPositionFromNode(init);
-            long startColumn = outerPos.getStartColumn();
-            clinit.pos = new Position(outerPos.getStartLine(), startColumn, startColumn + "static".length());
-            clinit.outerPos = outerPos;
-        } else
-            System.out.println("WARNING: non-static initializer is not yet supported.");
-        super.visit(init, sourceFile);
-        scope.inInitializer = false;
+        JType jt = scope.getEnclosingType();
+        if (jt == null) {
+            System.out.println("ERROR: found initializer declaration outside type: " + init);
+            return;
+        }
+        jt.typeUsages.addAll(new JavaModifierPack(sourceFile, init.getAnnotations()).getAnnotationUses());
+
+        JInit initMethod = init.isStatic() ? jt.classInitializer : jt.initBlock;
+        initMethod.setSource(true);
+        Position outerPos = JavaUtils.createPositionFromNode(init);
+        long startColumn = outerPos.getStartColumn();
+        initMethod.pos = new Position(outerPos.getStartLine(), startColumn, startColumn + "static".length());
+        initMethod.outerPos = outerPos;
+        scope.enterInitializerScope(initMethod, (cl -> init.getBody().accept(this, sourceFile)));
     }
 
     private <T extends CallableDeclaration<?>>
@@ -212,16 +215,19 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             jt.fields.add(srcField);
             Optional<Expression> optInitializer = vd.getInitializer();
             if (optInitializer != null && optInitializer.isPresent()) {
+                final boolean isStaticField = mp.isStatic();
                 Expression initExpr = optInitializer.get();
-                if (fd.isStatic() && fd.isFinal() && (initExpr instanceof StringLiteralExpr)) {
+                if (isStaticField && fd.isFinal() && (initExpr instanceof StringLiteralExpr)) {
                     StringLiteralExpr s = (StringLiteralExpr) initExpr;
                     String sValue = s.getValue();
                     if (sourceFile.debug)
                         System.out.println("Java static final field points to string constant: " + sValue);
                     Position pos = JavaUtils.createPositionFromNode(s);
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
-                } else
-                    initExpr.accept(this, sourceFile);
+                } else {
+                    JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
+                    scope.enterMethodScope(initBlock, init -> initExpr.accept(this, sourceFile));
+                }
             }
         }
     }
@@ -280,7 +286,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             });
         }
         if (parentMethod == null)
-            System.out.println("TODO: allocations/invocations in object creation in initializers");
+            System.out.println("ERROR: allocations/invocations in object creation in initializers");
         else {
             parentMethod.addInvocation(scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile);
             // If anonymous, add placeholder allocation, to be matched later.
@@ -301,12 +307,11 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             jt.typeUsages.addAll((new JavaModifierPack(sourceFile, level.getAnnotations())).getAnnotationUses());
 
         JMethod parentMethod = scope.getEnclosingMethod();
+        Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
         if (parentMethod == null)
-            System.out.println("TODO: array creation in initializers");
-        else {
-            Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
+            System.out.println("TODO: array creation in initializers: " + sourceFile + ": " + pos);
+        else
             parentMethod.addAllocation(sourceFile, pos, arrayCreationExpr.createdType().asString());
-        }
 
         arrayCreationExpr.getInitializer().ifPresent(initializer -> initializer.accept(this, sourceFile));
     }
@@ -322,7 +327,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     private void recordInvocation(String name, int arity, Position pos, SourceFile sourceFile) {
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
-            System.out.println("TODO: invocations in initializers");
+            System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
         else
             parentMethod.addInvocation(scope, name, arity, pos, sourceFile);
     }
@@ -392,12 +397,12 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             System.out.println("Field access [" + (read ? "read" : "write") + "]: " + fieldName + "@" + sourceFile + ":" + pos);
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
-            System.out.println("ERROR: field access outside method.");
+            System.out.println("TODO: field access outside method: " + fieldAccess + ": " + sourceFile);
         else
             parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, read, fieldName));
         JType jt = scope.getEnclosingType();
         if (jt == null)
-            System.out.println("ERROR: field access outside method.");
+            System.out.println("ERROR: field access outside type: " + fieldAccess + ": " + sourceFile);
         else
             fieldAccess.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)

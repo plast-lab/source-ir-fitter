@@ -23,7 +23,8 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
     private final boolean isFinal;
     public final boolean isAnonymous;
     private final boolean isInner;
-    public final JClassInit classInitializer;
+    public final JInit classInitializer;
+    public final JInit initBlock;
     public final List<JField> fields = new LinkedList<>();
     public final List<JMethod> methods = new LinkedList<>();
     public final List<TypeUsage> typeUsages = new LinkedList<>();
@@ -49,8 +50,11 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
         this.isFinal = isFinal;
         this.isAnonymous = isAnonymous;
         // Add <clinit>() method.
-        this.classInitializer = new JClassInit(srcFile, this);
+        this.classInitializer = JInit.createClinit(srcFile, this);
         this.methods.add(classInitializer);
+        // Add instance initializer block.
+        this.initBlock = JInit.createInitBlock(srcFile, this);
+        this.methods.add(initBlock);
     }
 
     /**

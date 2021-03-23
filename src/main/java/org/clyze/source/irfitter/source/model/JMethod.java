@@ -13,7 +13,7 @@ public class JMethod extends TypedNamedElementWithPosition<IRMethod, JvmMethod>
 implements AbstractMethod {
     public final String name;
     private final String retType;
-    private final List<JParameter> parameters;
+    public final List<JParameter> parameters;
     public final int arity;
     private final JType parent;
     public Position outerPos;

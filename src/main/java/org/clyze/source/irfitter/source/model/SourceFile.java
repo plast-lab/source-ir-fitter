@@ -374,21 +374,44 @@ public class SourceFile {
     private void matchMethodsWithSameNameArity(Map<String, Collection<JMethod>> methodMap, NameMatch<JMethod> srcMatch, NameMatch<IRMethod> irMatch) {
         // Match methods with same name and arity (in the presence of overloading).
         for (JMethod srcMethod : srcMatch.methods) {
+            IRMethod irMethodMatch = null;
+            JMethod srcMethodMatch = null;
             try {
-                IRMethod irMethodMatch = null;
-                JMethod srcMethodMatch = null;
                 for (IRMethod irMethod : irMatch.methods) {
                     if (irMethod.arity == srcMethod.arity) {
                         if (irMethodMatch == null) {
                             irMethodMatch = irMethod;
                             srcMethodMatch = srcMethod;
-                        } else
+                        } else {
+                            // If adding a second method, switch to slower signature comparison.
+                            if (debug)
+                                System.out.println("Too many name/arity matches for " + srcMethod + ", switching to pairwise signature checks.");
+                            irMethodMatch = null;
                             throw new BacktrackException();
+                        }
                     }
                 }
-                if (irMethodMatch != null)
-                    recordMatch(methodMap, "method", irMethodMatch, srcMethodMatch);
-            } catch (BacktrackException ignored) { }
+            } catch (BacktrackException ignored) {
+                // Compare signatures by comparing each parameter type,
+                List<IRMethod> matches = new ArrayList<>();
+                for (IRMethod irMethod : irMatch.methods) {
+                    if (irMethod.arity == srcMethod.arity) {
+                        for (int i = 0; i < irMethod.arity; i++) {
+                            String irParamType = Utils.getSimpleType(irMethod.paramTypes.get(i));
+                            String srcParamType = Utils.getSimpleType(Utils.simplifyType(srcMethod.parameters.get(i).type));
+                            if (irParamType.equals(srcParamType)) {
+                                if (debug)
+                                    System.out.println("Type-match candidate: " + irMethod);
+                                matches.add(irMethod);
+                            }
+                        }
+                    }
+                }
+                if (matches.size() == 1)
+                    irMethodMatch = matches.get(0);
+            }
+            if (irMethodMatch != null)
+                recordMatch(methodMap, "method", irMethodMatch, srcMethodMatch);
         }
     }
 

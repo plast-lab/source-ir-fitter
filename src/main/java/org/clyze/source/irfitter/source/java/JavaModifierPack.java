@@ -21,11 +21,13 @@ public class JavaModifierPack extends SourceModifierPack {
      * @param decl          the source code declaration
      * @param isEnum        true if this is an enum declaration
      * @param isInterface   true if this is an interface declaration
+     * @param isVarArgs     true if some parameter accepts varargs (only valid
+     *                      for methods, false otherwise)
      * @param <U>           the type of the declaration
      * @param <T>           the type of the declaration again (same as U)
      */
     public <U extends BodyDeclaration<?>, T extends BodyDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
-    JavaModifierPack(SourceFile sourceFile, T decl, boolean isEnum, boolean isInterface) {
+    JavaModifierPack(SourceFile sourceFile, T decl, boolean isEnum, boolean isInterface, boolean isVarArgs) {
         this.isStatic = decl.isStatic();
         this.isPublic = decl.isPublic();
         this.isPrivate = decl.isPrivate();
@@ -36,6 +38,7 @@ public class JavaModifierPack extends SourceModifierPack {
         this.isSynchronized = decl.hasModifier(Modifier.Keyword.SYNCHRONIZED);
         this.isEnum = isEnum;
         this.isInterface = isInterface;
+        this.isVarArgs = isVarArgs;
         registerAnnotations(decl.getAnnotations(), sourceFile);
     }
 

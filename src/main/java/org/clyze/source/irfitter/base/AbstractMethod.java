@@ -8,4 +8,5 @@ import java.util.List;
  */
 public interface AbstractMethod {
     List<? extends AbstractMethodInvocation> getInvocations();
+    boolean isVarArgs();
 }

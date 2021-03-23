@@ -88,4 +88,10 @@ class BytecodeModifierPack extends IRModifierPack {
     public boolean isEnum() {
         return (access & Opcodes.ACC_ENUM) != 0;
     }
+
+    @Override
+    public boolean isVarArgs() {
+        return (access & Opcodes.ACC_VARARGS) != 0;
+
+    }
 }

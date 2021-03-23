@@ -281,9 +281,11 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         if (jt == null)
             System.out.println("TODO: top-level function " + fName);
         else {
+            // TODO: handle varargs in Kotlin
+            boolean isVarArgs = false;
             jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters,
                     mp.getAnnotations(), outerPos, jt,
-                    KotlinUtils.createPositionFromToken(fNameCtx.start)));
+                    KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs));
             Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         }
         return null;

@@ -21,14 +21,17 @@ implements AbstractMethod {
     public final List<JMethodInvocation> invocations = new LinkedList<>();
     /** The object allocations found in the method body. */
     public final List<JAllocation> allocations = new LinkedList<>();
+    /** The field accesses (reads/writes) that appear in the method body. */
     public final List<JFieldAccess> fieldAccesses = new LinkedList<>();
     /** The annotations found in the source code. */
     public final Set<String> annotations;
     private Collection<String> cachedIds = null;
+    /** True if this method accepts varargs. */
+    private final boolean isVarArgs;
 
     public JMethod(SourceFile srcFile, String name, String retType,
                    List<JParameter> parameters, Set<String> annotations,
-                   Position outerPos, JType parent, Position pos) {
+                   Position outerPos, JType parent, Position pos, boolean isVarArgs) {
         super(srcFile, pos);
         this.name = name;
         this.retType = retType;
@@ -37,6 +40,7 @@ implements AbstractMethod {
         this.parent = parent;
         this.arity = parameters.size();
         this.outerPos = outerPos;
+        this.isVarArgs = isVarArgs;
     }
 
     @Override
@@ -148,6 +152,11 @@ implements AbstractMethod {
     @Override
     public List<? extends AbstractMethodInvocation> getInvocations() {
         return invocations;
+    }
+
+    @Override
+    public boolean isVarArgs() {
+        return isVarArgs;
     }
 
     /**

@@ -148,4 +148,9 @@ public class IRMethod extends IRElement implements AbstractMethod {
         addTypeRefs(target, invocations);
         addTypeRefs(target, allocations);
     }
+
+    @Override
+    public boolean isVarArgs() {
+        return mp.isVarArgs();
+    }
 }

@@ -33,7 +33,7 @@ public class JInit extends JMethod {
      * @param isStatic        true if this is a static init block
      */
     private JInit(SourceFile srcFile, JType declaringType, String name, boolean isStatic) {
-        super(srcFile, name, "void", Collections.emptyList(), Collections.emptySet(), null, declaringType, null);
+        super(srcFile, name, "void", Collections.emptyList(), Collections.emptySet(), null, declaringType, null, false);
         this.isStatic = isStatic;
     }
 

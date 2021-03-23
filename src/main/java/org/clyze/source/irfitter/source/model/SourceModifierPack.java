@@ -15,6 +15,7 @@ public abstract class SourceModifierPack extends ModifierPack {
     protected boolean isInterface = false;
     protected boolean isEnum = false;
     protected boolean isNative = false;
+    protected boolean isVarArgs = false;
     protected final Set<TypeUsage> annotationUses = new HashSet<>();
 
     @Override
@@ -55,6 +56,11 @@ public abstract class SourceModifierPack extends ModifierPack {
     @Override
     public boolean isNative() {
         return this.isNative;
+    }
+
+    @Override
+    public boolean isVarArgs() {
+        return this.isVarArgs;
     }
 
     public Set<TypeUsage> getAnnotationUses() {

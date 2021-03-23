@@ -178,14 +178,19 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         SimpleName name = md.getName();
         List<JParameter> parameters = new LinkedList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
+        boolean isVarArgs = false;
         for (Parameter param : md.getParameters()) {
-            addTypeUsagesFromType(paramTypeUsages, param.getType(), sourceFile);
-            parameters.add(new JParameter(param.getNameAsString(), param.getTypeAsString(), JavaUtils.createPositionFromNode(param)));
+            if (param.isVarArgs())
+                isVarArgs = true;
+            Type pType = param.getType();
+            addTypeUsagesFromType(paramTypeUsages, pType, sourceFile);
+            parameters.add(new JParameter(param.getNameAsString(), pType.asString(), JavaUtils.createPositionFromNode(param)));
         }
         JType jt = scope.getEnclosingType();
-        JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false);
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
-                mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt, JavaUtils.createPositionFromNode(name));
+                mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt,
+                JavaUtils.createPositionFromNode(name), isVarArgs);
         jt.typeUsages.addAll(mp.getAnnotationUses());
         Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         for (ReferenceType thrownException : md.getThrownExceptions())
@@ -206,7 +211,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             JType jt = scope.getEnclosingType();
             jt.typeUsages.addAll(fieldTypeUsages);
 
-            JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false);
+            JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false, false);
             JField srcField = new JField(sourceFile, typeOf(vd), vd.getNameAsString(),
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
             jt.typeUsages.addAll(mp.getAnnotationUses());
@@ -425,7 +430,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                             SourceFile sourceFile, List<String> superTypes, Scope scope) {
         SimpleName name = decl.getName();
         JType parent = scope.getEnclosingType();
-        JavaModifierPack mp = new JavaModifierPack(sourceFile, decl, isEnum, isInterface);
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, decl, isEnum, isInterface, false);
         boolean isInner = parent != null && !mp.isStatic();
         JType jt = new JType(sourceFile, name.toString(), superTypes, mp.getAnnotations(),
                 JavaUtils.createPositionFromNode(name), scope.getEnclosingElement(),

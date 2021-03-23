@@ -10,6 +10,7 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.tree.*;
 
 import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
+import static org.objectweb.asm.Opcodes.ACC_VARARGS;
 
 public class BytecodeParser {
     private final boolean debug;

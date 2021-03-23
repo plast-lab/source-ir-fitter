@@ -135,7 +135,9 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         Position outerPos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
         JType jt = scope.getEnclosingType();
         GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
-        JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos);
+        // TODO: handle varargs in Groovy
+        boolean isVarArgs = false;
+        JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos, isVarArgs);
         registerMethodSigTypeUsages(ctx, jt, retTypeUsages, paramTypeUsages);
 
         if (jt == null)

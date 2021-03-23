@@ -27,6 +27,8 @@ public abstract class ModifierPack {
     abstract public boolean isProtected();
     /** True if this is a "private" declaration. */
     abstract public boolean isPrivate();
+    /** True if the "varargs" flag is set. */
+    abstract public boolean isVarArgs();
 
     /** The set of annotations in the source code. */
     public Set<String> getAnnotations() {
@@ -43,6 +45,7 @@ public abstract class ModifierPack {
                 "synchronized=" + isSynchronized() + "," +
                 "final=" + isFinal() + "," +
                 "enum=" + isEnum() + "," +
+                "varargs=" + isVarArgs() + "," +
                 "public=" + isPublic() + "," +
                 "protected=" + isProtected() + "," +
                 "private=" + isPrivate();

@@ -1,13 +1,12 @@
 package org.clyze.source.irfitter.ir.dex;
 
+import java.util.Set;
 import org.clyze.source.irfitter.ir.model.IRModifierPack;
 import org.clyze.utils.TypeUtils;
 import org.jf.dexlib2.AccessFlags;
 import org.jf.dexlib2.iface.Annotation;
 import org.jf.dexlib2.iface.ClassDef;
 import org.jf.dexlib2.iface.Member;
-
-import java.util.Set;
 
 /** The modifiers of a Dex class/field/method. */
 class DexModifierPack extends IRModifierPack {
@@ -80,5 +79,10 @@ class DexModifierPack extends IRModifierPack {
     @Override
     public boolean isEnum() {
         return AccessFlags.ENUM.isSet(access);
+    }
+
+    @Override
+    public boolean isVarArgs() {
+        return AccessFlags.VARARGS.isSet(access);
     }
 }

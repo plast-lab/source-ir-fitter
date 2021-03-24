@@ -2,6 +2,8 @@ package org.clyze.source.irfitter.matcher;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
@@ -44,14 +46,13 @@ public class Matcher {
                 System.out.println("Matching source type: " + jt);
             String id = jt.getFullyQualifiedName(sourceFile.packageName);
             //System.out.println("Mapping " + jt.name + " -> " + id);
-            for (IRType irType : irTypes) {
+            for (IRType irType : irTypes)
                 if (!irType.matched && irType.getId().equals(id)) {
                     recordMatch(idMapper.typeMap, "type", irType, jt);
                     matchFields(idMapper.fieldMap, irType.fields, jt.fields);
-                    matchMethods(idMapper, irType.methods, jt.methods);
+                    matchMethods(idMapper, irType.methods, jt.methods, irType.outerTypes);
                     break;
                 }
-            }
         }
         // When all types have been resolved, mark declaring symbol ids.
         for (JType jt : sourceFile.jTypes)
@@ -76,9 +77,10 @@ public class Matcher {
      * @param idMapper    the mapping object to update
      * @param irMethods   the methods found in the IR
      * @param srcMethods  the methods found in the source
+     * @param outerTypes  the outer types (for inner classes)
      */
-    private void matchMethods(IdMapper idMapper,
-                              List<IRMethod> irMethods, List<JMethod> srcMethods) {
+    private void matchMethods(IdMapper idMapper, List<IRMethod> irMethods,
+                              List<JMethod> srcMethods, List<String> outerTypes) {
         if (debug)
             System.out.println("Matching " + irMethods.size() + " IR methods against " + srcMethods.size() + " methods...");
 
@@ -112,10 +114,43 @@ public class Matcher {
         // Do fuzzy type matching on method signatures.
         matchMethodSignaturesFuzzily(methodMap, srcMethods, irMethods);
 
+        // Match compiler-augmented constructors of inner classes.
+        if (outerTypes != null)
+            matchInnerConstructors(methodMap, srcMethods, irMethods, outerTypes);
+
         // After methods have been matched, match method invocations and allocations.
         matchInvocations(idMapper, srcMethods);
         matchAllocations(idMapper.allocationMap, srcMethods);
         matchFieldAccesses(idMapper.fieldAccessMap, srcMethods);
+    }
+
+    /**
+     * Match constructors of inner classes, which take additional outer class
+     * arguments in the IR.
+     * @param methodMap     the method map to update
+     * @param srcMethods    the class methods found in the source
+     * @param irMethods     the class methods found in the IR
+     * @param outerTypes    the outer classes found in the IR
+     */
+    private void matchInnerConstructors(Map<String, Collection<JMethod>> methodMap,
+                                        List<JMethod> srcMethods, List<IRMethod> irMethods,
+                                        List<String> outerTypes) {
+        List<JMethod> srcInits = srcMethods.stream().filter(m -> m.matchId == null && m.getLowLevelName().equals("<init>")).collect(Collectors.toList());
+        List<IRMethod> irInits = irMethods.stream().filter(m -> m.name.equals("<init>")).collect(Collectors.toList());
+        List<String> outerSimpleTypes = outerTypes.stream().map(Utils::getSimpleType).collect(Collectors.toList());
+        for (JMethod srcInit : srcInits)
+            for (IRMethod irInit : irInits) {
+                List<String> irParamTypes = irInit.paramTypes.stream().map(Utils::getSimpleType).collect(Collectors.toList());
+                List<String> srcParamTypes = new ArrayList<>(outerSimpleTypes);
+                for (JParameter parameter : srcInit.parameters)
+                    srcParamTypes.add(Utils.getSimpleSourceType(parameter.type));
+                if (debug)
+                    System.out.println("Checking source/IR constructors: " +
+                            srcInit + " vs. " + irInit + ": " +
+                            srcParamTypes + " vs. " + irParamTypes);
+                if (irParamTypes.equals(srcParamTypes))
+                    recordMatch(methodMap, "method", irInit, srcInit);
+            }
     }
 
     /**

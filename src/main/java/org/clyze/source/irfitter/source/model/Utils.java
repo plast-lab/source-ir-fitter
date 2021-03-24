@@ -73,7 +73,7 @@ public class Utils {
      */
     public static String getSynthesizedType(String srcType, String irType, boolean debug) {
         String irSimpleType = getSimpleType(irType);
-        String srcSimpleType = getSimpleType(dotsToDollars(simplifyType(srcType)));
+        String srcSimpleType = getSimpleSourceType(srcType);
         if (irType.endsWith(srcSimpleType)) {
             String prefix = irType.substring(0, irType.length() - srcSimpleType.length());
             if (debug)
@@ -83,6 +83,15 @@ public class Utils {
             return prefix + srcType;
         }
         return irType;
+    }
+
+    /**
+     * Simplify a source type.
+     * @param srcType    a source type (e.g. {@code }a.b.C<D>})
+     * @return           a simplified type ({@code C})
+     */
+    public static String getSimpleSourceType(String srcType) {
+        return getSimpleType(dotsToDollars(simplifyType(srcType)));
     }
 
     /**

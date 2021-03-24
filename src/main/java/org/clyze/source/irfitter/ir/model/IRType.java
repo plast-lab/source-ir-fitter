@@ -12,6 +12,8 @@ public class IRType extends IRElement {
     public final List<IRField> fields = new LinkedList<>();
     public final List<IRMethod> methods = new LinkedList<>();
     public final ModifierPack mp;
+    /** For true inner classes, this contains their outer classes. */
+    public List<String> outerTypes = null;
 
     public IRType(String id, List<String> superTypes, ModifierPack mp) {
         super(id);
@@ -30,5 +32,15 @@ public class IRType extends IRElement {
         addTypeRefs(target, methods);
         if (superTypes != null)
             target.addAll(superTypes);
+    }
+
+    /**
+     * Add an outer type of this inner class.
+     * @param typeId  the type id
+     */
+    public final void addOuterType(String typeId) {
+        if (outerTypes == null)
+            outerTypes = new ArrayList<>();
+        outerTypes.add(typeId);
     }
 }

@@ -45,7 +45,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
                     IRMethodInvocation irInvo = new IRMethodInvocation(elemId, methodId,
                             methodName, arity, invokedMethodId, counter, sourceLine);
                     if (debug)
-                        System.out.println("Found IR invocation: " + irInvo);
+                        System.out.println("IR invocation: " + irInvo);
                     return irInvo;
         }));
     }
@@ -58,7 +58,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
                 ((counter, elemId) -> {
                     IRAllocation irAlloc = new IRAllocation(elemId, typeId0, methodId, inIIB, isArray, sourceLine);
                     if (debug)
-                        System.out.println("Found IR allocation: " + irAlloc);
+                        System.out.println("IR allocation: " + irAlloc);
                     return irAlloc;
                 }));
     }
@@ -69,7 +69,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
                 ((counter, elemId) -> {
                     IRFieldAccess irFieldAccess = new IRFieldAccess(elemId, fieldId, fieldName, fieldType, read);
                     if (debug)
-                        System.out.println("Found IR field " + (read ? "read" : "write") + ": " + irFieldAccess.getId());
+                        System.out.println("IR field " + (read ? "read" : "write") + ": " + irFieldAccess.getId());
                     return irFieldAccess;
                 }));
     }

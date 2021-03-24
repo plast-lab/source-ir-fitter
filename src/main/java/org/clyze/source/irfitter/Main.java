@@ -104,7 +104,7 @@ public class Main {
             for (String i : irs)
                 irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug));
             if (debug)
-                System.out.println("Found IR vararg methods: " + vaIrMethods);
+                System.out.println("IR vararg methods: " + vaIrMethods);
 
             String dbVal = cli.getOptionValue(dbopt.getOpt());
             File db = dbVal == null ? null : new File(dbVal);

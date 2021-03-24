@@ -14,12 +14,14 @@ public class BytecodeMethodVisitor extends MethodVisitor {
     private int lastLine = NO_LINE;
     private final IRMethod irMethod;
     private final Map<Label, Integer> indexToSourceLine;
+    private final boolean inIIB;
     private final boolean debug;
 
-    public BytecodeMethodVisitor(IRMethod irMethod, Map<Label, Integer> indexToSourceLine, boolean debug) {
+    public BytecodeMethodVisitor(IRMethod irMethod, Map<Label, Integer> indexToSourceLine, boolean inIIB, boolean debug) {
         super(Opcodes.ASM9);
         this.irMethod = irMethod;
         this.indexToSourceLine = indexToSourceLine;
+        this.inIIB = inIIB;
         this.debug = debug;
     }
 
@@ -39,7 +41,6 @@ public class BytecodeMethodVisitor extends MethodVisitor {
 
     private void recordAllocation(String type, boolean isArray) {
         String allocatedTypeId = TypeUtils.replaceSlashesWithDots(type);
-        boolean inIIB = false;
         irMethod.addAllocation(allocatedTypeId, inIIB, isArray, getLastLine(), debug);
     }
 

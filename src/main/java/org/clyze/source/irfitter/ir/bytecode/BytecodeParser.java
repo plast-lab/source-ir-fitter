@@ -76,7 +76,8 @@ public class BytecodeParser {
             }
         }
         // Read the method again to map bytecode offsets to source positions.
-        mNode.accept(new BytecodeMethodVisitor(method, indexToSourceLine, debug));
+        boolean inIIB = mNode.name.equals("<clinit>");
+        mNode.accept(new BytecodeMethodVisitor(method, indexToSourceLine, inIIB, debug));
         // Parse method descriptor to discover type uses.
         for (String sigType : TypeUtils.raiseSignature(mNode.desc))
             method.addSigTypeReference(sigType);

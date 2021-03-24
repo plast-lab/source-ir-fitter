@@ -5,7 +5,6 @@ import java.util.stream.Collectors;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.source.irfitter.source.model.JMethodInvocation;
-import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** This class handles support for vararg methods. */
 public class VarArgSupport {
@@ -15,8 +14,8 @@ public class VarArgSupport {
      */
     private static final Map<String, List<Integer>> javaVarargMethods = getJavaVarargMethods();
 
-    /** The source file being processed. */
-    private final SourceFile sourceFile;
+    /** The matching object. */
+    private final Matcher matcher;
     /** The candidate source/IR invocations for vararg resolution. */
     private final List<Candidate> candidates = new LinkedList<>();
     /** Debugging mode. */
@@ -24,11 +23,11 @@ public class VarArgSupport {
 
     /**
      * Generate a vararg resolver object.
-     * @param sourceFile    the source file being processed
+     * @param matcher       the matching object
      * @param debug         debugging mode
      */
-    public VarArgSupport(SourceFile sourceFile, boolean debug) {
-        this.sourceFile = sourceFile;
+    public VarArgSupport(Matcher matcher, boolean debug) {
+        this.matcher = matcher;
         this.debug = debug;
     }
 
@@ -96,7 +95,7 @@ public class VarArgSupport {
                     int srcInvosSz = srcInvos.size();
                     int irInvosSz = irInvos.size();
                     if (srcInvosSz == irInvosSz) {
-                        sourceFile.matchInvocationLists(invocationMap, srcInvos, irInvos, c.srcName, c.arity);
+                        matcher.matchInvocationLists(invocationMap, srcInvos, irInvos, c.srcName, c.arity);
                     } else if (debug)
                         System.out.println("WARNING: vararg resolution failed for different src/IR arities: " +
                                 srcArity + "(" + srcInvosSz + " invocations) vs. " +

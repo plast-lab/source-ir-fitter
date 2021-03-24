@@ -127,7 +127,7 @@ public class Driver {
         for (SourceFile sf : sources) {
             addImportUsages(sf.getFileInfo().getElements(), sf);
             System.out.println("==> Matching elements in " + sf.getRelativePath());
-            sf.matchTypes(idMapper, irTypes);
+            sf.matcher.matchTypes(idMapper, irTypes);
             unmatched += sf.reportUmatched(debug);
         }
 

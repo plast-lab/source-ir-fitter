@@ -89,26 +89,24 @@ public class Matcher {
         // Match same-name methods without overloading.
         if (debug)
             System.out.println("* Matching same-name methods without overloading...");
-        Map<String, NameMatch<JMethod>> srcOverloading = new HashMap<>();
-        setOverloadingTable(srcMethods, srcOverloading, (JMethod::getLowLevelName));
-        Map<String, NameMatch<IRMethod>> irOverloading = new HashMap<>();
-        setOverloadingTable(irMethods, irOverloading, (m -> m.name));
-        for (Map.Entry<String, NameMatch<JMethod>> srcEntry : srcOverloading.entrySet()) {
-            NameMatch<JMethod> srcMatch = srcEntry.getValue();
+        Map<String, Set<JMethod>> srcOverloading = getOverloadingTable(srcMethods, (JMethod::getLowLevelName));
+        Map<String, Set<IRMethod>> irOverloading = getOverloadingTable(irMethods, (m -> m.name));
+        for (Map.Entry<String, Set<JMethod>> srcEntry : srcOverloading.entrySet()) {
+            Set<JMethod> srcMatches = srcEntry.getValue();
             String srcMethodName = srcEntry.getKey();
-            NameMatch<IRMethod> irMatch = irOverloading.get(srcMethodName);
-            if (irMatch == null) {
+            Set<IRMethod> irMatches = irOverloading.get(srcMethodName);
+            if (irMatches == null) {
                 if (!JInit.isInitName(srcMethodName))
-                    System.out.println("WARNING: method " + srcMethodName + "() does not match any bytecode methods: " + srcMatch.methods);
+                    System.out.println("WARNING: method " + srcMethodName + "() does not match any bytecode methods: " + srcMatches);
                 continue;
             }
             // Match methods with unique names both in sources and IR.
-            if (srcMatch.appearances == 1 && irMatch.appearances == 1) {
-                JMethod srcMethod = srcMatch.methods.get(0);
-                IRMethod irMethod = irMatch.methods.get(0);
+            if (srcMatches.size() == 1 && irMatches.size() == 1) {
+                JMethod srcMethod = srcMatches.iterator().next();
+                IRMethod irMethod = irMatches.iterator().next();
                 recordMatch(methodMap, "method", irMethod, srcMethod);
             } else
-                matchMethodsWithSameNameArity(methodMap, srcMatch, irMatch);
+                matchMethodsWithSameNameArity(methodMap, srcMatches, irMatches);
         }
 
         // Do fuzzy type matching on method signatures.
@@ -449,13 +447,15 @@ public class Matcher {
             }
     }
 
-    private void matchMethodsWithSameNameArity(Map<String, Collection<JMethod>> methodMap, NameMatch<JMethod> srcMatch, NameMatch<IRMethod> irMatch) {
+    private void matchMethodsWithSameNameArity(Map<String, Collection<JMethod>> methodMap,
+                                               Set<JMethod> srcMatches,
+                                               Set<IRMethod> irMatches) {
         // Match methods with same name and arity (in the presence of overloading).
-        for (JMethod srcMethod : srcMatch.methods) {
+        for (JMethod srcMethod : srcMatches) {
             IRMethod irMethodMatch = null;
             JMethod srcMethodMatch = null;
             try {
-                for (IRMethod irMethod : irMatch.methods) {
+                for (IRMethod irMethod : irMatches) {
                     if (irMethod.arity == srcMethod.arity) {
                         if (irMethodMatch == null) {
                             irMethodMatch = irMethod;
@@ -472,16 +472,21 @@ public class Matcher {
             } catch (BacktrackException ignored) {
                 // Compare signatures by comparing each parameter type,
                 List<IRMethod> matches = new ArrayList<>();
-                for (IRMethod irMethod : irMatch.methods) {
+                for (IRMethod irMethod : irMatches) {
                     if (irMethod.arity == srcMethod.arity) {
+                        boolean equal = true;
                         for (int i = 0; i < irMethod.arity; i++) {
                             String irParamType = Utils.getSimpleType(irMethod.paramTypes.get(i));
-                            String srcParamType = Utils.getSimpleType(Utils.simplifyType(srcMethod.parameters.get(i).type));
-                            if (irParamType.equals(srcParamType)) {
-                                if (debug)
-                                    System.out.println("Type-match candidate: " + irMethod);
-                                matches.add(irMethod);
+                            String srcParamType = Utils.getSimpleSourceType(srcMethod.parameters.get(i).type);
+                            if (!irParamType.equals(srcParamType)) {
+                                equal = false;
+                                break;
                             }
+                        }
+                        if (equal) {
+                            if (debug)
+                                System.out.println("Type-match candidate: " + irMethod);
+                            matches.add(irMethod);
                         }
                     }
                 }
@@ -545,22 +550,16 @@ public class Matcher {
         srcElem.initSymbolFromIRElement(irElem);
     }
 
-    private <T> void setOverloadingTable(Collection<T> methods,
-                                         Map<String, NameMatch<T>> srcOverloading,
+    private <T> Map<String, Set<T>> getOverloadingTable(Collection<T> methods,
                                          Function<T, String> namer) {
+        Map<String, Set<T>> srcOverloading = new HashMap<>();
         for (T method : methods) {
             String mName = namer.apply(method);
-            NameMatch<T> nameMatch = srcOverloading.computeIfAbsent(mName, (k -> new NameMatch<>()));
-            nameMatch.appearances++;
-            nameMatch.methods.add(method);
+            srcOverloading.computeIfAbsent(mName, (k -> new HashSet<>())).add(method);
         }
+        return srcOverloading;
     }
 }
 
 /** Helper exception to control match failures. */
 class BacktrackException extends Exception { }
-
-class NameMatch<M> {
-    int appearances = 0;
-    final List<M> methods = new ArrayList<>();
-}

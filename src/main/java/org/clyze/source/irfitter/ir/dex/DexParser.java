@@ -31,9 +31,11 @@ import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
 /** The .dex parser for Dalvik opcodes. */
 public class DexParser {
     private final boolean debug;
+    private final Set<String> varArgMethods;
 
-    public DexParser(boolean debug) {
+    public DexParser(boolean debug, Set<String> varArgMethods) {
         this.debug = debug;
+        this.varArgMethods = varArgMethods;
     }
 
     public void processDex(List<IRType> irTypes, InputStream is) {
@@ -77,8 +79,11 @@ public class DexParser {
                         String mName = dexMethod.getName();
                         String retType = raiseLowLevelType(dexMethod.getReturnType());
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
+                        DexModifierPack methodMods = new DexModifierPack(dexMethod);
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
-                                new DexModifierPack(dexMethod), irTypeMods.isInterface());
+                                methodMods, irTypeMods.isInterface());
+                        if (methodMods.isVarArgs())
+                            varArgMethods.add(methodId);
                         paramTypes.forEach(irMethod::addSigTypeReference);
                         irMethod.addSigTypeReference(retType);
                         for (Annotation annotation : dexMethod.getAnnotations()) {

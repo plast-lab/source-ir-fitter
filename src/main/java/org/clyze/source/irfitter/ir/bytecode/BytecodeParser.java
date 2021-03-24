@@ -10,13 +10,14 @@ import org.objectweb.asm.Label;
 import org.objectweb.asm.tree.*;
 
 import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
-import static org.objectweb.asm.Opcodes.ACC_VARARGS;
 
 public class BytecodeParser {
     private final boolean debug;
+    private final Set<String> varArgMethods;
 
-    public BytecodeParser(boolean debug) {
+    public BytecodeParser(boolean debug, Set<String> varArgMethods) {
         this.debug = debug;
+        this.varArgMethods = varArgMethods;
     }
 
     public IRType processBytecode(ClassReader reader) {
@@ -51,8 +52,11 @@ public class BytecodeParser {
             }
             String mName = mNode.name;
             String methodId = classPrefix + sig[0] + " " + mName + "(" + sj.toString() + ")>";
+            BytecodeModifierPack methodMods = new BytecodeModifierPack(mNode);
             IRMethod irMethod = new IRMethod(methodId, mName, sig[0], paramTypes,
-                    new BytecodeModifierPack(mNode), irTypeMods.isInterface());
+                    methodMods, irTypeMods.isInterface());
+            if (methodMods.isVarArgs())
+                varArgMethods.add(methodId);
             if (debug)
                 System.out.println("IR method: " + irMethod);
             processBytecodeInstructions(irMethod, mNode);
@@ -82,8 +86,7 @@ public class BytecodeParser {
 
     public void processClass(List<IRType> irTypes, InputStream is) {
         try {
-            ClassReader reader = new ClassReader(is);
-            irTypes.add((new BytecodeParser(debug)).processBytecode(reader));
+            irTypes.add(processBytecode(new ClassReader(is)));
         } catch (IOException ex) {
             ex.printStackTrace();
         }

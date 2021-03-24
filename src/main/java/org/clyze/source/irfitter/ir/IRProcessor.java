@@ -5,16 +5,13 @@ import org.clyze.source.irfitter.ir.dex.DexParser;
 import org.clyze.source.irfitter.ir.model.IRType;
 
 import java.io.*;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class IRProcessor {
-    public static List<IRType> processIR(File irFile, boolean debug) {
+    public static List<IRType> processIR(Set<String> varArgMethods, File irFile, boolean debug) {
         List<IRType> irTypes = new LinkedList<>();
         if (debug)
             System.out.println("Processing IR in: " + irFile.getPath());
@@ -22,20 +19,20 @@ public class IRProcessor {
             String name = irFile.getName().toLowerCase();
             if (name.endsWith(".jar")) {
                 processZipArchive(irFile, ".class", debug,
-                        is -> new BytecodeParser(debug).processClass(irTypes, is));
+                        is -> new BytecodeParser(debug, varArgMethods).processClass(irTypes, is));
             } else if (name.endsWith(".class")) {
                 try (InputStream is = new FileInputStream(irFile)) {
-                    (new BytecodeParser(debug)).processClass(irTypes, is);
+                    (new BytecodeParser(debug, varArgMethods)).processClass(irTypes, is);
                 } catch (IOException ex) {
                     ex.printStackTrace();
                 }
             } else if (name.endsWith(".apk")) {
                 processZipArchive(irFile, ".dex", debug,
-                        is -> new DexParser(debug).processDex(irTypes, is));
+                        is -> new DexParser(debug, varArgMethods).processDex(irTypes, is));
             }
         } else if (irFile.isDirectory()) {
             for (File f : Objects.requireNonNull(irFile.listFiles()))
-                irTypes.addAll(processIR(f, debug));
+                irTypes.addAll(processIR(varArgMethods, f, debug));
         }
         return irTypes;
     }

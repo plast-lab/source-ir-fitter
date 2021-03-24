@@ -37,6 +37,7 @@ public class Driver {
     private final File out;
     /** If true, enable debug reports. */
     private final boolean debug;
+    private final Set<String> varargIrMethods;
 
     /**
      * Create a new driver / processing pipeline.
@@ -45,8 +46,10 @@ public class Driver {
      * @param version      the results version (used in SARIF mode)
      * @param standalone   false if to be used as a library
      * @param debug        debug mode
+     * @param vaIrMethods  the vararg methods found in the IR
      */
-    public Driver(File out, File db, String version, boolean standalone, boolean debug) {
+    public Driver(File out, File db, String version, boolean standalone, boolean debug, Set<String> vaIrMethods) {
+        this.varargIrMethods = vaIrMethods;
         this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
         this.out = out;
         this.debug = debug;
@@ -60,8 +63,8 @@ public class Driver {
      * @param lossy               if true, enable lossy heuristics
      * @return                    the processed source file objects
      */
-    public static Collection<SourceFile> readSources(File srcFile, boolean debug,
-                                                     boolean synthesizeTypes, boolean lossy) {
+    public Collection<SourceFile> readSources(File srcFile, boolean debug,
+                                              boolean synthesizeTypes, boolean lossy) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
@@ -77,9 +80,9 @@ public class Driver {
             return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy);
     }
 
-    private static Collection<SourceFile> readSources(File topDir, File srcFile,
-                                                      boolean debug, boolean synthesizeTypes,
-                                                      boolean lossy) {
+    private Collection<SourceFile> readSources(File topDir, File srcFile,
+                                               boolean debug, boolean synthesizeTypes,
+                                               boolean lossy) {
         Collection<SourceFile> sources = new LinkedList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -92,13 +95,13 @@ public class Driver {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
             }
         }
         return sources;

@@ -3,6 +3,9 @@ package org.clyze.source.irfitter;
 import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
+
 import org.apache.commons.cli.*;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.Driver;
@@ -96,9 +99,17 @@ public class Main {
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
 
             // Process IR (such as Java bytecode).
+            Set<String> vaIrMethods = new ConcurrentSkipListSet<>();
             List<IRType> irTypes = new LinkedList<>();
             for (String i : irs)
-                irTypes.addAll(IRProcessor.processIR(new File(i), debug));
+                irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug));
+            if (debug)
+                System.out.println("Found IR vararg methods: " + vaIrMethods);
+
+            String dbVal = cli.getOptionValue(dbopt.getOpt());
+            File db = dbVal == null ? null : new File(dbVal);
+            File out = new File(cli.getOptionValue(outOpt.getOpt()));
+            Driver driver = new Driver(out, db, "1.0", false, debug, vaIrMethods);
 
             // Process source code.
             List<SourceFile> sources = new LinkedList<>();
@@ -108,14 +119,11 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(Driver.readSources(srcFile, debug, synthesizeTypes, lossy));
+                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy));
             }
 
             // Match information between IR and sources.
-            String dbVal = cli.getOptionValue(dbopt.getOpt());
-            File db = dbVal == null ? null : new File(dbVal);
-            File out = new File(cli.getOptionValue(outOpt.getOpt()));
-            return (new Driver(out, db, "1.0", false, debug)).match(irTypes, sources, json, sarif);
+            return driver.match(irTypes, sources, json, sarif);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

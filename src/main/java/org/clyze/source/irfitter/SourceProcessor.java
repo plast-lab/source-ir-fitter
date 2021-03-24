@@ -1,6 +1,8 @@
 package org.clyze.source.irfitter;
 
 import java.io.File;
+import java.util.Set;
+
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** Source code processor interface. */
@@ -13,7 +15,8 @@ public interface SourceProcessor {
      * @param debug     if true, run extra debug code
      * @param synthesizeTypes if true, try to synthesize high-level types from source/IR types
      * @param lossy     if true, enable lossy heuristics
+     * @param vaIrMethods the vararg methods found in the IR
      * @return          the source file object
      */
-    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy);
+    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, Set<String> vaIrMethods);
 }

@@ -11,6 +11,7 @@ import org.clyze.source.irfitter.base.AbstractMethodInvocation;
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.persistent.metadata.FileInfo;
 import org.clyze.persistent.metadata.jvm.JvmMetadata;
+import org.clyze.source.irfitter.matcher.VarArgSupport;
 
 /**
  * This is the source code representation that is responsible for matching
@@ -318,57 +319,78 @@ public class SourceFile {
             if (srcSigs == null)
                 continue;
 
+            VarArgSupport va = new VarArgSupport(this, debug);
             for (Map.Entry<String, Map<Integer, List<AbstractMethodInvocation>>> srcNameEntry : srcSigs.entrySet()) {
                 String srcName = srcNameEntry.getKey();
-                for (Map.Entry<Integer, List<AbstractMethodInvocation>> srcArityEntry : srcNameEntry.getValue().entrySet()) {
+                Map<Integer, List<AbstractMethodInvocation>> srcArityMap = srcNameEntry.getValue();
+                for (Map.Entry<Integer, List<AbstractMethodInvocation>> srcArityEntry : srcArityMap.entrySet()) {
                     List<AbstractMethodInvocation> srcInvos = srcArityEntry.getValue();
-                    Map<Integer, List<AbstractMethodInvocation>> irInvoMap = irSigs.get(srcName);
-                    if (irInvoMap == null) {
+                    Map<Integer, List<AbstractMethodInvocation>> irArityMap = irSigs.get(srcName);
+                    if (irArityMap == null) {
                         if (debug)
                             for (AbstractMethodInvocation ami : srcInvos)
                                 System.out.println("WARNING: method name not found in IR: " + ami);
                         continue;
                     }
                     Integer arity = srcArityEntry.getKey();
-                    List<AbstractMethodInvocation> irInvos = irInvoMap.get(arity);
+                    List<AbstractMethodInvocation> irInvos = irArityMap.get(arity);
                     if (irInvos == null) {
                         if (debug)
-                            for (AbstractMethodInvocation ami : srcInvos)
-                                System.out.println("WARNING: method arity not found in IR: " + ami);
+                            System.out.println("Could not find " + srcName + "/" + arity + " in IR, postponing vararg resolution.");
+                        va.recordInvocations(srcName, arity, srcArityMap, irArityMap);
                         continue;
                     }
-                    // If both name/arity sets have same size, match them one-by-one.
-                    int srcCount = srcInvos.size();
-                    int irCount = irInvos.size();
-                    if (srcCount == irCount) {
-                        for (int i = 0; i < srcCount; i++) {
-                            IRMethodInvocation irInvo = (IRMethodInvocation) irInvos.get(i);
-                            JMethodInvocation srcInvo = (JMethodInvocation) srcInvos.get(i);
-                            recordMatch(invocationMap, "invocation", irInvo, srcInvo);
-                        }
-                    } else if (debug)
-                        System.out.println("WARNING: name/arity invocation combination (" + srcName + "," + arity + ") matches " + srcCount + " source elements but " + irCount + " IR elements.");
+                    matchInvocationLists(invocationMap, srcInvos, irInvos, srcName, arity);
                 }
             }
+            va.resolve(invocationMap);
 
-            // Last step: for the unmatched IR invocations that still have
-            // source line information, generate metadata. This can help with
-            // mapping compiler-generated invocations (such as StringBuilder
-            // calls for string concatenation).
-            for (IRMethodInvocation irInvo : irMethod.invocations) {
-                if (!irInvo.matched) {
-                    Integer line = irInvo.getSourceLine();
-                    if (line != null) {
-                        Position pos = new Position(line, line, 0, 0);
-                        boolean inIIB = "<init>".equals(irMethod.name) || JInit.isInitName(irMethod.name);
-                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(this, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB);
-                        srcMethod.invocations.add(fakeSrcInvo);
-                        recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
-                        fakeSrcInvo.symbol.setSource(false);
-                    }
+            // Last step: generate metadata for unmatched IR elements that have
+            // source line information.
+            generateUnknownMetadata(invocationMap, srcMethod, irMethod);
+        }
+    }
+
+    public void matchInvocationLists(Map<String, Collection<JMethodInvocation>> invocationMap,
+                                     List<AbstractMethodInvocation> srcInvos,
+                                     List<AbstractMethodInvocation> irInvos,
+                                     String srcName, Integer arity) {
+        // If both name/arity sets have same size, match them one-by-one.
+        int srcCount = srcInvos.size();
+        int irCount = irInvos.size();
+        if (srcCount == irCount)
+            for (int i = 0; i < srcCount; i++) {
+                IRMethodInvocation irInvo = (IRMethodInvocation) irInvos.get(i);
+                JMethodInvocation srcInvo = (JMethodInvocation) srcInvos.get(i);
+                recordMatch(invocationMap, "invocation", irInvo, srcInvo);
+            }
+        else if (debug)
+            System.out.println("WARNING: name/arity invocation combination (" +
+                    srcName + "," + arity + ") matches " + srcCount +
+                    " source elements but " + irCount + " IR elements exist.");
+    }
+
+    /**
+     * Generate metadata for the unmatched IR invocations that still have
+     * source line information. This can help with mapping compiler-generated
+     * invocations (such as StringBuilder calls for string concatenation).
+     * @param invocationMap    the invocation map to update
+     * @param srcMethod        a source method
+     * @param irMethod         the IR method that corresponds to the source method
+     */
+    private void generateUnknownMetadata(Map<String, Collection<JMethodInvocation>> invocationMap, JMethod srcMethod, IRMethod irMethod) {
+        for (IRMethodInvocation irInvo : irMethod.invocations)
+            if (!irInvo.matched) {
+                Integer line = irInvo.getSourceLine();
+                if (line != null) {
+                    Position pos = new Position(line, line, 0, 0);
+                    boolean inIIB = "<init>".equals(irMethod.name) || JInit.isInitName(irMethod.name);
+                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(this, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB);
+                    srcMethod.invocations.add(fakeSrcInvo);
+                    recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
+                    fakeSrcInvo.symbol.setSource(false);
                 }
             }
-        }
     }
 
     private void matchMethodsWithSameNameArity(Map<String, Collection<JMethod>> methodMap, NameMatch<JMethod> srcMatch, NameMatch<IRMethod> irMatch) {
@@ -444,7 +466,11 @@ public class SourceFile {
         return arEntry.get(arity);
     }
 
-    // Compute signatures per method name/arity pair.
+    /**
+     * Compute signatures per method name/arity pair.
+     * @param method    a source/IR method
+     * @return          a map (method name to arity to invocations)
+     */
     private Map<String, Map<Integer, List<AbstractMethodInvocation>>>
     computeAbstractSignatures(AbstractMethod method) {
         Map<String, Map<Integer, List<AbstractMethodInvocation>>> sigs = new HashMap<>();
@@ -452,24 +478,9 @@ public class SourceFile {
             return null;
         for (AbstractMethodInvocation invo : method.getInvocations()) {
             String invoMethodName = invo.getMethodName();
-            Map<Integer, List<AbstractMethodInvocation>> sigs0 = sigs.get(invoMethodName);
-            boolean add0 = false;
-            if (sigs0 == null) {
-                sigs0 = new HashMap<>();
-                add0 = true;
-            }
-            int invoArity = invo.getArity();
-            boolean add1 = false;
-            List<AbstractMethodInvocation> sigs1 = sigs0.get(invoArity);
-            if (sigs1 == null) {
-                sigs1 = new ArrayList<>();
-                add1 = true;
-            }
-            sigs1.add(invo);
-            if (add1)
-                sigs0.put(invoArity, sigs1);
-            if (add0)
-                sigs.put(invoMethodName, sigs0);
+            sigs.computeIfAbsent(invoMethodName, (k -> new HashMap<>()))
+                    .computeIfAbsent(invo.getArity(), (k -> new ArrayList<>()))
+                    .add(invo);
         }
         return sigs;
     }

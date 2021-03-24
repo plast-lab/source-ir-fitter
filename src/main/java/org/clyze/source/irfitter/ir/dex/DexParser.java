@@ -12,6 +12,7 @@ import org.apache.commons.io.IOUtils;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.source.model.JInit;
 import org.clyze.utils.TypeUtils;
 import org.jf.dexlib2.DexFileFactory;
 import org.jf.dexlib2.dexbacked.*;
@@ -120,8 +121,8 @@ public class DexParser {
                     case FILLED_NEW_ARRAY:
                     case FILLED_NEW_ARRAY_RANGE: {
                         String typeId = raisedJvmTypeOf((ReferenceInstruction) instr);
-                        // TODO: support initializer blocks
-                        boolean inIIB = false;
+                        // TODO: support non-static initializer blocks
+                        boolean inIIB = irMethod.name.equals(JInit.CLINIT);
                         // TODO: read source line
                         Integer sourceLine = null;
                         irMethod.addAllocation(typeId, inIIB, false, sourceLine, debug);

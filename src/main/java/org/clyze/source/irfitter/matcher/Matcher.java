@@ -133,12 +133,17 @@ public class Matcher {
     private void matchInnerConstructors(Map<String, Collection<JMethod>> methodMap,
                                         List<JMethod> srcMethods, List<IRMethod> irMethods,
                                         List<String> outerTypes) {
-        List<JMethod> srcInits = srcMethods.stream().filter(m -> m.matchId == null && m.getLowLevelName().equals("<init>")).collect(Collectors.toList());
         List<IRMethod> irInits = irMethods.stream().filter(m -> m.name.equals("<init>")).collect(Collectors.toList());
-        List<String> outerSimpleTypes = outerTypes.stream().map(Utils::getSimpleType).collect(Collectors.toList());
-        for (JMethod srcInit : srcInits)
+        List<String> outerSimpleTypes = outerTypes.stream().map(Utils::getSimpleIrType).collect(Collectors.toList());
+        int outerTypesCount = outerTypes.size();
+        for (JMethod srcInit : srcMethods) {
+            if (srcInit.matchId != null || !srcInit.getLowLevelName().equals("<init>"))
+                continue;
             for (IRMethod irInit : irInits) {
-                List<String> irParamTypes = irInit.paramTypes.stream().map(Utils::getSimpleType).collect(Collectors.toList());
+                List<String> irParamTypes = irInit.paramTypes.stream().map(Utils::getSimpleIrType).collect(Collectors.toList());
+                // Abort if |outer-types + source-types| != |ir-types|.
+                if (irInit.paramTypes.size() != outerTypesCount + srcInit.parameters.size())
+                    continue;
                 List<String> srcParamTypes = new ArrayList<>(outerSimpleTypes);
                 for (JParameter parameter : srcInit.parameters)
                     srcParamTypes.add(Utils.getSimpleSourceType(parameter.type));
@@ -149,6 +154,7 @@ public class Matcher {
                 if (irParamTypes.equals(srcParamTypes))
                     recordMatch(methodMap, "method", irInit, srcInit);
             }
+        }
     }
 
     /**
@@ -476,9 +482,9 @@ public class Matcher {
                     if (irMethod.arity == srcMethod.arity) {
                         boolean equal = true;
                         for (int i = 0; i < irMethod.arity; i++) {
-                            String irParamType = Utils.getSimpleType(irMethod.paramTypes.get(i));
-                            String srcParamType = Utils.getSimpleSourceType(srcMethod.parameters.get(i).type);
-                            if (!irParamType.equals(srcParamType)) {
+                            String srcParamType = srcMethod.parameters.get(i).type;
+                            String irParamType = irMethod.paramTypes.get(i);
+                            if (!Utils.simpleTypesAreEqual(srcParamType, irParamType)) {
                                 equal = false;
                                 break;
                             }

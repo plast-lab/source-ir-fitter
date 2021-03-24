@@ -91,7 +91,27 @@ public class Utils {
      * @return           a simplified type ({@code C})
      */
     public static String getSimpleSourceType(String srcType) {
-        return getSimpleType(dotsToDollars(simplifyType(srcType)));
+        return getSimpleType(simplifyType(srcType));
+    }
+
+    /**
+     * Simplify an IR type.
+     * @param irType    an IR type (e.g. {@code }a.B$C<D>})
+     * @return          a simplified IR type ({@code C})
+     */
+    public static String getSimpleIrType(String irType) {
+        int irDollarIdx = irType.indexOf("$");
+        return getSimpleType(irDollarIdx == -1 ? irType : irType.substring(irDollarIdx + 1));
+    }
+
+    /**
+     * Compare a source type against an IR type.
+     * @param srcType    source type
+     * @param irType     IR type
+     * @return           true if the simple names of the two types are equal
+     */
+    public static boolean simpleTypesAreEqual(String srcType, String irType) {
+        return getSimpleSourceType(srcType).equals(getSimpleIrType(irType));
     }
 
     /**

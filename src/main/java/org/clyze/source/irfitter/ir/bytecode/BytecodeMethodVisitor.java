@@ -27,16 +27,46 @@ public class BytecodeMethodVisitor extends MethodVisitor {
 
     @Override
     public void visitIntInsn(int opcode, int operand) {
-        if (opcode == Opcodes.NEWARRAY)
-            recordAllocation("java.lang.Object", true);
+        if (opcode == Opcodes.NEWARRAY) {
+            String elemType = null;
+            switch (operand) {
+                case Opcodes.T_BOOLEAN: elemType = "boolean"; break;
+                case Opcodes.T_CHAR   : elemType = "char"   ; break;
+                case Opcodes.T_FLOAT  : elemType = "float"  ; break;
+                case Opcodes.T_DOUBLE : elemType = "double" ; break;
+                case Opcodes.T_BYTE   : elemType = "byte"   ; break;
+                case Opcodes.T_SHORT  : elemType = "short"  ; break;
+                case Opcodes.T_INT    : elemType = "int"    ; break;
+                case Opcodes.T_LONG   : elemType = "long"   ; break;
+            }
+            if (elemType != null)
+                recordAllocation(elemType, true);
+        }
         super.visitIntInsn(opcode, operand);
     }
 
     @Override
     public void visitTypeInsn(int opcode, String type) {
         if (opcode == Opcodes.NEW)
-            recordAllocation(type, false);
+            recordAllocation(TypeUtils.replaceSlashesWithDots(type), false);
+        else if (opcode == Opcodes.ANEWARRAY) {
+            // Types can be either "[Ljava.lang.String;" or "java.lang.String".
+            boolean isDescriptor = (type.startsWith("[") || type.startsWith("L")) && type.endsWith(";");
+            String typeId = isDescriptor ? TypeUtils.raiseTypeId(type) : TypeUtils.replaceSlashesWithDots(type);
+            recordAllocation(typeId, true);
+        }
         super.visitTypeInsn(opcode, type);
+    }
+
+    @Override
+    public void visitMultiANewArrayInsn(String descriptor, int numDimensions) {
+        String arrayType = TypeUtils.raiseTypeId(descriptor);
+        // Strip one pair of brackets, since allocations take the element type.
+        if (arrayType.endsWith("[]"))
+            recordAllocation(arrayType.substring(0, arrayType.length() - 2), true);
+        else
+            System.out.println("ERROR: could not process multianewarray(" + descriptor + ")");
+        super.visitMultiANewArrayInsn(descriptor, numDimensions);
     }
 
     private void recordAllocation(String type, boolean isArray) {

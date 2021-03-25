@@ -165,7 +165,7 @@ public class Driver {
     private void addImportUsages(JvmMetadata bm, SourceFile sf) {
         for (Import imp : sf.imports)
             if (!imp.isAsterisk && !imp.isStatic)
-                bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), true, imp.name, UsageKind.TYPE));
+                bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), true, imp.getUniqueId(sf), imp.name, UsageKind.TYPE));
     }
 
     /**

@@ -41,4 +41,8 @@ public class Import {
             sj.add("static");
         return "import " + name + (sj.length() > 0 ? "[" + sj.toString() + "]" : "");
     }
+
+    public String getUniqueId(SourceFile sourceFile) {
+        return "import-" + pos + "@" + sourceFile;
+    }
 }

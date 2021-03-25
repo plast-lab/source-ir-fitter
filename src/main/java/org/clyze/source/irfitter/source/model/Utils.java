@@ -87,7 +87,7 @@ public class Utils {
 
     /**
      * Simplify a source type.
-     * @param srcType    a source type (e.g. {@code }a.b.C<D>})
+     * @param srcType    a source type (e.g. {@code a.b.C<D>})
      * @return           a simplified type ({@code C})
      */
     public static String getSimpleSourceType(String srcType) {
@@ -96,7 +96,7 @@ public class Utils {
 
     /**
      * Simplify an IR type.
-     * @param irType    an IR type (e.g. {@code }a.B$C<D>})
+     * @param irType    an IR type (e.g. {@code a.B$C<D>})
      * @return          a simplified IR type ({@code C})
      */
     public static String getSimpleIrType(String irType) {

@@ -43,6 +43,6 @@ public class Import {
     }
 
     public String getUniqueId(SourceFile sourceFile) {
-        return "import-" + pos + "@" + sourceFile;
+        return "import-" + pos + "@" + sourceFile.getRelativePath();
     }
 }

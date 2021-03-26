@@ -116,7 +116,7 @@ public class SourceFile {
 
     @Override
     public String toString() {
-        return this.file.getPath();
+        return this.getRelativePath();
     }
 }
 

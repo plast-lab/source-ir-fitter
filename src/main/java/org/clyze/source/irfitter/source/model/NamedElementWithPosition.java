@@ -27,6 +27,6 @@ public abstract class NamedElementWithPosition<T extends IRElement, S extends Sy
      * @return a string representation of the location of this element
      */
     protected String getLocation() {
-        return "@" + srcFile.file.getPath() + ":" + pos;
+        return "@" + srcFile.getRelativePath() + ":" + pos;
     }
 }

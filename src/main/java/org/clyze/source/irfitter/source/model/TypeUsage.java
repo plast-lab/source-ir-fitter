@@ -47,6 +47,6 @@ public class TypeUsage implements FuzzyTypes {
 
     @Override
     public String toString() {
-        return "TYPE-USE: " + type + "@" + sourceFile + ", " + position;
+        return "TYPE-USE: " + type + "@" + sourceFile.getRelativePath() + ", " + position;
     }
 }

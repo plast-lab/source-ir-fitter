@@ -8,7 +8,7 @@ import org.clyze.source.irfitter.ir.model.IRMethodRef;
 import java.util.Collection;
 
 /**
- * Method references (<code>A::meth</code> in Java/Kotlin or <code>A.&meth</code> in Groovy).
+ * Method references (<code>A::meth</code> in Java/Kotlin or {@code A.&meth} in Groovy).
  * The model of this feature reuses type usage machinery to be able to resolve
  * the type part of the reference.
  */

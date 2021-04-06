@@ -66,6 +66,8 @@ public class DexParser {
                         String fieldName = dexField.getName();
                         String fieldType = raiseLowLevelType(dexField.getType());
                         String fieldId = classPrefix + fieldType + " " + fieldName + ">";
+                        if (debug)
+                            System.out.println("IR field: " + fieldId);
                         irType.fields.add(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField)));
                     }
                     for (DexBackedMethod dexMethod : dexClass.getMethods()) {

@@ -51,12 +51,29 @@ public class Matcher {
                     recordMatch(idMapper.typeMap, "type", irType, jt);
                     matchFields(idMapper.fieldMap, irType.fields, jt.fields);
                     matchMethods(idMapper, irType.methods, jt.methods, irType.outerTypes);
+                    generateUnknownTypeMetadata(idMapper, irType, jt);
                     break;
                 }
         }
         // When all types have been resolved, mark declaring symbol ids.
         for (JType jt : sourceFile.jTypes)
             jt.updateDeclaringSymbolId();
+    }
+
+    /**
+     * Generate metadata for type members that could not be matched with the
+     * sources. Positions are assumed to come from the source type argument.
+     * @param idMapper    the mapper object to update
+     * @param irType      the IR type
+     * @param jt          the source type
+     */
+    private void generateUnknownTypeMetadata(IdMapper idMapper, IRType irType, JType jt) {
+        for (IRField irField : irType.fields)
+            if (!irField.matched) {
+                JField fakeField = new JField(sourceFile, irField.type, irField.name, new HashSet<>(), jt.pos, jt);
+                recordMatch(idMapper.fieldMap, "field", irField, fakeField);
+                fakeField.symbol.setSource(false);
+            }
     }
 
     private void matchFields(Map<String, Collection<JField>> mapping,

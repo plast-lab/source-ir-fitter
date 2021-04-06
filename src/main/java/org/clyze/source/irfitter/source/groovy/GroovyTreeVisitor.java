@@ -125,7 +125,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     String paramType = getType(frmType);
                     addTypeUsagesInType(paramTypeUsages, frmType);
                     Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
-                    JParameter param = new JParameter(paramName, paramType, paramPos);
+                    JParameter param = new JParameter(sourceFile, paramPos, paramName, paramType);
                     logDebug(() -> "param: " + param);
                     parameters.add(param);
                 }

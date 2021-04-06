@@ -21,17 +21,6 @@ public class JMethodRef extends TypedNamedElementWithPosition<IRMethodRef, Usage
         this.methodName = methodName;
     }
 
-//    /**
-//     * Build the final metadata object.
-//     * @return the (method reference) usage object
-//     */
-//    @Override
-//    public Usage getUsage() {
-//        if (matchId == null)
-//            System.out.println("ERROR: Method reference usage not matched: " + toString());
-//        return new Usage(position, sourceFile.getRelativePath(), true, this.toString(), matchId + "::" + methodName, UsageKind.FUNCTION);
-//    }
-
     @Override
     public String toString() {
         return "METHOD-REFERENCE: " + methodName + "@" + getSourceFile() + ", " + pos;

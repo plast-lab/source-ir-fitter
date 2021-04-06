@@ -45,7 +45,7 @@ public class BytecodeParser {
         for (MethodNode mNode : node.methods) {
             String[] sig = TypeUtils.raiseSignature(mNode.desc).toArray(new String[0]);
             StringJoiner sj = new StringJoiner(",");
-            List<String> paramTypes = new LinkedList<>();
+            List<String> paramTypes = new ArrayList<>();
             for (int i = 1; i < sig.length; i++) {
                 String paramType = sig[i];
                 sj.add(paramType);
@@ -53,9 +53,12 @@ public class BytecodeParser {
             }
             String mName = mNode.name;
             String methodId = classPrefix + sig[0] + " " + mName + "(" + sj.toString() + ")>";
+            List<IRParameter> parameters = new ArrayList<>();
+            for (int i = 1; i < sig.length; i++)
+                parameters.add(new IRParameter(methodId, i-1));
             BytecodeModifierPack methodMods = new BytecodeModifierPack(mNode);
             IRMethod irMethod = new IRMethod(methodId, mName, sig[0], paramTypes,
-                    methodMods, irTypeMods.isInterface());
+                    parameters, methodMods, irTypeMods.isInterface());
             if (methodMods.isVarArgs())
                 varArgMethods.add(methodId);
             if (debug)

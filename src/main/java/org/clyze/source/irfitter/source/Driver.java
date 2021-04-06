@@ -224,6 +224,8 @@ public class Driver {
             bm.jvmInvocations.add((JvmMethodInvocation) symbol);
         else if (symbol instanceof JvmHeapAllocation)
             bm.jvmHeapAllocations.add((JvmHeapAllocation) symbol);
+        else if (symbol instanceof JvmVariable)
+            bm.jvmVariables.add((JvmVariable) symbol);
         else if (symbol instanceof Usage)
             bm.usages.add((Usage) symbol);
         else

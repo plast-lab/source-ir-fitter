@@ -271,7 +271,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 String paramName = funParam.simpleIdentifier().getText();
                 String funType = getType(funTypeCtx);
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
-                parameters.add(new JParameter(paramName, funType, paramPos));
+                parameters.add(new JParameter(sourceFile, paramPos, paramName, funType));
                 addTypeUsagesInType(paramTypeUsages, funTypeCtx);
             }
         }

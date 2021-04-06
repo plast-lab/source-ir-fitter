@@ -184,7 +184,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                 isVarArgs = true;
             Type pType = param.getType();
             addTypeUsagesFromType(paramTypeUsages, pType, sourceFile);
-            parameters.add(new JParameter(param.getNameAsString(), pType.asString(), JavaUtils.createPositionFromNode(param)));
+            Position paramPos = JavaUtils.createPositionFromNode(param);
+            parameters.add(new JParameter(sourceFile, paramPos, param.getNameAsString(), pType.asString()));
         }
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);

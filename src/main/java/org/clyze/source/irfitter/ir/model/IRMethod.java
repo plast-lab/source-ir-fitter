@@ -23,16 +23,18 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public final String name;
     public final String returnType;
     public final List<String> paramTypes;
+    public final List<IRParameter> parameters;
     public final IRModifierPack mp;
     public final int arity;
     public final boolean isInterface;
 
     public IRMethod(String id, String name, String returnType, List<String> paramTypes,
-                    IRModifierPack mp, boolean isInterface) {
+                    List<IRParameter> parameters, IRModifierPack mp, boolean isInterface) {
         super(id);
         this.name = name;
         this.returnType = returnType;
         this.paramTypes = paramTypes;
+        this.parameters = parameters;
         this.mp = mp;
         this.arity = paramTypes.size();
         this.isInterface = isInterface;

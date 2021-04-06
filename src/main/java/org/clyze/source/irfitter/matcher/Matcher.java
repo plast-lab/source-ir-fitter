@@ -133,11 +133,30 @@ public class Matcher {
         if (outerTypes != null)
             matchInnerConstructors(methodMap, srcMethods, irMethods, outerTypes);
 
-        // After methods have been matched, match method invocations and allocations.
+        // After methods have been matched, match elements inside methods.
+        matchParameters(idMapper.variableMap, srcMethods);
         matchInvocations(idMapper, srcMethods);
         matchAllocations(idMapper.allocationMap, srcMethods);
         matchFieldAccesses(idMapper.fieldAccessMap, srcMethods);
         matchMethodReferences(idMapper.methodRefMap, srcMethods);
+    }
+
+    private void matchParameters(Map<String, Collection<JParameter>> variableMap, List<JMethod> srcMethods) {
+        for (JMethod srcMethod : srcMethods) {
+            if (srcMethod.matchId == null)
+                continue;
+            List<JParameter> srcParameters = srcMethod.parameters;
+            List<IRParameter> irParameters = srcMethod.matchElement.parameters;
+            int irParamSize = irParameters.size();
+            int srcParamSize = srcParameters.size();
+            if (irParamSize == srcParamSize) {
+                for (int i = 0; i < irParamSize; i++)
+                    recordMatch(variableMap, "parameter", irParameters.get(i), srcParameters.get(i));
+            } else
+                System.out.println("WARNING: different number of parameters, source: " +
+                        srcParamSize + " vs. IR: " + irParamSize + " for method: " +
+                        srcMethod.matchId);
+        }
     }
 
     private void matchMethodReferences(Map<String, Collection<JMethodRef>> mapper,

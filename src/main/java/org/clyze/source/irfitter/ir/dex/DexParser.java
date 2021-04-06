@@ -4,13 +4,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-import java.util.StringJoiner;
+import java.util.*;
+
 import org.apache.commons.io.IOUtils;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
+import org.clyze.source.irfitter.ir.model.IRParameter;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.model.JInit;
 import org.clyze.utils.TypeUtils;
@@ -72,7 +71,7 @@ public class DexParser {
                     }
                     for (DexBackedMethod dexMethod : dexClass.getMethods()) {
                         StringJoiner sj = new StringJoiner(",");
-                        List<String> paramTypes = new LinkedList<>();
+                        List<String> paramTypes = new ArrayList<>();
                         for (String pType : dexMethod.getParameterTypes()) {
                             String paramType = raiseLowLevelType(pType);
                             sj.add(paramType);
@@ -81,9 +80,12 @@ public class DexParser {
                         String mName = dexMethod.getName();
                         String retType = raiseLowLevelType(dexMethod.getReturnType());
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
+                        List<IRParameter> parameters = new ArrayList<>();
+                        for (int i = 0; i < paramTypes.size(); i++)
+                            parameters.add(new IRParameter(methodId, i));
                         DexModifierPack methodMods = new DexModifierPack(dexMethod);
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
-                                methodMods, irTypeMods.isInterface());
+                                parameters, methodMods, irTypeMods.isInterface());
                         if (methodMods.isVarArgs())
                             varArgMethods.add(methodId);
                         paramTypes.forEach(irMethod::addSigTypeReference);

@@ -346,8 +346,9 @@ public class Matcher {
     private <T>
     Map<String, List<T>> groupElementsBy(Collection<T> elems, Function<T, String> keyExtractor) {
         Map<String, List<T>> map = new HashMap<>();
-        for (T elem : elems)
-            map.computeIfAbsent(keyExtractor.apply(elem), (k -> new LinkedList<>())).add(elem);
+        if (elems != null)
+            for (T elem : elems)
+                map.computeIfAbsent(keyExtractor.apply(elem), (k -> new LinkedList<>())).add(elem);
         return map;
     }
 

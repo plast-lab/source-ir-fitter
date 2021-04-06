@@ -222,14 +222,10 @@ public class Matcher {
                 continue;
             IRMethod irMethod = srcMethod.matchElement;
             // Group accesses by field name.
-            Map<String, List<JFieldAccess>> srcAccessesByName = new HashMap<>();
-            for (JFieldAccess srcFieldAcc : srcMethod.fieldAccesses)
-                srcAccessesByName.computeIfAbsent(srcFieldAcc.fieldName, (x) -> new ArrayList<>()).add(srcFieldAcc);
+            Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName));
             if (srcAccessesByName.size() == 0)
                 continue;
-            Map<String, List<IRFieldAccess>> irAccessesByName = new HashMap<>();
-            for (IRFieldAccess irFieldAcc : irMethod.fieldAccesses)
-                irAccessesByName.computeIfAbsent(irFieldAcc.fieldName, (x) -> new ArrayList<>()).add(irFieldAcc);
+            Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName));
             if (irAccessesByName.size() == 0)
                 continue;
             if (debug) {

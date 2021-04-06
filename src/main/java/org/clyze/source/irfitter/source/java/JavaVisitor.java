@@ -301,6 +301,31 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     @Override
+    public void visit(MethodReferenceExpr mRef, SourceFile sourceFile) {
+        String id = mRef.getIdentifier();
+        Expression baseExpr = mRef.getScope();
+        if (id.equals("new"))
+            id = "<init>";
+        if (baseExpr instanceof TypeExpr) {
+            // TypeExpr tScope = (TypeExpr) baseExpr;
+            Position pos = JavaUtils.createPositionFromNode(mRef);
+            JType jt = scope.getEnclosingType();
+            if (jt == null)
+                System.out.println("ERROR: found method reference outside type definition");
+            else {
+                JMethod jm = scope.getEnclosingMethod();
+                if (jm == null) {
+                    System.out.println("ERROR: found method reference outside method definition");
+                } else
+                    jm.addMethodRef(new JMethodRef(sourceFile, pos, id));
+            }
+        } else
+            System.out.println("WARNING: could not handle method reference: " + mRef);
+        baseExpr.accept(this, sourceFile);
+        mRef.getTypeArguments().ifPresent(l -> l.forEach(v -> v.accept(this, sourceFile)));
+    }
+
+    @Override
     public void visit(ArrayCreationExpr arrayCreationExpr, SourceFile sourceFile) {
         JType jt = scope.getEnclosingType();
         if (jt == null) {

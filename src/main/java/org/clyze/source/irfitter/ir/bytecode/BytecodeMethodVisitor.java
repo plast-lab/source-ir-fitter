@@ -1,6 +1,9 @@
 package org.clyze.source.irfitter.ir.bytecode;
 
+import java.util.List;
 import java.util.Map;
+import java.util.StringJoiner;
+
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.utils.TypeUtils;
@@ -67,6 +70,28 @@ public class BytecodeMethodVisitor extends MethodVisitor {
         else
             System.out.println("ERROR: could not process multianewarray(" + descriptor + ")");
         super.visitMultiANewArrayInsn(descriptor, numDimensions);
+    }
+
+    @Override
+    public void visitInvokeDynamicInsn(String name, String descriptor, Handle bootstrapMethodHandle, Object... bootstrapMethodArguments) {
+        if (bootstrapMethodHandle.getName().equals("metafactory") &&
+            bootstrapMethodHandle.getDesc().equals("(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;")) {
+            if (debug)
+                System.out.println("Processing special invokedynamic instruction: " + name + "/" + descriptor);
+            for (Object arg : bootstrapMethodArguments)
+                if (arg instanceof Handle) {
+                    Handle handle = (Handle) arg;
+                    List<String> sig = TypeUtils.raiseSignature(handle.getDesc());
+                    StringJoiner params = new StringJoiner(",");
+                    if (sig.size() > 1)
+                        sig.subList(1, sig.size()).forEach(s -> params.add(TypeUtils.replaceSlashesWithDots(s)));
+                    String methodName = handle.getName();
+                    String methodId = '<' + TypeUtils.replaceSlashesWithDots(handle.getOwner()) + ": " + sig.get(0) + ' ' + methodName + '(' + params + ")>";
+                    irMethod.addMethodRef(methodId, methodName, getLastLine(), debug);
+                }
+
+        } else if (debug)
+            System.out.println("Ignoring invokedynamic instruction: " + name + "/" + descriptor + ", bootstrap: " + bootstrapMethodHandle);
     }
 
     private void recordAllocation(String type, boolean isArray) {

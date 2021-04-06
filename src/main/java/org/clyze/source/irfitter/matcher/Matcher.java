@@ -120,6 +120,41 @@ public class Matcher {
         matchInvocations(idMapper, srcMethods);
         matchAllocations(idMapper.allocationMap, srcMethods);
         matchFieldAccesses(idMapper.fieldAccessMap, srcMethods);
+        matchMethodReferences(idMapper.methodRefMap, srcMethods);
+    }
+
+    private void matchMethodReferences(Map<String, Collection<JMethodRef>> mapper,
+                                       List<JMethod> srcMethods) {
+        for (JMethod srcMethod : srcMethods) {
+            if (srcMethod.matchId == null)
+                continue;
+            List<IRMethodRef> methodRefs = srcMethod.matchElement.methodRefs;
+            if (methodRefs == null)
+                continue;
+            Map<String, List<JMethodRef>> srcRefsByName = groupElementsBy(srcMethod.getMethodRefs(), (ref -> ref.methodName));
+            Map<String, List<IRMethodRef>> irRefsByName = groupElementsBy(srcMethod.matchElement.methodRefs, (ref -> ref.name));
+            for (Map.Entry<String, List<JMethodRef>> srcEntry : srcRefsByName.entrySet()) {
+                String mName = srcEntry.getKey();
+                List<JMethodRef> srcRefs = srcEntry.getValue();
+                List<IRMethodRef> irRefs = irRefsByName.get(mName);
+                if (irRefs == null) {
+                    System.out.println("WARNING: source reference " + mName + " not found in the IR.");
+                    continue;
+                }
+                int srcSize = srcRefs.size();
+                int irSize = irRefs.size();
+                if (srcSize == irSize) {
+                    for (int i = 0; i < srcSize; i++) {
+                        recordMatch(mapper, "method-reference", irRefs.get(i), srcRefs.get(i));
+                    }
+                } else {
+                    System.out.println("WARNING: method reference '" + mName +
+                            "' matches " + srcSize + " source elements but " +
+                            irSize + " IR elements.");
+                }
+            }
+
+        }
     }
 
     /**
@@ -226,14 +261,10 @@ public class Matcher {
             if (srcMethod.matchId == null)
                 continue;
             // Group source allocations by type.
-            Map<String, List<JAllocation>> srcAllocationsByType = new HashMap<>();
-            for (JAllocation srcAlloc : srcMethod.allocations)
-                registerAllocationByType(srcAllocationsByType, srcAlloc);
+            Map<String, List<JAllocation>> srcAllocationsByType = groupElementsBy(srcMethod.allocations, AbstractAllocation::getSimpleType);
             // Group IR allocations by type.
             IRMethod irMethod = srcMethod.matchElement;
-            Map<String, List<IRAllocation>> irAllocationsByType = new HashMap<>();
-            for (IRAllocation irAlloc : irMethod.allocations)
-                registerAllocationByType(irAllocationsByType, irAlloc);
+            Map<String, List<IRAllocation>> irAllocationsByType = groupElementsBy(irMethod.allocations, AbstractAllocation::getSimpleType);
             // Match same-size groups.
             for (Map.Entry<String, List<JAllocation>> srcEntry : srcAllocationsByType.entrySet()) {
                 for (Map.Entry<String, List<IRAllocation>> irEntry : irAllocationsByType.entrySet()) {
@@ -287,11 +318,22 @@ public class Matcher {
         }
     }
 
-    private <T extends AbstractAllocation>
-    void registerAllocationByType(Map<String, List<T>> map, T alloc) {
-        String type = alloc.getSimpleType();
-        map.computeIfAbsent(type, (k -> new LinkedList<>())).add(alloc);
+    /**
+     * Helper method to group elements by a key. Used to partition lists into
+     * groups of lists, so that failures are localized.
+     * @param elems          the elements to process
+     * @param keyExtractor   a function that computes the group key from an element
+     * @param <T>            the type of an element
+     * @return               the resulting map of groups
+     */
+    private <T>
+    Map<String, List<T>> groupElementsBy(Collection<T> elems, Function<T, String> keyExtractor) {
+        Map<String, List<T>> map = new HashMap<>();
+        for (T elem : elems)
+            map.computeIfAbsent(keyExtractor.apply(elem), (k -> new LinkedList<>())).add(elem);
+        return map;
     }
+
 
     /**
      * If there is only one source allocation in this line, match it with the
@@ -380,7 +422,7 @@ public class Matcher {
 
             // Last step: generate metadata for unmatched IR elements that have
             // source line information.
-            generateUnknownMetadata(invocationMap, srcMethod, irMethod);
+            generateUnknownMethodMetadata(invocationMap, srcMethod, irMethod);
         }
     }
 
@@ -438,7 +480,7 @@ public class Matcher {
      * @param srcMethod        a source method
      * @param irMethod         the IR method that corresponds to the source method
      */
-    private void generateUnknownMetadata(Map<String, Collection<JMethodInvocation>> invocationMap, JMethod srcMethod, IRMethod irMethod) {
+    private void generateUnknownMethodMetadata(Map<String, Collection<JMethodInvocation>> invocationMap, JMethod srcMethod, IRMethod irMethod) {
         for (IRMethodInvocation irInvo : irMethod.invocations)
             if (!irInvo.matched) {
                 Integer line = irInvo.getSourceLine();

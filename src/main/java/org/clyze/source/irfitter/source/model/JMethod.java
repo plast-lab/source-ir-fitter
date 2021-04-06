@@ -25,6 +25,8 @@ implements AbstractMethod {
     public final List<JFieldAccess> fieldAccesses = new LinkedList<>();
     /** The annotations found in the source code. */
     public final Set<String> annotations;
+    /** The method references found in the source code. */
+    private List<JMethodRef> methodRefs = null;
     private Collection<String> cachedIds = null;
     /** True if this method accepts varargs. */
     private final boolean isVarArgs;
@@ -199,6 +201,24 @@ implements AbstractMethod {
             allocations.add(alloc);
         }
         return alloc;
+    }
+
+    /**
+     * Add a method reference.
+     * @param ref    the method reference to add
+     */
+    public void addMethodRef(JMethodRef ref) {
+        if (methodRefs == null)
+            methodRefs = new ArrayList<>();
+        methodRefs.add(ref);
+    }
+
+    /**
+     * Get the method references appearing in the body of this method.
+     * @return    a list of method references
+     */
+    public List<JMethodRef> getMethodRefs() {
+        return this.methodRefs;
     }
 
     /**

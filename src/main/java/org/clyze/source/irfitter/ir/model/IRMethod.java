@@ -18,6 +18,8 @@ public class IRMethod extends IRElement implements AbstractMethod {
     private final Map<String, Integer> fieldAccessCounters = new HashMap<>();
     private Set<String> typeReferences = null;
     private Set<String> sigTypeReferences = null;
+    public List<IRMethodRef> methodRefs = null;
+    private Map<String, Integer> methodRefCounters = null;
     public final String name;
     public final String returnType;
     public final List<String> paramTypes;
@@ -106,6 +108,27 @@ public class IRMethod extends IRElement implements AbstractMethod {
             typeReferences = new HashSet<>();
 //        System.out.println("Found type reference to " + type + " in " + this);
         typeReferences.add(type);
+    }
+
+    /**
+     * Register a reference to a method in the method body (such as {@code A::m}).
+     * @param methodId    the full id of the method
+     * @param name        the name (e.g. "m")
+     * @param sourceLine  the source line information (if available)
+     * @param debug       debugging mode
+     */
+    public void addMethodRef(String methodId, String name, Integer sourceLine, boolean debug) {
+        if (methodRefs == null)
+            methodRefs = new ArrayList<>();
+        if (methodRefCounters == null)
+            methodRefCounters = new HashMap<>();
+        addNumberedElement(methodRefCounters, methodRefs, getId(), "<method-ref-" + name + ">",
+                (counter, elemId) -> {
+                    IRMethodRef ref = new IRMethodRef(elemId, methodId, name, sourceLine);
+                    if (debug)
+                        System.out.println("IR method reference: " + ref);
+                    return ref;
+                });
     }
 
     /**

@@ -110,7 +110,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 if (jt == null)
                     System.out.println("ERROR: primary constructor class parameter outside type: " + classParam.getText());
                 else {
-                    TypeContext fType = classParam.type();
+                    Type_Context fType = classParam.type_();
                     SimpleIdentifierContext fId = classParam.simpleIdentifier();
                     String fName = fId.getText();
                     Set<String> annotations = (new KotlinModifierPack(sourceFile, classParam.modifiers())).getAnnotations();
@@ -224,7 +224,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                                          ExpressionContext vExpr) {
         SimpleIdentifierContext id = fDecl.simpleIdentifier();
         String fName = id.getText();
-        TypeContext fType = fDecl.type();
+        Type_Context fType = fDecl.type_();
         String fTypeName = getType(fType);
         if (sourceFile.debug)
             System.out.println("Visiting field declaration: " + fTypeName + " " + fName);
@@ -257,7 +257,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public Void visitFunctionDeclaration(FunctionDeclarationContext funMemDecl) {
         SimpleIdentifierContext fNameCtx = funMemDecl.simpleIdentifier();
         String fName = fNameCtx.getText();
-        TypeContext fmdType = funMemDecl.type();
+        Type_Context fmdType = funMemDecl.type_();
         String retType = getType(fmdType);
         Collection<TypeUsage> retTypeUsages = new HashSet<>();
         addTypeUsagesInType(retTypeUsages, fmdType);
@@ -267,7 +267,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         if (funParamsCtx != null) {
             for (FunctionValueParameterContext funParamCtx : funParamsCtx.functionValueParameter()) {
                 ParameterContext funParam = funParamCtx.parameter();
-                TypeContext funTypeCtx = funParam.type();
+                Type_Context funTypeCtx = funParam.type_();
                 String paramName = funParam.simpleIdentifier().getText();
                 String funType = getType(funTypeCtx);
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
@@ -424,7 +424,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         return sj.toString();
     }
 
-    private void addTypeUsagesInType(Collection<TypeUsage> target, TypeContext t) {
+    private void addTypeUsagesInType(Collection<TypeUsage> target, Type_Context t) {
         if (t == null)
             return;
         addTypeUsagesInParenType(target, t.parenthesizedType());
@@ -434,7 +434,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
     private void addTypeUsagesInParenType(Collection<TypeUsage> target, ParenthesizedTypeContext t) {
         if (t != null)
-            addTypeUsagesInType(target, t.type());
+            addTypeUsagesInType(target, t.type_());
     }
     private void addTypeUsagesInNullableType(Collection<TypeUsage> target, NullableTypeContext t) {
         if (t != null) {
@@ -453,7 +453,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     TypeArgumentsContext typeArgs = simpleUserType.typeArguments();
                     if (typeArgs != null)
                         for (TypeProjectionContext typeProj : typeArgs.typeProjection())
-                            addTypeUsagesInType(target, typeProj.type());
+                            addTypeUsagesInType(target, typeProj.type_());
                 }
         }
 

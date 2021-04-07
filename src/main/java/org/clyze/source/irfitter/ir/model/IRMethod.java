@@ -27,6 +27,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public final IRModifierPack mp;
     public final int arity;
     public final boolean isInterface;
+    public IRParameter receiver = null;
 
     public IRMethod(String id, String name, String returnType, List<String> paramTypes,
                     List<IRParameter> parameters, IRModifierPack mp, boolean isInterface) {
@@ -177,5 +178,12 @@ public class IRMethod extends IRElement implements AbstractMethod {
     @Override
     public boolean isVarArgs() {
         return mp.isVarArgs();
+    }
+
+    /**
+     * Sets up the hidden receiver parameter for instance methods.
+     */
+    public void setReceiver() {
+        this.receiver = new IRParameter(getId());
     }
 }

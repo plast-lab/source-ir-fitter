@@ -192,6 +192,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt,
                 JavaUtils.createPositionFromNode(name), isVarArgs);
+        if (!mp.isStatic())
+            jm.setReceiver();
         jt.typeUsages.addAll(mp.getAnnotationUses());
         Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         for (ReferenceType thrownException : md.getThrownExceptions())

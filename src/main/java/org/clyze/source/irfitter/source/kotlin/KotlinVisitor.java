@@ -283,9 +283,12 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         else {
             // TODO: handle varargs in Kotlin
             boolean isVarArgs = false;
-            jt.methods.add(new JMethod(jt.srcFile, fName, retType, parameters,
+            JMethod jm = new JMethod(jt.srcFile, fName, retType, parameters,
                     mp.getAnnotations(), outerPos, jt,
-                    KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs));
+                    KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs);
+            jt.methods.add(jm);
+            if (!mp.isStatic())
+                jm.setReceiver();
             Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         }
         return null;

@@ -86,6 +86,8 @@ public class DexParser {
                         DexModifierPack methodMods = new DexModifierPack(dexMethod);
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
                                 parameters, methodMods, irTypeMods.isInterface());
+                        if (!methodMods.isStatic())
+                            irMethod.setReceiver();
                         if (methodMods.isVarArgs())
                             varArgMethods.add(methodId);
                         paramTypes.forEach(irMethod::addSigTypeReference);

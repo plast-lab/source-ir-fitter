@@ -59,6 +59,8 @@ public class BytecodeParser {
             BytecodeModifierPack methodMods = new BytecodeModifierPack(mNode);
             IRMethod irMethod = new IRMethod(methodId, mName, sig[0], paramTypes,
                     parameters, methodMods, irTypeMods.isInterface());
+            if (!methodMods.isStatic())
+                irMethod.setReceiver();
             if (methodMods.isVarArgs())
                 varArgMethods.add(methodId);
             if (debug)

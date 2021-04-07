@@ -138,6 +138,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // TODO: handle varargs in Groovy
         boolean isVarArgs = false;
         JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos, isVarArgs);
+        if (!mp.isStatic())
+            jm.setReceiver();
         registerMethodSigTypeUsages(ctx, jt, retTypeUsages, paramTypeUsages);
 
         if (jt == null)

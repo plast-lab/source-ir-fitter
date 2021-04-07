@@ -14,6 +14,7 @@ implements AbstractMethod {
     public final String name;
     private final String retType;
     public final List<JParameter> parameters;
+    public JParameter receiver = null;
     public final int arity;
     private final JType parent;
     public Position outerPos;
@@ -227,5 +228,12 @@ implements AbstractMethod {
      */
     public boolean isSpecialInitializer() {
         return false;
+    }
+
+    /**
+     * Sets up the hidden receiver parameter for instance methods.
+     */
+    public void setReceiver() {
+        this.receiver = new JParameter(getSourceFile(), pos, "this", parent.getSimpleName());
     }
 }

@@ -145,8 +145,13 @@ public class Matcher {
         for (JMethod srcMethod : srcMethods) {
             if (srcMethod.matchId == null)
                 continue;
+            IRMethod irMethod = srcMethod.matchElement;
+            JParameter srcReceiver = srcMethod.receiver;
+            IRParameter irReceiver = irMethod.receiver;
+            if (srcReceiver != null && irReceiver != null)
+                recordMatch(variableMap, "receiver", irReceiver, srcReceiver);
             List<JParameter> srcParameters = srcMethod.parameters;
-            List<IRParameter> irParameters = srcMethod.matchElement.parameters;
+            List<IRParameter> irParameters = irMethod.parameters;
             int irParamSize = irParameters.size();
             int srcParamSize = srcParameters.size();
             if (irParamSize == srcParamSize) {

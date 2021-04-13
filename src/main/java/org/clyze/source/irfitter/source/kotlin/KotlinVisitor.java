@@ -287,8 +287,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     mp.getAnnotations(), outerPos, jt,
                     KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs);
             jt.methods.add(jm);
-            if (!mp.isStatic())
-                jm.setReceiver();
+            jm.setReceiver();
             Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         }
         return null;

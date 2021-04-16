@@ -7,6 +7,8 @@ import org.clyze.source.irfitter.source.model.SourceModifierPack;
 /** Class/field/method modifiers for Groovy sources. */
 class GroovyModifierPack extends SourceModifierPack {
     private boolean isStatic = false;
+    private boolean isDef = false;
+    private boolean isStrictFp = false;
 
     public GroovyModifierPack(SourceFile sourceFile, ClassOrInterfaceModifiersOptContext classOrInterfaceModifiersOptContext) {
         if (classOrInterfaceModifiersOptContext == null)
@@ -26,6 +28,39 @@ class GroovyModifierPack extends SourceModifierPack {
 
     public GroovyModifierPack(SourceFile sourceFile, ModifiersContext modifiersContext) {
         updateFrom(sourceFile, modifiersContext);
+    }
+
+    public GroovyModifierPack(VariableModifiersOptContext variableModifiersOpt) {
+        if (variableModifiersOpt == null)
+            return;
+        VariableModifiersContext variableModifiers = variableModifiersOpt.variableModifiers();
+        if (variableModifiers == null)
+            return;
+        for (VariableModifierContext variableModifier : variableModifiers.variableModifier())
+            updateFrom(variableModifier);
+    }
+
+    private void updateFrom(VariableModifierContext variableModifier) {
+        if (variableModifier == null)
+            return;
+        if (variableModifier.ABSTRACT() != null)
+            this.isAbstract = true;
+        else if (variableModifier.DEF() != null || variableModifier.VAR() != null)
+            this.isDef = true;
+        else if (variableModifier.FINAL() != null)
+            this.isFinal = true;
+        else if (variableModifier.PUBLIC() != null)
+            this.isPublic = true;
+        else if (variableModifier.PROTECTED() != null)
+            this.isProtected = true;
+        else if (variableModifier.PRIVATE() != null)
+            this.isPrivate = true;
+        else if (variableModifier.STATIC() != null)
+            this.isStatic = true;
+        else if (variableModifier.STRICTFP() != null)
+            this.isStrictFp = true;
+        else if (variableModifier.PRIVATE() != null)
+            this.isPrivate = true;
     }
 
     private void updateFrom(SourceFile sourceFile, ModifiersContext modifiersContext) {

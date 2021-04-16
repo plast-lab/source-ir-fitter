@@ -19,7 +19,7 @@ public class JavaProcessor implements SourceProcessor {
             Optional<CompilationUnit> optCu = jp.parse(srcFile).getResult();
             if (optCu.isPresent()) {
                 SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy);
-                optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(), sf));
+                optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf), null));
                 return sf;
             } else
                 System.out.println("No parsing result for " + srcFile);

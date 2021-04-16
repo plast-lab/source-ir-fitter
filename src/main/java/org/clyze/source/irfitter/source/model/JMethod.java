@@ -13,8 +13,8 @@ public class JMethod extends TypedNamedElementWithPosition<IRMethod, JvmMethod>
 implements AbstractMethod {
     public final String name;
     private final String retType;
-    public final List<JParameter> parameters;
-    public JParameter receiver = null;
+    public final List<JVariable> parameters;
+    public JVariable receiver = null;
     public final int arity;
     private final JType parent;
     public Position outerPos;
@@ -33,7 +33,7 @@ implements AbstractMethod {
     private final boolean isVarArgs;
 
     public JMethod(SourceFile srcFile, String name, String retType,
-                   List<JParameter> parameters, Set<String> annotations,
+                   List<JVariable> parameters, Set<String> annotations,
                    Position outerPos, JType parent, Position pos, boolean isVarArgs) {
         super(srcFile, pos);
         this.name = name;
@@ -52,7 +52,7 @@ implements AbstractMethod {
             cachedIds = new LinkedList<>();
             List<String[]> variants = new LinkedList<>();
             variants.add(resolveType(retType).toArray(new String[0]));
-            for (JParameter param : parameters)
+            for (JVariable param : parameters)
                 variants.add(resolveType(param.type).toArray(new String[0]));
             cachedIds = flattenVariants(variants);
         }
@@ -105,7 +105,7 @@ implements AbstractMethod {
     @Override
     public String toString() {
         StringJoiner sj = new StringJoiner(", ");
-        for (JParameter param : parameters)
+        for (JVariable param : parameters)
             sj.add(param.toString());
         String parentName = parent.getUnqualifiedName();
         String parentDesc = parentName == null ? parent.toString() : parentName;
@@ -117,7 +117,7 @@ implements AbstractMethod {
         if (symbol == null) {
             List<String> paramNames = new LinkedList<>();
             List<String> paramTypes = new LinkedList<>();
-            for (JParameter param : parameters) {
+            for (JVariable param : parameters) {
                 paramNames.add(param.name);
                 paramTypes.add(param.type);
             }
@@ -234,6 +234,6 @@ implements AbstractMethod {
      * Sets up the hidden receiver parameter for instance methods.
      */
     public void setReceiver() {
-        this.receiver = new JParameter(getSourceFile(), pos, "this", parent.getSimpleName());
+        this.receiver = new JVariable(getSourceFile(), pos, "this", parent.getSimpleName(), null);
     }
 }

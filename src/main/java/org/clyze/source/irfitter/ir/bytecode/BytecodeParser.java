@@ -53,9 +53,9 @@ public class BytecodeParser {
             }
             String mName = mNode.name;
             String methodId = classPrefix + sig[0] + " " + mName + "(" + sj.toString() + ")>";
-            List<IRParameter> parameters = new ArrayList<>();
+            List<IRVariable> parameters = new ArrayList<>();
             for (int i = 1; i < sig.length; i++)
-                parameters.add(new IRParameter(methodId, i-1));
+                parameters.add(IRVariable.newParam(methodId, i-1));
             BytecodeModifierPack methodMods = new BytecodeModifierPack(mNode);
             IRMethod irMethod = new IRMethod(methodId, mName, sig[0], paramTypes,
                     parameters, methodMods, irTypeMods.isInterface());

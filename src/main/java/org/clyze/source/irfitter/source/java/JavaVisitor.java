@@ -10,37 +10,41 @@ import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
 
 /** The AST visitor that reads Java sources. */
-public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
+public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     /** The scoping object. */
     private final Scope scope = new Scope();
 
+    private final SourceFile sourceFile;
+
+    public JavaVisitor(SourceFile sourceFile) {
+        this.sourceFile = sourceFile;
+    }
+
     @Override
-    public void visit(CompilationUnit n, SourceFile sourceFile) {
+    public void visit(CompilationUnit n, JBlock block) {
         // Add default Java imports.
         sourceFile.imports.add(new Import(null, "java.lang", true, false));
-        super.visit(n, sourceFile);
+        super.visit(n, block);
     }
 
     @Override
-    public void visit(ClassOrInterfaceDeclaration td, SourceFile sourceFile) {
+    public void visit(ClassOrInterfaceDeclaration td, JBlock block) {
         List<TypeUsage> superTypeUsages = new LinkedList<>();
-        updateFromTypes(superTypeUsages, td.getExtendedTypes(), sourceFile);
-        updateFromTypes(superTypeUsages, td.getImplementedTypes(), sourceFile);
+        updateFromTypes(superTypeUsages, td.getExtendedTypes());
+        updateFromTypes(superTypeUsages, td.getImplementedTypes());
         List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
-        JType jt = recordType(td, sourceFile, superTypes, false, td.isInterface());
+        JType jt = recordType(td, superTypes, false, td.isInterface());
         jt.typeUsages.addAll(superTypeUsages);
-        scope.enterTypeScope(jt, (jt0 -> super.visit(td, sourceFile)));
+        scope.enterTypeScope(jt, (jt0 -> super.visit(td, block)));
     }
 
-    static void updateFromTypes(List<TypeUsage> types, NodeList<ClassOrInterfaceType> nl,
-                                SourceFile sourceFile) {
+    void updateFromTypes(List<TypeUsage> types, NodeList<ClassOrInterfaceType> nl) {
         if (nl != null)
             for (ClassOrInterfaceType t : nl) {
                 SimpleName name = t.getName();
@@ -50,52 +54,64 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     @Override
-    public void visit(EnumDeclaration ed, SourceFile sourceFile) {
-        JType jt = recordType(ed, sourceFile, Collections.singletonList("java.lang.Enum"), true, false);
-        scope.enterTypeScope(jt, (jt0 -> super.visit(ed, sourceFile)));
+    public void visit(EnumDeclaration ed, JBlock block) {
+        JType jt = recordType(ed, Collections.singletonList("java.lang.Enum"), true, false);
+        scope.enterTypeScope(jt, (jt0 -> super.visit(ed, block)));
     }
 
     @Override
-    public void visit(AnnotationDeclaration ad, SourceFile sourceFile) {
-        JType jt = recordType(ad, sourceFile, null, false, true);
-        scope.enterTypeScope(jt, (jt0 -> super.visit(ad, sourceFile)));
+    public void visit(AnnotationDeclaration ad, JBlock block) {
+        JType jt = recordType(ad, null, false, true);
+        scope.enterTypeScope(jt, (jt0 -> super.visit(ad, block)));
     }
 
     private <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
-    JType recordType(T decl, SourceFile srcFile, List<String> superTypes,
+    JType recordType(T decl, List<String> superTypes,
                      boolean isEnum, boolean isInterface) {
-        JType jt = jTypeFromTypeDecl(decl, isEnum, isInterface, srcFile, superTypes, scope);
-        if (srcFile.debug)
+        JType jt = jTypeFromTypeDecl(decl, isEnum, isInterface, superTypes, scope);
+        if (sourceFile.debug)
             System.out.println("Adding type: " + jt);
-        srcFile.jTypes.add(jt);
+        sourceFile.jTypes.add(jt);
         return jt;
     }
 
     @Override
-    public void visit(ConstructorDeclaration cd, SourceFile sourceFile) {
-        visit(cd, "void", null, sourceFile, (cd0 -> super.visit(cd, sourceFile)));
+    public void visit(ConstructorDeclaration cd, JBlock block) {
+        visit(cd, "void", null, (() -> super.visit(cd, block)));
     }
 
     @Override
-    public void visit(MethodDeclaration md, SourceFile sourceFile) {
+    public void visit(MethodDeclaration md, JBlock block) {
         String retType = md.getTypeAsString();
         Collection<TypeUsage> retTypeUsages = new HashSet<>();
-        addTypeUsagesFromType(retTypeUsages, md.getType(), sourceFile);
-        visit(md, retType, retTypeUsages, sourceFile, (md0 -> super.visit(md, sourceFile)));
+        addTypeUsagesFromType(retTypeUsages, md.getType());
+        visit(md, retType, retTypeUsages, (() -> super.visit(md, block)));
     }
 
     @Override
-    public void visit(VariableDeclarationExpr vDecl, SourceFile sourceFile) {
+    public void visit(VariableDeclarationExpr vDecl, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt == null) {
             System.err.println("ERROR: variable declaration outside type: " + vDecl.getRange());
             return;
         }
-        jt.typeUsages.addAll((new JavaModifierPack(sourceFile, vDecl.getAnnotations())).getAnnotationUses());
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, vDecl);
+        jt.typeUsages.addAll(mp.getAnnotationUses());
         for (VariableDeclarator variable : vDecl.getVariables()) {
-            addTypeUsagesFromType(jt.typeUsages, variable.getType(), sourceFile);
+            Type type = variable.getType();
+            addTypeUsagesFromType(jt.typeUsages, type);
+            Position pos = JavaUtils.createPositionFromNode(variable);
+            String name = variable.getNameAsString();
+            if (block == null) {
+                System.err.println("ERROR: null block in " + pos);
+                continue;
+            }
+            JVariable v = new JVariable(sourceFile, pos, name, type.asString(), mp);
+            if (sourceFile.debug)
+                System.out.println("Adding variable [" + v + "] to block [" + block + "]");
+            block.addVariable(v);
             Optional<Expression> initializer = variable.getInitializer();
-            initializer.ifPresent(expression -> expression.accept(this, sourceFile));
+            initializer.ifPresent(expression -> expression.accept(this, block));
         }
     }
 
@@ -103,10 +119,8 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
      * Helper method that recursively traverses a type and records all type usages.
      * @param target        the collection to populate
      * @param type          the type to traverse
-     * @param sourceFile    the source file object
      */
-    private void addTypeUsagesFromType(Collection<TypeUsage> target, Type type,
-                                       SourceFile sourceFile) {
+    private void addTypeUsagesFromType(Collection<TypeUsage> target, Type type) {
         if (type.isPrimitiveType() || type.isVoidType())
             return;
 
@@ -126,36 +140,36 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                 System.out.println("Added type usage: " + tu);
             classOrIntf.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
-                    addTypeUsagesFromType(target, typeArg, sourceFile);
+                    addTypeUsagesFromType(target, typeArg);
             });
         } else if (type.isArrayType())
-            addTypeUsagesFromType(target, ((ArrayType) type).getComponentType(), sourceFile);
+            addTypeUsagesFromType(target, ((ArrayType) type).getComponentType());
         else if (type.isIntersectionType())
             System.err.println("WARNING: intersection type usages are not yet recorded.");
         else if (type.isTypeParameter())
             System.err.println("WARNING: type parameter usages are not yet recorded.");
         else if (type.isUnionType()) {
             UnionType uType = (UnionType) type;
-            uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsagesFromType(target, refType, sourceFile)));
+            uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsagesFromType(target, refType)));
         } else if (type.isVarType())
             System.err.println("WARNING: var-type usages are not yet recorded.");
         else if (type.isWildcardType()) {
             WildcardType wType = ((WildcardType)type);
-            wType.getExtendedType().ifPresent(refType -> addTypeUsagesFromType(target, refType, sourceFile));
-            wType.getSuperType().ifPresent(refType -> addTypeUsagesFromType(target, refType, sourceFile));
+            wType.getExtendedType().ifPresent(refType -> addTypeUsagesFromType(target, refType));
+            wType.getSuperType().ifPresent(refType -> addTypeUsagesFromType(target, refType));
         } else
             System.err.println("WARNING: unknown type usage for element: " + type.getClass().getSimpleName());
     }
 
 //    @Override
-//    public void visit(FieldAccessExpr fldAccess, SourceFile sourceFile) {
+//    public void visit(FieldAccessExpr fldAccess, JBlock block) {
 //        System.out.println("Field access: " + fldAccess.getName() +
 //                ", scope: " + fldAccess.getScope().toString());
-//        super.visit(fldAccess, sourceFile);
+//        super.visit(fldAccess, block);
 //    }
 
     @Override
-    public void visit(InitializerDeclaration init, SourceFile sourceFile) {
+    public void visit(InitializerDeclaration init, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt == null) {
             System.out.println("ERROR: found initializer declaration outside type: " + init);
@@ -169,23 +183,24 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         long startColumn = outerPos.getStartColumn();
         initMethod.pos = new Position(outerPos.getStartLine(), startColumn, startColumn + "static".length());
         initMethod.outerPos = outerPos;
-        scope.enterInitializerScope(initMethod, (cl -> init.getBody().accept(this, sourceFile)));
+        scope.enterInitializerScope(initMethod, (cl -> init.getBody().accept(this, block)));
     }
 
     private <T extends CallableDeclaration<?>>
     void visit(CallableDeclaration<T> md, String retType, Collection<TypeUsage> retTypeUsages,
-               SourceFile sourceFile, Consumer<CallableDeclaration<T>> methodProcessor) {
+               Runnable methodProcessor) {
         SimpleName name = md.getName();
-        List<JParameter> parameters = new LinkedList<>();
+        List<JVariable> parameters = new LinkedList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         boolean isVarArgs = false;
         for (Parameter param : md.getParameters()) {
             if (param.isVarArgs())
                 isVarArgs = true;
             Type pType = param.getType();
-            addTypeUsagesFromType(paramTypeUsages, pType, sourceFile);
+            addTypeUsagesFromType(paramTypeUsages, pType);
             Position paramPos = JavaUtils.createPositionFromNode(param);
-            parameters.add(new JParameter(sourceFile, paramPos, param.getNameAsString(), pType.asString()));
+            JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
+            parameters.add(new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), mp));
         }
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);
@@ -197,20 +212,20 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         jt.typeUsages.addAll(mp.getAnnotationUses());
         Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
         for (ReferenceType thrownException : md.getThrownExceptions())
-            addTypeUsagesFromType(jt.typeUsages, thrownException, sourceFile);
+            addTypeUsagesFromType(jt.typeUsages, thrownException);
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);
 
         // Set current method and visit method body.
-        scope.enterMethodScope(jm, (jm0 -> methodProcessor.accept(md)));
+        scope.enterMethodScope(jm, (jm0 -> methodProcessor.run()));
     }
 
     @Override
-    public void visit(FieldDeclaration fd, SourceFile sourceFile) {
+    public void visit(FieldDeclaration fd, JBlock block) {
         for (VariableDeclarator vd : fd.getVariables()) {
             Collection<TypeUsage> fieldTypeUsages = new ArrayList<>();
-            addTypeUsagesFromType(fieldTypeUsages, vd.getType(), sourceFile);
+            addTypeUsagesFromType(fieldTypeUsages, vd.getType());
             JType jt = scope.getEnclosingType();
             jt.typeUsages.addAll(fieldTypeUsages);
 
@@ -234,50 +249,51 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
                 } else {
                     JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
-                    scope.enterMethodScope(initBlock, init -> initExpr.accept(this, sourceFile));
+                    JBlock methodBlock = new JBlock("block-" + initBlock.name, block);
+                    scope.enterMethodScope(initBlock, init -> initExpr.accept(this, methodBlock));
                 }
             }
         }
     }
 
     @Override
-    public void visit(PackageDeclaration pd, SourceFile sourceFile) {
+    public void visit(PackageDeclaration pd, JBlock block) {
         sourceFile.packageName = pd.getNameAsString();
     }
 
     @Override
-    public void visit(final ImportDeclaration id, final SourceFile sourceFile) {
+    public void visit(final ImportDeclaration id, final JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(id);
         sourceFile.imports.add(new Import(pos, id.getNameAsString(), id.isAsterisk(), id.isStatic()));
     }
 
     @Override
-    public void visit(IfStmt ifStmt, SourceFile sourceFile) {
+    public void visit(IfStmt ifStmt, JBlock block) {
         // Reimplement parent to control visit order.
-        ifStmt.getCondition().accept(this, sourceFile);
-        ifStmt.getThenStmt().accept(this, sourceFile);
-        ifStmt.getElseStmt().ifPresent(l -> l.accept(this, sourceFile));
+        ifStmt.getCondition().accept(this, block);
+        ifStmt.getThenStmt().accept(this, block);
+        ifStmt.getElseStmt().ifPresent(l -> l.accept(this, block));
     }
 
     @Override
-    public void visit(ExplicitConstructorInvocationStmt constrInvo, SourceFile sourceFile) {
+    public void visit(ExplicitConstructorInvocationStmt constrInvo, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(constrInvo);
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: explicit constructors in initializers");
         else
             parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile);
-        super.visit(constrInvo, sourceFile);
+        super.visit(constrInvo, block);
     }
 
     @Override
-    public void visit(ObjectCreationExpr objCExpr, SourceFile sourceFile) {
+    public void visit(ObjectCreationExpr objCExpr, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(objCExpr);
         JMethod parentMethod = scope.getEnclosingMethod();
         Optional<NodeList<BodyDeclaration<?>>> anonymousClassBody = objCExpr.getAnonymousClassBody();
         boolean isAnonymousClassDecl = anonymousClassBody.isPresent();
         Collection<TypeUsage> typeUsages = new ArrayList<>();
-        addTypeUsagesFromType(typeUsages, objCExpr.getType(), sourceFile);
+        addTypeUsagesFromType(typeUsages, objCExpr.getType());
         JType enclosingType = scope.getEnclosingType();
         enclosingType.typeUsages.addAll(typeUsages);
         String simpleType = Utils.getSimpleType(typeOf(objCExpr));
@@ -290,7 +306,7 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             JavaVisitor jv = this;
             scope.enterTypeScope(anonymousType, jt0 -> {
                 for (BodyDeclaration<?> bodyDeclaration : anonymousClassBody.get())
-                    bodyDeclaration.accept(jv, sourceFile);
+                    bodyDeclaration.accept(jv, block);
             });
         }
         if (parentMethod == null)
@@ -300,11 +316,11 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             // If anonymous, add placeholder allocation, to be matched later.
             parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
         }
-        objCExpr.getArguments().forEach(p -> p.accept(this, sourceFile));
+        objCExpr.getArguments().forEach(p -> p.accept(this, block));
     }
 
     @Override
-    public void visit(MethodReferenceExpr mRef, SourceFile sourceFile) {
+    public void visit(MethodReferenceExpr mRef, JBlock block) {
         String id = mRef.getIdentifier();
         Expression baseExpr = mRef.getScope();
         if (id.equals("new"))
@@ -324,12 +340,12 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
             }
         } else
             System.out.println("WARNING: could not handle method reference: " + mRef);
-        baseExpr.accept(this, sourceFile);
-        mRef.getTypeArguments().ifPresent(l -> l.forEach(v -> v.accept(this, sourceFile)));
+        baseExpr.accept(this, block);
+        mRef.getTypeArguments().ifPresent(l -> l.forEach(v -> v.accept(this, block)));
     }
 
     @Override
-    public void visit(ArrayCreationExpr arrayCreationExpr, SourceFile sourceFile) {
+    public void visit(ArrayCreationExpr arrayCreationExpr, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt == null) {
             System.out.println("ERROR: array creation found outside type");
@@ -346,18 +362,18 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         else
             parentMethod.addAllocation(sourceFile, pos, arrayCreationExpr.createdType().asString());
 
-        arrayCreationExpr.getInitializer().ifPresent(initializer -> initializer.accept(this, sourceFile));
+        arrayCreationExpr.getInitializer().ifPresent(initializer -> initializer.accept(this, block));
     }
 
     @Override
-    public void visit(MethodCallExpr call, SourceFile sourceFile) {
+    public void visit(MethodCallExpr call, JBlock block) {
         int arity = call.getArguments().size();
         Position pos = JavaUtils.createPositionFromNode(call);
-        recordInvocation(call.getName().getIdentifier(), arity, pos, sourceFile);
-        super.visit(call, sourceFile);
+        recordInvocation(call.getName().getIdentifier(), arity, pos);
+        super.visit(call, block);
     }
 
-    private void recordInvocation(String name, int arity, Position pos, SourceFile sourceFile) {
+    private void recordInvocation(String name, int arity, Position pos) {
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
@@ -366,15 +382,15 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     @Override
-    public void visit(BlockStmt n, SourceFile sourceFile) {
+    public void visit(BlockStmt n, JBlock block) {
         if (sourceFile.debug)
             for (Statement statement : n.getStatements())
                 System.out.println("STATEMENT: " + statement.getClass().getSimpleName());
-        super.visit(n, sourceFile);
+        super.visit(n, JavaUtils.newBlock(n, block));
     }
 
     @Override
-    public void visit(ClassExpr classExpr, SourceFile sourceFile) {
+    public void visit(ClassExpr classExpr, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(classExpr);
         TypeUsage tu = new TypeUsage(classExpr.getTypeAsString(), pos, sourceFile);
         if (sourceFile.debug)
@@ -383,46 +399,47 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
     }
 
     @Override
-    public void visit(final CatchClause cc, SourceFile sourceFile) {
-        visit(cc.getParameter(), sourceFile);
-        visit(cc.getBody(), sourceFile);
+    public void visit(final CatchClause cc, JBlock block) {
+        JBlock catchBlock = new JBlock(JavaUtils.createPositionFromNode(cc), block);
+        visit(cc.getParameter(), catchBlock);
+        visit(cc.getBody(), catchBlock);
     }
 
     @Override
-    public void visit(Parameter param, SourceFile sourceFile) {
+    public void visit(Parameter param, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null) {
-            addTypeUsagesFromType(jt.typeUsages, param.getType(), sourceFile);
+            addTypeUsagesFromType(jt.typeUsages, param.getType());
             jt.typeUsages.addAll(new JavaModifierPack(sourceFile, param).getAnnotationUses());
         } else
             System.err.println("WARNING: found parameter outside type: " + param);
     }
 
     @Override
-    public void visit(CastExpr castExpr, SourceFile sourceFile) {
+    public void visit(CastExpr castExpr, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null)
-            addTypeUsagesFromType(jt.typeUsages, castExpr.getType(), sourceFile);
+            addTypeUsagesFromType(jt.typeUsages, castExpr.getType());
         else
             System.err.println("WARNING: found cast outside type: " + castExpr);
-        super.visit(castExpr, sourceFile);
+        super.visit(castExpr, block);
     }
 
     @Override
-    public void visit(AssignExpr assignExpr, SourceFile sourceFile) {
+    public void visit(AssignExpr assignExpr, JBlock block) {
         Expression target = assignExpr.getTarget();
         if (target instanceof FieldAccessExpr) {
             FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
             // Any field accesses in the "scope" should be reads.
-            fieldAcc.getScope().accept(this, sourceFile);
+            fieldAcc.getScope().accept(this, block);
             // Record the final field as a "write".
-            visitFieldAccess(fieldAcc, false, sourceFile);
+            visitFieldAccess(fieldAcc, false);
         } else
-            target.accept(this, sourceFile);
-        assignExpr.getValue().accept(this, sourceFile);
+            target.accept(this, block);
+        assignExpr.getValue().accept(this, block);
     }
 
-    private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read, SourceFile sourceFile) {
+    private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read) {
         SimpleName name = fieldAccess.getName();
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
@@ -439,23 +456,23 @@ public class JavaVisitor extends VoidVisitorAdapter<SourceFile> {
         else
             fieldAccess.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
-                    addTypeUsagesFromType(jt.typeUsages, typeArg, sourceFile);
+                    addTypeUsagesFromType(jt.typeUsages, typeArg);
             });
     }
 
     @Override
-    public void visit(FieldAccessExpr fieldAccess, SourceFile sourceFile) {
+    public void visit(FieldAccessExpr fieldAccess, JBlock block) {
         // This method is assumed to only find reads and be overridden when visiting field writes.
-        visitFieldAccess(fieldAccess, true, sourceFile);
+        visitFieldAccess(fieldAccess, true);
     }
 
     private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getType().asString());
     }
 
-    private static <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
+    private <U extends TypeDeclaration<?>, T extends TypeDeclaration<U> & NodeWithAccessModifiers<U> & NodeWithStaticModifier<U>>
     JType jTypeFromTypeDecl(T decl, boolean isEnum, boolean isInterface,
-                            SourceFile sourceFile, List<String> superTypes, Scope scope) {
+                            List<String> superTypes, Scope scope) {
         SimpleName name = decl.getName();
         JType parent = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, decl, isEnum, isInterface, false);

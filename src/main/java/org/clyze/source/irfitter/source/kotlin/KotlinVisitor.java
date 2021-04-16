@@ -261,7 +261,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String retType = getType(fmdType);
         Collection<TypeUsage> retTypeUsages = new HashSet<>();
         addTypeUsagesInType(retTypeUsages, fmdType);
-        List<JParameter> parameters = new LinkedList<>();
+        List<JVariable> parameters = new LinkedList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FunctionValueParametersContext funParamsCtx = funMemDecl.functionValueParameters();
         if (funParamsCtx != null) {
@@ -271,7 +271,8 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 String paramName = funParam.simpleIdentifier().getText();
                 String funType = getType(funTypeCtx);
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
-                parameters.add(new JParameter(sourceFile, paramPos, paramName, funType));
+                KotlinModifierPack mp = new KotlinModifierPack(sourceFile, funParam.type_().typeModifiers());
+                parameters.add(new JVariable(sourceFile, paramPos, paramName, funType, mp));
                 addTypeUsagesInType(paramTypeUsages, funTypeCtx);
             }
         }

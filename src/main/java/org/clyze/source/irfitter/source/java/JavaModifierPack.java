@@ -1,11 +1,14 @@
 package org.clyze.source.irfitter.source.java;
 
 import com.github.javaparser.ast.Modifier;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.expr.AnnotationExpr;
+import com.github.javaparser.ast.expr.VariableDeclarationExpr;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithAccessModifiers;
+import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithFinalModifier;
 import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithStaticModifier;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.clyze.source.irfitter.source.model.SourceModifierPack;
@@ -52,6 +55,17 @@ public class JavaModifierPack extends SourceModifierPack {
         this.isStatic = false;
         this.isSynchronized = false;
         registerAnnotations(param.getAnnotations(), sourceFile);
+    }
+
+    public JavaModifierPack(SourceFile sourceFile, VariableDeclarationExpr vDecl) {
+        this.isStatic = false;
+        this.isSynchronized = false;
+        registerAnnotations(vDecl.getAnnotations(), sourceFile);
+        registerFinalModifiers(vDecl);
+    }
+
+    private <U extends Node> void registerFinalModifiers(NodeWithFinalModifier<U> node) {
+        this.isFinal = node.hasModifier(Modifier.Keyword.FINAL);
     }
 
     /**

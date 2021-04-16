@@ -141,17 +141,17 @@ public class Matcher {
         matchMethodReferences(idMapper.methodRefMap, srcMethods);
     }
 
-    private void matchParameters(Map<String, Collection<JParameter>> variableMap, List<JMethod> srcMethods) {
+    private void matchParameters(Map<String, Collection<JVariable>> variableMap, List<JMethod> srcMethods) {
         for (JMethod srcMethod : srcMethods) {
             if (srcMethod.matchId == null)
                 continue;
             IRMethod irMethod = srcMethod.matchElement;
-            JParameter srcReceiver = srcMethod.receiver;
-            IRParameter irReceiver = irMethod.receiver;
+            JVariable srcReceiver = srcMethod.receiver;
+            IRVariable irReceiver = irMethod.receiver;
             if (srcReceiver != null && irReceiver != null)
                 recordMatch(variableMap, "receiver", irReceiver, srcReceiver);
-            List<JParameter> srcParameters = srcMethod.parameters;
-            List<IRParameter> irParameters = irMethod.parameters;
+            List<JVariable> srcParameters = srcMethod.parameters;
+            List<IRVariable> irParameters = irMethod.parameters;
             int irParamSize = irParameters.size();
             int srcParamSize = srcParameters.size();
             if (irParamSize == srcParamSize) {
@@ -221,7 +221,7 @@ public class Matcher {
                 if (irInit.paramTypes.size() != outerTypesCount + srcInit.parameters.size())
                     continue;
                 List<String> srcParamTypes = new ArrayList<>(outerSimpleTypes);
-                for (JParameter parameter : srcInit.parameters)
+                for (JVariable parameter : srcInit.parameters)
                     srcParamTypes.add(Utils.getSimpleSourceType(parameter.type));
                 if (debug)
                     System.out.println("Checking source/IR constructors: " +

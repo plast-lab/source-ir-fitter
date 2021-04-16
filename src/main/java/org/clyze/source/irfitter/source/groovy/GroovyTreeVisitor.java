@@ -111,7 +111,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         if (retCtx != null)
             addTypeUsagesInType(retTypeUsages, retCtx.type());
         logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
-        List<JParameter> parameters = new LinkedList<>();
+        List<JVariable> parameters = new LinkedList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
         if (paramsCtx == null)
@@ -125,7 +125,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     String paramType = getType(frmType);
                     addTypeUsagesInType(paramTypeUsages, frmType);
                     Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
-                    JParameter param = new JParameter(sourceFile, paramPos, paramName, paramType);
+                    GroovyModifierPack mp = new GroovyModifierPack(frmCtx.variableModifiersOpt());
+                    JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, mp);
                     logDebug(() -> "param: " + param);
                     parameters.add(param);
                 }
@@ -177,10 +178,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitMethodBody(MethodBodyContext methodBody) {
-        if (methodBody == null)
-            return null;
-        BlockContext block = methodBody.block();
+    public Void visitBlock(BlockContext block) {
         if (block != null) {
             BlockStatementsOptContext blockStatementsOpt = block.blockStatementsOpt();
             if (blockStatementsOpt != null) {
@@ -200,6 +198,13 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             }
         }
         return null;
+    }
+
+    @Override
+    public Void visitMethodBody(MethodBodyContext methodBody) {
+        if (methodBody == null)
+            return null;
+        return visitBlock(methodBody.block());
     }
 
     @Override

@@ -1,33 +1,49 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.LinkedList;
-import java.util.List;
-import org.clyze.persistent.model.jvm.JvmMethodInvocation;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.jvm.JvmVariable;
 import org.clyze.source.irfitter.base.ModifierPack;
+import org.clyze.source.irfitter.ir.model.IRVariable;
 
-/** A source variable or field. */
-public class JVariable {
-    /** The source file. */
-    public final SourceFile srcFile;
-    /** The source code position. */
-    public final Position pos;
+/** A source variable. */
+public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable> {
     /** The element name. */
     public final String name;
-    /** The element type. */
+    /** The element type. Can be null when the type is omitted (Groovy, Kotlin). */
     public final String type;
-    /** The invocations that may be involved in variable initialization. */
-    public final List<JvmMethodInvocation> invocations = new LinkedList<>();
     /** The modifiers of the element. */
     public final ModifierPack mp;
     /** The initial string value. */
     public JStringConstant<JVariable> initStringValue = null;
 
-    public JVariable(SourceFile srcFile, Position pos, String name, String type, ModifierPack mp) {
-        this.srcFile = srcFile;
-        this.pos = pos;
+    /**
+     * Create a variable.
+     * @param sourceFile the source file containing this variable
+     * @param position   the position of the variable
+     * @param name       the name of the variable
+     * @param type       the type of the variable (may be null)
+     * @param mp         the modifiers of this variable
+     */
+    public JVariable(SourceFile sourceFile, Position position, String name,
+                     String type, ModifierPack mp) {
+        super(sourceFile, position);
         this.name = name;
         this.type = type;
         this.mp = mp;
+    }
+
+    @Override
+    public String toString() {
+        return (type == null ? "*" : type) + " " + name;
+    }
+
+    @Override
+    public void initSymbolFromIRElement(IRVariable irElement) {
+        if (symbol == null)
+            symbol = new JvmVariable(pos, srcFile.getRelativePath(), true,
+                    irElement.name, irElement.getId(), type,
+                    irElement.declaringMethodId, false, true, false);
+        else
+            System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 }

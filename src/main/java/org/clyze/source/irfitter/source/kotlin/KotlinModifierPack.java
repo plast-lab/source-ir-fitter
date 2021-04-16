@@ -11,6 +11,7 @@ import org.clyze.source.irfitter.source.model.SourceModifierPack;
 public class KotlinModifierPack extends SourceModifierPack {
     private boolean isInner = false;
     private boolean isConst = false;
+    private boolean isSuspend = false;
 
     public KotlinModifierPack(SourceFile sourceFile, ModifiersContext modsCtxt) {
         this(sourceFile, null, modsCtxt);
@@ -29,6 +30,16 @@ public class KotlinModifierPack extends SourceModifierPack {
                 for (ModifierContext mc : mcl)
                     updateFrom(mc);
             updateFrom(sourceFile, modsCtxt.annotation());
+        }
+    }
+
+    public KotlinModifierPack(SourceFile sourceFile, TypeModifiersContext typeModifiers) {
+        if (typeModifiers == null)
+            return;
+        for (TypeModifierContext typeModifier : typeModifiers.typeModifier()) {
+            updateFrom(sourceFile, typeModifier.annotation());
+            if (typeModifier.SUSPEND() != null)
+                this.isSuspend = true;
         }
     }
 
@@ -116,6 +127,10 @@ public class KotlinModifierPack extends SourceModifierPack {
 
     public boolean isConst() {
         return this.isConst;
+    }
+
+    public boolean isSuspend() {
+        return this.isSuspend;
     }
 
     /** Pretty printer. */

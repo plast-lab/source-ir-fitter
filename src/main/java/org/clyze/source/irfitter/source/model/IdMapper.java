@@ -16,7 +16,7 @@ public class IdMapper {
     public final Map<String, Collection<JAllocation>> allocationMap = new HashMap<>();
     public final Map<String, Collection<JFieldAccess>> fieldAccessMap = new HashMap<>();
     public final Map<String, Collection<JMethodRef>> methodRefMap = new HashMap<>();
-    public final Map<String, Collection<JParameter>> variableMap = new HashMap<>();
+    public final Map<String, Collection<JVariable>> variableMap = new HashMap<>();
 
     /**
      * Merge all element information into a single mapping.

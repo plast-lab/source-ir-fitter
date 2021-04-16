@@ -9,7 +9,7 @@ import java.util.*;
 import org.apache.commons.io.IOUtils;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
-import org.clyze.source.irfitter.ir.model.IRParameter;
+import org.clyze.source.irfitter.ir.model.IRVariable;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.model.JInit;
 import org.clyze.utils.TypeUtils;
@@ -80,9 +80,9 @@ public class DexParser {
                         String mName = dexMethod.getName();
                         String retType = raiseLowLevelType(dexMethod.getReturnType());
                         String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
-                        List<IRParameter> parameters = new ArrayList<>();
+                        List<IRVariable> parameters = new ArrayList<>();
                         for (int i = 0; i < paramTypes.size(); i++)
-                            parameters.add(new IRParameter(methodId, i));
+                            parameters.add(IRVariable.newParam(methodId, i));
                         DexModifierPack methodMods = new DexModifierPack(dexMethod);
                         IRMethod irMethod = new IRMethod(methodId, mName, retType, paramTypes,
                                 parameters, methodMods, irTypeMods.isInterface());

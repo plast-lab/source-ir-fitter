@@ -4,7 +4,10 @@ import org.clyze.source.irfitter.base.ModifierPack;
 
 /** A set of access modifiers for a program element (in IR). */
 public abstract class IRModifierPack extends ModifierPack {
-    /** True if the "synthetic" flag is set. */
+    /**
+     * True if the "synthetic" flag is set.
+     * @return true if this element is synthetic
+     */
     abstract public boolean isSynthetic();
 
     @Override

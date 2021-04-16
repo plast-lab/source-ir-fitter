@@ -72,6 +72,8 @@ java {
     withJavadocJar()
 }
 
+javadoc.options.addBooleanOption('Xdoclint:all', true)
+
 jar {
     manifest {
         attributes 'Implementation-Version' : archiveVersion.get()

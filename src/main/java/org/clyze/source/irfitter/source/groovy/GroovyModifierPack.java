@@ -122,6 +122,14 @@ class GroovyModifierPack extends SourceModifierPack {
         throw new UnsupportedOperationException("Groovy sources: isEnum() is not supported");
     }
 
+    public boolean isDef() {
+        return this.isDef;
+    }
+
+    public boolean isStrictFp() {
+        return this.isStrictFp;
+    }
+
     /**
      * Take into account that default visibility (no modifier) in Groovy is
      * also considered public.

@@ -169,12 +169,15 @@ implements AbstractMethod {
      * @param arity          the number of arguments passed
      * @param pos            the position of the invocation in the sources
      * @param sourceFile     the source file
+     * @param block          the containing block
+     * @param base           the receiver variable (if it exists)
      */
     public void addInvocation(Scope scope, String name, int arity,
-                              Position pos, SourceFile sourceFile) {
+                              Position pos, SourceFile sourceFile,
+                              JBlock block, String base) {
         boolean inIIB = scope.inInitializer || parent == null;
         JMethodInvocation invo = new JMethodInvocation(sourceFile, pos,
-                name, arity, this, inIIB);
+                name, arity, this, inIIB, block, base);
         if (parent == null)
             System.out.println("TODO: invocations in initializers");
         else {

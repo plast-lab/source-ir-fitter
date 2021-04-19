@@ -249,7 +249,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
                 } else {
                     JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
-                    JBlock methodBlock = new JBlock("block-" + initBlock.name, block);
+                    JBlock methodBlock = new JBlock(initBlock.name, block);
                     scope.enterMethodScope(initBlock, init -> initExpr.accept(this, methodBlock));
                 }
             }
@@ -282,7 +282,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (parentMethod == null)
             System.out.println("TODO: explicit constructors in initializers");
         else
-            parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile);
+            parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile, block, null);
         super.visit(constrInvo, block);
     }
 
@@ -312,11 +312,21 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (parentMethod == null)
             System.out.println("ERROR: allocations/invocations in object creation in initializers");
         else {
-            parentMethod.addInvocation(scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile);
+            String base = getName(objCExpr.getScope());
+            parentMethod.addInvocation(this.scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile, block, base);
             // If anonymous, add placeholder allocation, to be matched later.
             parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
         }
         objCExpr.getArguments().forEach(p -> p.accept(this, block));
+    }
+
+    private static String getName(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<Expression> sc) {
+        if (sc.isPresent()) {
+            Expression expr = sc.get();
+            if (expr.isNameExpr())
+                return expr.asNameExpr().getNameAsString();
+        }
+        return null;
     }
 
     @Override
@@ -369,16 +379,16 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(MethodCallExpr call, JBlock block) {
         int arity = call.getArguments().size();
         Position pos = JavaUtils.createPositionFromNode(call);
-        recordInvocation(call.getName().getIdentifier(), arity, pos);
+        recordInvocation(call.getName().getIdentifier(), arity, pos, block, getName(call.getScope()));
         super.visit(call, block);
     }
 
-    private void recordInvocation(String name, int arity, Position pos) {
+    private void recordInvocation(String name, int arity, Position pos, JBlock block, String base) {
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
         else
-            parentMethod.addInvocation(scope, name, arity, pos, sourceFile);
+            parentMethod.addInvocation(scope, name, arity, pos, sourceFile, block, base);
     }
 
     @Override

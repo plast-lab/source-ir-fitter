@@ -354,9 +354,10 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             }
             if (methodName != null && methodArity >= 0) {
                 JMethod jm = scope.getEnclosingMethod();
+                // TODO: containing block, base variable
                 JMethodInvocation invo = new JMethodInvocation(sourceFile,
                         GroovyUtils.createPositionFromToken(pathExpr.start), methodName,
-                        methodArity, jm, false);
+                        methodArity, jm, false, null, null);
                 if (jm == null)
                     System.out.println("TODO: handle invocations outside methods");
                 else

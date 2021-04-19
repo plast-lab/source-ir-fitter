@@ -1,10 +1,13 @@
 package org.clyze.source.irfitter.matcher;
 
+import java.io.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-
+import org.clyze.persistent.metadata.jvm.JvmMetadata;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.SymbolAlias;
+import org.clyze.persistent.model.jvm.JvmVariable;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -23,12 +26,11 @@ public class Matcher {
     private final SourceFile sourceFile;
 
     /**
-     *
      * @param sourceFile   the source file where matching will happen
-     * @param lossy        if true, use unsafe heuristics
      * @param debug        debugging mode
+     * @param lossy        if true, use unsafe heuristics
      */
-    public Matcher(SourceFile sourceFile, boolean lossy, boolean debug) {
+    public Matcher(SourceFile sourceFile, boolean debug, boolean lossy) {
         this.sourceFile = sourceFile;
         this.lossy = lossy;
         this.debug = debug;
@@ -134,68 +136,80 @@ public class Matcher {
             matchInnerConstructors(methodMap, srcMethods, irMethods, outerTypes);
 
         // After methods have been matched, match elements inside methods.
-        matchParameters(idMapper.variableMap, srcMethods);
-        matchInvocations(idMapper, srcMethods);
-        matchAllocations(idMapper.allocationMap, srcMethods);
-        matchFieldAccesses(idMapper.fieldAccessMap, srcMethods);
-        matchMethodReferences(idMapper.methodRefMap, srcMethods);
+        if (debug)
+            System.out.println("* Matching method invocations by name/arity...");
+        for (JMethod srcMethod : srcMethods) {
+            matchInvocations(idMapper.invocationMap, idMapper.srcInvoMap, srcMethod);
+            if (srcMethod.matchId != null) {
+                matchParameters(idMapper.variableMap, srcMethod);
+                matchAllocations(idMapper.allocationMap, srcMethod);
+                matchFieldAccesses(idMapper.fieldAccessMap, srcMethod);
+                matchMethodReferences(idMapper.methodRefMap, srcMethod);
+                matchVariables(idMapper.variableMap, srcMethod);
+            }
+        }
+
+        generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
     }
 
-    private void matchParameters(Map<String, Collection<JVariable>> variableMap, List<JMethod> srcMethods) {
-        for (JMethod srcMethod : srcMethods) {
-            if (srcMethod.matchId == null)
-                continue;
-            IRMethod irMethod = srcMethod.matchElement;
-            JVariable srcReceiver = srcMethod.receiver;
-            IRVariable irReceiver = irMethod.receiver;
-            if (srcReceiver != null && irReceiver != null)
-                recordMatch(variableMap, "receiver", irReceiver, srcReceiver);
-            List<JVariable> srcParameters = srcMethod.parameters;
-            List<IRVariable> irParameters = irMethod.parameters;
-            int irParamSize = irParameters.size();
-            int srcParamSize = srcParameters.size();
-            if (irParamSize == srcParamSize) {
-                for (int i = 0; i < irParamSize; i++)
-                    recordMatch(variableMap, "parameter", irParameters.get(i), srcParameters.get(i));
-            } else
-                System.out.println("WARNING: different number of parameters, source: " +
-                        srcParamSize + " vs. IR: " + irParamSize + " for method: " +
-                        srcMethod.matchId);
+    private void matchVariables(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
+        for (JMethodInvocation srcInvo : srcMethod.invocations) {
+            JVariable base = srcInvo.getBase();
+            if (base != null) {
+                if (base.symbol == null)
+                    base.initSyntheticIRVariable(srcMethod.matchId);
+                variableMap.computeIfAbsent(base.symbol.getSymbolId(), (k -> new ArrayList<>())).add(base);
+            }
         }
+    }
+
+    private void matchParameters(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
+        IRMethod irMethod = srcMethod.matchElement;
+        JVariable srcReceiver = srcMethod.receiver;
+        IRVariable irReceiver = irMethod.receiver;
+        if (srcReceiver != null && irReceiver != null)
+            recordMatch(variableMap, "receiver", irReceiver, srcReceiver);
+        List<JVariable> srcParameters = srcMethod.parameters;
+        List<IRVariable> irParameters = irMethod.parameters;
+        int irParamSize = irParameters.size();
+        int srcParamSize = srcParameters.size();
+        if (irParamSize == srcParamSize) {
+            for (int i = 0; i < irParamSize; i++)
+                recordMatch(variableMap, "parameter", irParameters.get(i), srcParameters.get(i));
+        } else
+            System.out.println("WARNING: different number of parameters, source: " +
+                    srcParamSize + " vs. IR: " + irParamSize + " for method: " +
+                    srcMethod.matchId);
     }
 
     private void matchMethodReferences(Map<String, Collection<JMethodRef>> mapper,
-                                       List<JMethod> srcMethods) {
-        for (JMethod srcMethod : srcMethods) {
-            if (srcMethod.matchId == null)
+                                       JMethod srcMethod) {
+        List<IRMethodRef> methodRefs = srcMethod.matchElement.methodRefs;
+        if (methodRefs == null)
+            return;
+        Map<String, List<JMethodRef>> srcRefsByName = groupElementsBy(srcMethod.getMethodRefs(), (ref -> ref.methodName));
+        Map<String, List<IRMethodRef>> irRefsByName = groupElementsBy(srcMethod.matchElement.methodRefs, (ref -> ref.name));
+        for (Map.Entry<String, List<JMethodRef>> srcEntry : srcRefsByName.entrySet()) {
+            String mName = srcEntry.getKey();
+            List<JMethodRef> srcRefs = srcEntry.getValue();
+            List<IRMethodRef> irRefs = irRefsByName.get(mName);
+            if (irRefs == null) {
+                System.out.println("WARNING: source reference " + mName + " not found in the IR.");
                 continue;
-            List<IRMethodRef> methodRefs = srcMethod.matchElement.methodRefs;
-            if (methodRefs == null)
-                continue;
-            Map<String, List<JMethodRef>> srcRefsByName = groupElementsBy(srcMethod.getMethodRefs(), (ref -> ref.methodName));
-            Map<String, List<IRMethodRef>> irRefsByName = groupElementsBy(srcMethod.matchElement.methodRefs, (ref -> ref.name));
-            for (Map.Entry<String, List<JMethodRef>> srcEntry : srcRefsByName.entrySet()) {
-                String mName = srcEntry.getKey();
-                List<JMethodRef> srcRefs = srcEntry.getValue();
-                List<IRMethodRef> irRefs = irRefsByName.get(mName);
-                if (irRefs == null) {
-                    System.out.println("WARNING: source reference " + mName + " not found in the IR.");
-                    continue;
-                }
-                int srcSize = srcRefs.size();
-                int irSize = irRefs.size();
-                if (srcSize == irSize) {
-                    for (int i = 0; i < srcSize; i++) {
-                        recordMatch(mapper, "method-reference", irRefs.get(i), srcRefs.get(i));
-                    }
-                } else {
-                    System.out.println("WARNING: method reference '" + mName +
-                            "' matches " + srcSize + " source elements but " +
-                            irSize + " IR elements.");
-                }
             }
-
+            int srcSize = srcRefs.size();
+            int irSize = irRefs.size();
+            if (srcSize == irSize) {
+                for (int i = 0; i < srcSize; i++) {
+                    recordMatch(mapper, "method-reference", irRefs.get(i), srcRefs.get(i));
+                }
+            } else {
+                System.out.println("WARNING: method reference '" + mName +
+                        "' matches " + srcSize + " source elements but " +
+                        irSize + " IR elements.");
+            }
         }
+
     }
 
     /**
@@ -238,51 +252,47 @@ public class Matcher {
      * methods are implicit (assumed to have already been resolved, pointed to
      * by source methods).
      * @param fieldAccessMap   the map object to update
-     * @param srcMethods       the source methods
+     * @param srcMethod        the source method to process
      */
-    private void matchFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, List<JMethod> srcMethods) {
-        for (JMethod srcMethod : srcMethods) {
-            if (srcMethod.matchId == null)
+    private void matchFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, JMethod srcMethod) {
+        IRMethod irMethod = srcMethod.matchElement;
+        // Group accesses by field name.
+        Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName));
+        if (srcAccessesByName.size() == 0)
+            return;
+        Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName));
+        if (irAccessesByName.size() == 0)
+            return;
+        if (debug) {
+            System.out.println("Field accesses by name (IR/SRC): " + irAccessesByName.size() + "/" + srcAccessesByName.size() + " in " + srcMethod);
+            srcAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
+            irAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
+        }
+        for (Map.Entry<String, List<JFieldAccess>> srcEntry : srcAccessesByName.entrySet()) {
+            String fieldName = srcEntry.getKey();
+            List<IRFieldAccess> irAccesses = irAccessesByName.get(fieldName);
+            if (irAccesses == null)
                 continue;
-            IRMethod irMethod = srcMethod.matchElement;
-            // Group accesses by field name.
-            Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName));
-            if (srcAccessesByName.size() == 0)
-                continue;
-            Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName));
-            if (irAccessesByName.size() == 0)
-                continue;
-            if (debug) {
-                System.out.println("Field accesses by name (IR/SRC): " + irAccessesByName.size() + "/" + srcAccessesByName.size() + " in " + srcMethod);
-                srcAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
-                irAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
-            }
-            for (Map.Entry<String, List<JFieldAccess>> srcEntry : srcAccessesByName.entrySet()) {
-                String fieldName = srcEntry.getKey();
-                List<IRFieldAccess> irAccesses = irAccessesByName.get(fieldName);
-                if (irAccesses == null)
-                    continue;
-                List<JFieldAccess> srcAccesses = srcEntry.getValue();
-                int srcSize = srcAccesses.size();
-                int irSize = irAccesses.size();
-                if (srcSize == irSize && srcSize > 0) {
-                    if (debug)
-                        System.out.println("Matching " + srcSize + " '" + fieldName + "' field accesses in " + srcMethod + " with " + irMethod);
-                    for (int i = 0; i < srcSize; i++) {
-                        IRFieldAccess irAccess = irAccesses.get(i);
-                        JFieldAccess srcAccess = srcAccesses.get(i);
-                        boolean irRead = irAccess.read;
-                        boolean srcRead = srcAccess.read;
-                        if (irRead == srcRead)
-                            recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
-                        else {
-                            System.out.println("WARNING: incompatible field accesses found, aborting matching for field '" + fieldName + "' (IR/SRC 'read'): " + irRead + "/" + srcRead);
-                            break;
-                        }
+            List<JFieldAccess> srcAccesses = srcEntry.getValue();
+            int srcSize = srcAccesses.size();
+            int irSize = irAccesses.size();
+            if (srcSize == irSize && srcSize > 0) {
+                if (debug)
+                    System.out.println("Matching " + srcSize + " '" + fieldName + "' field accesses in " + srcMethod + " with " + irMethod);
+                for (int i = 0; i < srcSize; i++) {
+                    IRFieldAccess irAccess = irAccesses.get(i);
+                    JFieldAccess srcAccess = srcAccesses.get(i);
+                    boolean irRead = irAccess.read;
+                    boolean srcRead = srcAccess.read;
+                    if (irRead == srcRead)
+                        recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
+                    else {
+                        System.out.println("WARNING: incompatible field accesses found, aborting matching for field '" + fieldName + "' (IR/SRC 'read'): " + irRead + "/" + srcRead);
+                        break;
                     }
-                } else if (debug)
-                    System.out.println("Field accesses ignored: (IR=" + irSize+ "/SRC=" + srcSize + ") in " + srcMethod);
-            }
+                }
+            } else if (debug)
+                System.out.println("Field accesses ignored: (IR=" + irSize+ "/SRC=" + srcSize + ") in " + srcMethod);
         }
     }
 
@@ -290,47 +300,46 @@ public class Matcher {
      * Match allocations in source methods. The corresponding IR methods are
      * implicit (assumed to have already been resolved, pointed to by source methods).
      * @param allocationMap    the allocation map to update
-     * @param srcMethods       the source methods
+     * @param srcMethod        the source method to process
      */
     private void matchAllocations(Map<String, Collection<JAllocation>> allocationMap,
-                                  List<JMethod> srcMethods) {
-        for (JMethod srcMethod : srcMethods) {
-            if (srcMethod.matchId == null)
-                continue;
-            // Group source allocations by type.
-            Map<String, List<JAllocation>> srcAllocationsByType = groupElementsBy(srcMethod.allocations, AbstractAllocation::getSimpleType);
-            // Group IR allocations by type.
-            IRMethod irMethod = srcMethod.matchElement;
-            Map<String, List<IRAllocation>> irAllocationsByType = groupElementsBy(irMethod.allocations, AbstractAllocation::getSimpleType);
-            // Match same-size groups.
-            for (Map.Entry<String, List<JAllocation>> srcEntry : srcAllocationsByType.entrySet()) {
-                for (Map.Entry<String, List<IRAllocation>> irEntry : irAllocationsByType.entrySet()) {
-                    String simpleType = srcEntry.getKey();
-                    if (simpleType.equals(irEntry.getKey())) {
-                        List<JAllocation> srcAllocs = srcEntry.getValue();
-                        List<IRAllocation> irAllocs = irEntry.getValue();
-                        int srcSize = srcAllocs.size();
-                        int irSize = irAllocs.size();
-                        if (srcSize == irSize) {
-                            for (int i = 0; i < srcSize; i++) {
-                                IRAllocation irAlloc = irAllocs.get(i);
-                                JAllocation srcAlloc = srcAllocs.get(i);
-                                recordMatch(allocationMap, "allocation", irAlloc, srcAlloc);
-                            }
-                        } else if (lossy) {
-                            if (debug) {
-                                System.out.println("WARNING: cannot match allocations of type " + simpleType + ":");
-                                System.out.println("Source allocations (" + srcSize + "):\n" + srcAllocs);
-                                System.out.println("IR allocations (" + irSize + "):\n" + irAllocs);
-                                System.out.println("Attempting matching by line number...");
-                            }
-                            matchSameLineFirstAllocations(allocationMap, srcAllocs, irAllocs);
+                                  JMethod srcMethod) {
+        // Group source allocations by type.
+        Map<String, List<JAllocation>> srcAllocationsByType = groupElementsBy(srcMethod.allocations, AbstractAllocation::getSimpleType);
+        // Group IR allocations by type.
+        IRMethod irMethod = srcMethod.matchElement;
+        Map<String, List<IRAllocation>> irAllocationsByType = groupElementsBy(irMethod.allocations, AbstractAllocation::getSimpleType);
+        // Match same-size groups.
+        for (Map.Entry<String, List<JAllocation>> srcEntry : srcAllocationsByType.entrySet()) {
+            for (Map.Entry<String, List<IRAllocation>> irEntry : irAllocationsByType.entrySet()) {
+                String simpleType = srcEntry.getKey();
+                if (simpleType.equals(irEntry.getKey())) {
+                    List<JAllocation> srcAllocs = srcEntry.getValue();
+                    List<IRAllocation> irAllocs = irEntry.getValue();
+                    int srcSize = srcAllocs.size();
+                    int irSize = irAllocs.size();
+                    if (srcSize == irSize) {
+                        for (int i = 0; i < srcSize; i++) {
+                            IRAllocation irAlloc = irAllocs.get(i);
+                            JAllocation srcAlloc = srcAllocs.get(i);
+                            recordMatch(allocationMap, "allocation", irAlloc, srcAlloc);
                         }
+                    } else if (lossy) {
+                        if (debug) {
+                            System.out.println("WARNING: cannot match allocations of type " + simpleType + ":");
+                            System.out.println("Source allocations (" + srcSize + "):\n" + srcAllocs);
+                            System.out.println("IR allocations (" + irSize + "):\n" + irAllocs);
+                            System.out.println("Attempting matching by line number...");
+                        }
+                        matchSameLineFirstAllocations(allocationMap, srcAllocs, irAllocs);
                     }
                 }
             }
         }
+    }
 
+    private void generateUnknownMethodAllocations(Map<String, Collection<JAllocation>> allocationMap,
+                                                  List<JMethod> srcMethods) {
         // Last step: for the unmatched IR allocations that still have
         // source line information, generate metadata. This can help with
         // mapping compiler-generated allocations (such as StringBuilder objects
@@ -415,53 +424,49 @@ public class Matcher {
      * wrong visit order due to new Java syntax not yet visited) only affect
      * specific name/arity pairs.
      *
-     * @param idMapper   the source-to-IR mapper object
-     * @param srcMethods the source methods
+     * @param invocationMap  the source-to-IR mapper object
+     * @param srcMethod      the source method to process
      */
-    private void matchInvocations(IdMapper idMapper, List<JMethod> srcMethods) {
-        if (debug)
-            System.out.println("* Matching method invocations by name/arity...");
+    private void matchInvocations(Map<String, Collection<JMethodInvocation>> invocationMap,
+                                  Map<String, JMethodInvocation> srcInvoMap,
+                                  JMethod srcMethod) {
+        IRMethod irMethod = srcMethod.matchElement;
+        Map<String, Map<Integer, List<AbstractMethodInvocation>>> irSigs = computeAbstractSignatures(irMethod);
+        if (irSigs == null)
+            return;
+        Map<String, Map<Integer, List<AbstractMethodInvocation>>> srcSigs = computeAbstractSignatures(srcMethod);
+        if (srcSigs == null)
+            return;
 
-        Map<String, Collection<JMethodInvocation>> invocationMap = idMapper.invocationMap;
-        for (JMethod srcMethod : srcMethods) {
-            IRMethod irMethod = srcMethod.matchElement;
-            Map<String, Map<Integer, List<AbstractMethodInvocation>>> irSigs = computeAbstractSignatures(irMethod);
-            if (irSigs == null)
-                continue;
-            Map<String, Map<Integer, List<AbstractMethodInvocation>>> srcSigs = computeAbstractSignatures(srcMethod);
-            if (srcSigs == null)
-                continue;
-
-            VarArgSupport va = new VarArgSupport(this, debug);
-            for (Map.Entry<String, Map<Integer, List<AbstractMethodInvocation>>> srcNameEntry : srcSigs.entrySet()) {
-                String srcName = srcNameEntry.getKey();
-                Map<Integer, List<AbstractMethodInvocation>> srcArityMap = srcNameEntry.getValue();
-                for (Map.Entry<Integer, List<AbstractMethodInvocation>> srcArityEntry : srcArityMap.entrySet()) {
-                    List<AbstractMethodInvocation> srcInvos = srcArityEntry.getValue();
-                    Map<Integer, List<AbstractMethodInvocation>> irArityMap = irSigs.get(srcName);
-                    if (irArityMap == null) {
-                        if (debug)
-                            for (AbstractMethodInvocation ami : srcInvos)
-                                System.out.println("WARNING: method name not found in IR: " + ami);
-                        continue;
-                    }
-                    Integer arity = srcArityEntry.getKey();
-                    List<AbstractMethodInvocation> irInvos = irArityMap.get(arity);
-                    if (irInvos == null) {
-                        if (debug)
-                            System.out.println("Could not find " + srcName + "/" + arity + " in IR, postponing vararg resolution.");
-                        va.recordInvocations(srcName, arity, srcArityMap, irArityMap);
-                        continue;
-                    }
-                    matchInvocationLists(invocationMap, srcInvos, irInvos, srcName, arity);
+        VarArgSupport va = new VarArgSupport(this, debug);
+        for (Map.Entry<String, Map<Integer, List<AbstractMethodInvocation>>> srcNameEntry : srcSigs.entrySet()) {
+            String srcName = srcNameEntry.getKey();
+            Map<Integer, List<AbstractMethodInvocation>> srcArityMap = srcNameEntry.getValue();
+            for (Map.Entry<Integer, List<AbstractMethodInvocation>> srcArityEntry : srcArityMap.entrySet()) {
+                List<AbstractMethodInvocation> srcInvos = srcArityEntry.getValue();
+                Map<Integer, List<AbstractMethodInvocation>> irArityMap = irSigs.get(srcName);
+                if (irArityMap == null) {
+                    if (debug)
+                        for (AbstractMethodInvocation ami : srcInvos)
+                            System.out.println("WARNING: method name not found in IR: " + ami);
+                    continue;
                 }
+                Integer arity = srcArityEntry.getKey();
+                List<AbstractMethodInvocation> irInvos = irArityMap.get(arity);
+                if (irInvos == null) {
+                    if (debug)
+                        System.out.println("Could not find " + srcName + "/" + arity + " in IR, postponing vararg resolution.");
+                    va.recordInvocations(srcName, arity, srcArityMap, irArityMap);
+                    continue;
+                }
+                matchInvocationLists(invocationMap, srcInvoMap, srcInvos, irInvos, srcName, arity);
             }
-            va.resolve(invocationMap);
-
-            // Last step: generate metadata for unmatched IR elements that have
-            // source line information.
-            generateUnknownMethodMetadata(invocationMap, srcMethod, irMethod);
         }
+        va.resolve(invocationMap, srcInvoMap);
+
+        // Last step: generate metadata for unmatched IR elements that have
+        // source line information.
+        generateUnknownMethodMetadata(invocationMap, srcInvoMap, srcMethod, irMethod);
     }
 
     /**
@@ -485,13 +490,13 @@ public class Matcher {
 
     /**
      * Match two invocation lists, pairwise.
-     * @param invocationMap   the map to update
      * @param srcInvos        the first list (assumed to come from sources)
      * @param irInvos         the second list (assumed to come from the IR)
      * @param srcName         the method name (used for error reporting)
      * @param arity           the arity (used for error reporting)
      */
     public void matchInvocationLists(Map<String, Collection<JMethodInvocation>> invocationMap,
+                                     Map<String, JMethodInvocation> srcInvoMap,
                                      List<AbstractMethodInvocation> srcInvos,
                                      List<AbstractMethodInvocation> irInvos,
                                      String srcName, Integer arity) {
@@ -502,7 +507,7 @@ public class Matcher {
             for (int i = 0; i < srcCount; i++) {
                 IRMethodInvocation irInvo = (IRMethodInvocation) irInvos.get(i);
                 JMethodInvocation srcInvo = (JMethodInvocation) srcInvos.get(i);
-                recordMatch(invocationMap, "invocation", irInvo, srcInvo);
+                recordInvoMatch(irInvo, srcInvo, invocationMap, srcInvoMap);
             }
         else if (debug)
             System.out.println("WARNING: name/arity invocation combination (" +
@@ -518,16 +523,20 @@ public class Matcher {
      * @param srcMethod        a source method
      * @param irMethod         the IR method that corresponds to the source method
      */
-    private void generateUnknownMethodMetadata(Map<String, Collection<JMethodInvocation>> invocationMap, JMethod srcMethod, IRMethod irMethod) {
+    private void generateUnknownMethodMetadata(Map<String, Collection<JMethodInvocation>> invocationMap,
+                                               Map<String, JMethodInvocation> srcInvoMap,
+                                               JMethod srcMethod, IRMethod irMethod) {
         for (IRMethodInvocation irInvo : irMethod.invocations)
             if (!irInvo.matched) {
                 Integer line = irInvo.getSourceLine();
                 if (line != null) {
                     Position pos = new Position(line, line, 0, 0);
-                    boolean inIIB = "<init>".equals(irMethod.name) || JInit.isInitName(irMethod.name);
-                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB);
+                    String mName = irMethod.name;
+                    boolean inIIB = "<init>".equals(mName) || JInit.isInitName(mName);
+                    JBlock block = new JBlock(mName, null);
+                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null);
                     srcMethod.invocations.add(fakeSrcInvo);
-                    recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
+                    recordInvoMatch(irInvo, fakeSrcInvo, invocationMap, srcInvoMap);
                     fakeSrcInvo.symbol.setSource(false);
                 }
             }
@@ -605,6 +614,14 @@ public class Matcher {
         }
     }
 
+    public void recordInvoMatch(IRMethodInvocation irInvo, JMethodInvocation srcInvo,
+                                Map<String, Collection<JMethodInvocation>> invocationMap,
+                                Map<String, JMethodInvocation> srcInvoMap) {
+        srcInvoMap.put(irInvo.getId(), srcInvo);
+        recordMatch(invocationMap, "invocation", irInvo, srcInvo);
+    }
+
+
     /**
      * The core method that records a match between an IR and a source element.
      * @param mapping         the mapping to update
@@ -614,7 +631,7 @@ public class Matcher {
      * @param <IR_ELEM_T>     the type of the IR code element
      * @param <SRC_ELEM_T>    the type of the source code element
      */
-    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends NamedElementWithPosition<IR_ELEM_T, ?>>
+    public <IR_ELEM_T extends IRElement, SRC_ELEM_T extends NamedElementWithPosition<IR_ELEM_T, ?>>
     void recordMatch(Map<String, Collection<SRC_ELEM_T>> mapping, String kind, IR_ELEM_T irElem,
                      SRC_ELEM_T srcElem) {
         String id = irElem.getId();
@@ -644,6 +661,76 @@ public class Matcher {
             srcOverloading.computeIfAbsent(mName, (k -> new HashSet<>())).add(method);
         }
         return srcOverloading;
+    }
+
+    public static void resolveDoopVariables(File db, IdMapper idMapper, boolean debug) {
+        System.out.println("Resolving variables from facts in " + db);
+        // Keep a map of encountered IR variables to avoid recomputation.
+        Map<String, JvmVariable> jvmVars = new HashMap<>();
+        processInstanceInvocations(db, idMapper, debug, jvmVars, "SpecialMethodInvocation.facts", 5, 0, 3, 4);
+        processInstanceInvocations(db, idMapper, debug, jvmVars, "SuperMethodInvocation.facts", 5, 0, 3, 4);
+        processInstanceInvocations(db, idMapper, debug, jvmVars, "VirtualMethodInvocation.facts", 5, 0, 3, 4);
+    }
+
+    /**
+     * Process a facts file representing an instance method invocation, to
+     * match "base" variables.
+     * @param db              the Doop database
+     * @param idMapper        the mapper object to update
+     * @param debug           debugging mode
+     * @param jvmVars         the map of already encountered JVM variables
+     * @param factsFileName   the file name of the facts file
+     * @param columns         the number of relation columns
+     * @param invoIdx         the index of the invocation-id column
+     * @param baseIdx         the index of the base-variable-id column
+     * @param methIdx         the index of the declaring-method-id column
+     */
+    @SuppressWarnings("SameParameterValue")
+    private static void processInstanceInvocations(File db, IdMapper idMapper, boolean debug,
+                                                   Map<String, JvmVariable> jvmVars,
+                                                   String factsFileName, int columns,
+                                                   int invoIdx, int baseIdx, int methIdx) {
+        File factsFile = new File(db, factsFileName);
+        if (factsFile.exists()) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(factsFile))))  {
+                br.lines().forEach(line -> {
+                    String[] parts = line.split("\t");
+                    if (parts.length < columns) {
+                        System.out.println("Ignoring line: " + line);
+                        return;
+                    }
+                    String irInvoId = parts[invoIdx];
+                    String baseId = parts[baseIdx];
+                    String declaringMethoId = parts[methIdx];
+                    JMethodInvocation srcInvo = idMapper.srcInvoMap.get(irInvoId);
+                    if (srcInvo != null) {
+                        if (debug)
+                            System.out.println("FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
+                        JVariable base = srcInvo.getBase();
+                        if (base != null) {
+                            if (debug)
+                                System.out.println("FACTS: Variable alias: " + base + " -> " + baseId);
+                            JvmMetadata jvmMetadata = srcInvo.srcFile.getJvmMetadata();
+                            if (base.symbol == null)
+                                jvmMetadata.jvmVariables.add(base.getSymbol());
+                            String sourceFileName = srcInvo.srcFile.getRelativePath();
+                            if (jvmVars.get(baseId) == null) {
+                                String name = baseId.substring(baseId.indexOf(">/") + 2);
+                                boolean inIIB = false;
+                                jvmMetadata.jvmVariables.add(new JvmVariable(null, sourceFileName, false, name, baseId, base.type, declaringMethoId, true, false, inIIB));
+                            }
+                            SymbolAlias alias = new SymbolAlias(sourceFileName, baseId, base.symbol.getSymbolId());
+                            jvmMetadata.aliases.add(alias);
+                            if (debug)
+                                System.out.println("FACTS: alias = " + alias);
+                        }
+                    }
+                });
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else
+            System.err.println("ERROR: could not read " + factsFile);
     }
 }
 

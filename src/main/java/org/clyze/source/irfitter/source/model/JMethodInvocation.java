@@ -16,6 +16,8 @@ implements AbstractMethodInvocation {
     public final int arity;
     /** True if the invocation is inside an initializer block. */
     public final boolean inIIB;
+    private final JBlock block;
+    private final String base;
 
     /**
      * Create a method invocation.
@@ -25,15 +27,19 @@ implements AbstractMethodInvocation {
      * @param arity        the number of arguments in the call
      * @param parent       the method containing the invocation
      * @param inIIB        true if the invocation is inside an initializer block
+     * @param block        the containing block
+     * @param base         the name of the base variable (if it exists)
      */
     public JMethodInvocation(SourceFile srcFile, Position pos,
                              String methodName, int arity, JMethod parent,
-                             boolean inIIB) {
+                             boolean inIIB, JBlock block, String base) {
         super(srcFile, pos);
         this.methodName = methodName;
         this.arity = arity;
         this.parent = parent;
         this.inIIB = inIIB;
+        this.block = block;
+        this.base = base;
     }
 
     @Override
@@ -65,6 +71,12 @@ implements AbstractMethodInvocation {
     @Override
     public String getId() {
         String parentDesc = parent == null ? "{}" : (parent.matchId == null ? parent.toString() : parent.matchId);
-        return "method: [parent:" + parentDesc + "]/" + methodName + ":" + arity + getLocation();
+        return "method: [base: " + base + ", parent:" + parentDesc + "]/" + methodName + ":" + arity + getLocation();
+    }
+
+    public JVariable getBase() {
+        if (block == null)
+            return null;
+        return block.lookup(base);
     }
 }

@@ -34,7 +34,7 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
 
     @Override
     public String toString() {
-        return (type == null ? "*" : type) + " " + name;
+        return (type == null ? "*" : type) + " " + name + getLocation();
     }
 
     @Override
@@ -45,5 +45,16 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
                     irElement.declaringMethodId, false, true, false);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
+    }
+
+    /**
+     * Generates a synthetic IR code element that corresponds to this source
+     * variable. Used when the IR has no concrete support for local variables.
+     * @param declaringMethodId   the declaring method
+     */
+    public void initSyntheticIRVariable(String declaringMethodId) {
+        IRVariable irVar = new IRVariable(declaringMethodId + "/" + type + "_" + name + "@SRC", name, declaringMethodId);
+        initSymbolFromIRElement(irVar);
+        this.matchId = irVar.getId();
     }
 }

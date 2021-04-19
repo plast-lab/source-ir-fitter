@@ -55,6 +55,12 @@ public class Main {
         Option sarifOpt = new Option(null, "sarif", false, "Enable SARIF output.");
         options.addOption(sarifOpt);
 
+        Option resolveVarsOpt = new Option(null, "resolve-variables", false, "Map variables from Doop facts to source variables.");
+        options.addOption(resolveVarsOpt);
+
+        Option translateResultsOpt = new Option(null, "translate-results", false, "Translate Doop results to source results.");
+        options.addOption(translateResultsOpt);
+
         Option jsonOpt = new Option("j", "json", false, "Enable JSON output.");
         options.addOption(jsonOpt);
 
@@ -92,6 +98,16 @@ public class Main {
             CommandLine cli = parser.parse(options, args);
             boolean debug = cli.hasOption(debugOpt.getOpt());
             boolean sarif = cli.hasOption(sarifOpt.getLongOpt());
+            boolean resolveVars = cli.hasOption(resolveVarsOpt.getLongOpt());
+            boolean translateResults = cli.hasOption(translateResultsOpt.getLongOpt());
+            String dbVal = cli.getOptionValue(dbopt.getOpt());
+            if (resolveVars && (dbVal == null)) {
+                System.err.println("ERROR: --" + resolveVarsOpt.getLongOpt() + " requires -" + dbopt.getOpt() + "/--" + dbopt.getLongOpt());
+                return null;
+            } else if (translateResults && (dbVal == null)) {
+                System.err.println("ERROR: --" + translateResultsOpt.getLongOpt() + " requires -" + dbopt.getOpt() + "/--" + dbopt.getLongOpt());
+                return null;
+            }
             boolean json = cli.hasOption(jsonOpt.getOpt());
             boolean synthesizeTypes = cli.hasOption(synthOpt.getLongOpt());
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
@@ -106,7 +122,6 @@ public class Main {
             if (debug)
                 System.out.println("IR vararg methods: " + vaIrMethods);
 
-            String dbVal = cli.getOptionValue(dbopt.getOpt());
             File db = dbVal == null ? null : new File(dbVal);
             File out = new File(cli.getOptionValue(outOpt.getOpt()));
             Driver driver = new Driver(out, db, "1.0", false, debug, vaIrMethods);
@@ -123,7 +138,7 @@ public class Main {
             }
 
             // Match information between IR and sources.
-            return driver.match(irTypes, sources, json, sarif);
+            return driver.match(irTypes, sources, json, sarif, resolveVars, translateResults);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

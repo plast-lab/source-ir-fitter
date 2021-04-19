@@ -1,9 +1,8 @@
 package org.clyze.source.irfitter.source.model;
 
-import org.clyze.persistent.model.Position;
-
 import java.util.ArrayList;
 import java.util.List;
+import org.clyze.persistent.model.Position;
 
 /**
  * A source code block such as curly-bracket blocks in Java or parenthesis-blocks
@@ -16,8 +15,8 @@ public class JBlock {
     public final JBlock parent;
     private List<JVariable> variables = null;
 
-    public JBlock(String id, JBlock parent) {
-        this.id = id;
+    public JBlock(String name, JBlock parent) {
+        this.id = "block-" + name;
         this.parent = parent;
     }
 
@@ -34,6 +33,18 @@ public class JBlock {
         if (variables == null)
             variables = new ArrayList<>();
         variables.add(v);
+    }
+
+    public JVariable lookup(String name) {
+        if (name == null)
+            return null;
+        if (variables != null)
+            for (JVariable variable : variables)
+                if (variable.name.equals(name))
+                    return variable;
+        else if (parent != null)
+            return parent.lookup(name);
+        return null;
     }
 
     @Override

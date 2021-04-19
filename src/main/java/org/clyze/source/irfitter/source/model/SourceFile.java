@@ -36,6 +36,7 @@ public class SourceFile {
     public final boolean synthesizeTypes;
     private FileInfo cachedFileInfo = null;
     private String cachedRelativePath = null;
+    private JvmMetadata cachedJvmMetadata = null;
     public final Matcher matcher;
 
     public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes, boolean lossy) {
@@ -43,7 +44,7 @@ public class SourceFile {
         this.file = file;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
-        this.matcher = new Matcher(this, lossy, debug);
+        this.matcher = new Matcher(this, debug, lossy);
     }
 
     /**
@@ -62,6 +63,16 @@ public class SourceFile {
             }
         }
         return cachedFileInfo;
+    }
+
+    /**
+     * Returns the JVM metadata object.
+     * @return the metadata object
+     */
+    public JvmMetadata getJvmMetadata() {
+        if (cachedJvmMetadata == null)
+            cachedJvmMetadata = getFileInfo().getElements();
+        return cachedJvmMetadata;
     }
 
     /**

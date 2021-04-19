@@ -1,8 +1,7 @@
 package org.clyze.source.irfitter.source;
 
 import com.google.common.collect.ImmutableSet;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,6 +9,7 @@ import org.clyze.doop.sarif.SARIFGenerator;
 import org.clyze.sarif.model.Result;
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.matcher.Matcher;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
 import org.clyze.source.irfitter.source.kotlin.KotlinProcessor;
@@ -35,9 +35,11 @@ public class Driver {
 
     private final SARIFGenerator sarifGenerator;
     private final File out;
+    private final File db;
     /** If true, enable debug reports. */
     private final boolean debug;
     private final Set<String> varargIrMethods;
+    private final IdMapper idMapper = new IdMapper();
 
     /**
      * Create a new driver / processing pipeline.
@@ -50,6 +52,7 @@ public class Driver {
      */
     public Driver(File out, File db, String version, boolean standalone, boolean debug, Set<String> vaIrMethods) {
         this.varargIrMethods = vaIrMethods;
+        this.db = db;
         this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
         this.out = out;
         this.debug = debug;
@@ -117,15 +120,16 @@ public class Driver {
      * @param sources   the set of source files
      * @param json      if true, generate JSON metadata
      * @param sarif     if true, generate SARIF results
+     * @param resolveVars       if true, resolve variables from Doop facts
+     * @param translateResults  if true, map Doop results to sources
      * @return          the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                           boolean json, boolean sarif) {
+                           boolean json, boolean sarif, boolean resolveVars, boolean translateResults) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
-        IdMapper idMapper = new IdMapper();
         int unmatched = 0;
         for (SourceFile sf : sources) {
-            addImportUsages(sf.getFileInfo().getElements(), sf);
+            addImportUsages(sf.getJvmMetadata(), sf);
             System.out.println("==> Matching elements in " + sf.getRelativePath());
             sf.matcher.matchTypes(idMapper, irTypes);
             unmatched += sf.reportUmatched(debug);
@@ -141,16 +145,20 @@ public class Driver {
         if (debug)
             System.out.println("* Performing fuzzy type matching for type/field references...");
         for (SourceFile sf : sources) {
-            JvmMetadata bm = sf.getFileInfo().getElements();
+            JvmMetadata bm = sf.getJvmMetadata();
             for (JType jt : sf.jTypes) {
                 matchTypeUsages(allIrTypes, bm, jt);
             }
         }
 
+        if (resolveVars)
+            Matcher.resolveDoopVariables(db, idMapper, debug);
+
         System.out.println(unmatched + " elements not matched.");
 
         Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
-        process(flatMapping, sarif);
+        if (translateResults)
+            process(flatMapping, sarif);
         if (json)
             generateJSON(flatMapping, sources);
 
@@ -228,6 +236,8 @@ public class Driver {
             bm.jvmVariables.add((JvmVariable) symbol);
         else if (symbol instanceof Usage)
             bm.usages.add((Usage) symbol);
+        else if (symbol instanceof SymbolAlias)
+            bm.aliases.add((SymbolAlias) symbol);
         else
             System.out.println("WARNING: cannot handle symbol of type " + symbol.getClass().getName() + ": " + symbol.toJSON());
     }
@@ -244,11 +254,11 @@ public class Driver {
                     System.out.println("Source element has no symbol: " + srcElem);
                     continue;
                 }
-                registerSymbol(srcElem.srcFile.getFileInfo().getElements(), symbol);
+                registerSymbol(srcElem.srcFile.getJvmMetadata(), symbol);
             }
         }
         for (SourceFile sf : sources) {
-            Set<JvmStringConstant> stringConstants = sf.getFileInfo().getElements().jvmStringConstants;
+            Set<JvmStringConstant> stringConstants = sf.getJvmMetadata().jvmStringConstants;
             for (JStringConstant<?> jStrConstant : sf.stringConstants)
                 stringConstants.add(jStrConstant.getStringConstant());
         }

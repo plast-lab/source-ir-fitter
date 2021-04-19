@@ -63,7 +63,8 @@ public class VarArgSupport {
         candidates.add(new Candidate(srcName, arity, srcArityMap, irArityMap));
     }
 
-    public void resolve(Map<String, Collection<JMethodInvocation>> invocationMap) {
+    public void resolve(Map<String, Collection<JMethodInvocation>> invocationMap,
+                        Map<String, JMethodInvocation> srcInvoMap) {
         for (Candidate c : candidates) {
             Map<Integer, List<AbstractMethodInvocation>> srcMap = c.srcArityMap;
             Map<Integer, List<AbstractMethodInvocation>> irMap = c.irArityMap;
@@ -95,7 +96,7 @@ public class VarArgSupport {
                     int srcInvosSz = srcInvos.size();
                     int irInvosSz = irInvos.size();
                     if (srcInvosSz == irInvosSz) {
-                        matcher.matchInvocationLists(invocationMap, srcInvos, irInvos, c.srcName, c.arity);
+                        matcher.matchInvocationLists(invocationMap, srcInvoMap, srcInvos, irInvos, c.srcName, c.arity);
                     } else if (debug)
                         System.out.println("WARNING: vararg resolution failed for different src/IR arities: " +
                                 srcArity + "(" + srcInvosSz + " invocations) vs. " +

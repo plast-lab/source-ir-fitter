@@ -22,11 +22,11 @@ public class SourceFile {
     /** The package name declared in the top of the source file. Default unnamed package is "". */
     public String packageName = "";
     /** The import declarations. */
-    public final List<Import> imports = new LinkedList<>();
+    public final List<Import> imports = new ArrayList<>();
     /** List of visited types. */
     public final Set<JType> jTypes = new HashSet<>();
     /** List of string constants that may be inlined and should be preserved. */
-    public final List<JStringConstant<?>> stringConstants = new LinkedList<>();
+    public final List<JStringConstant<?>> stringConstants = new ArrayList<>();
     /** Debugging flag, set by command-line option. */
     public final boolean debug;
     /**

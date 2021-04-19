@@ -12,7 +12,7 @@ import java.util.zip.ZipFile;
 
 public class IRProcessor {
     public static List<IRType> processIR(Set<String> varArgMethods, File irFile, boolean debug) {
-        List<IRType> irTypes = new LinkedList<>();
+        List<IRType> irTypes = new ArrayList<>();
         if (debug)
             System.out.println("Processing IR in: " + irFile.getPath());
         if (irFile.isFile()) {

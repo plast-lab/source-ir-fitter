@@ -9,8 +9,8 @@ import org.clyze.source.irfitter.base.ModifierPack;
  */
 public class IRType extends IRElement {
     public final List<String> superTypes;
-    public final List<IRField> fields = new LinkedList<>();
-    public final List<IRMethod> methods = new LinkedList<>();
+    public final List<IRField> fields = new ArrayList<>();
+    public final List<IRMethod> methods = new ArrayList<>();
     public final ModifierPack mp;
     /** For true inner classes, this contains their outer classes. */
     public List<String> outerTypes = null;

@@ -87,7 +87,7 @@ public class Driver {
     private Collection<SourceFile> readSources(File topDir, File srcFile,
                                                boolean debug, boolean synthesizeTypes,
                                                boolean lossy) {
-        Collection<SourceFile> sources = new LinkedList<>();
+        Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
             if (srcFiles == null)
@@ -293,7 +293,7 @@ public class Driver {
             return;
         }
 
-        List<Result> results = new LinkedList<>();
+        List<Result> results = new ArrayList<>();
         AtomicInteger elements = new AtomicInteger(0);
 
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {

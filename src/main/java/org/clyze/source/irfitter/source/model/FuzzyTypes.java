@@ -50,7 +50,7 @@ public interface FuzzyTypes {
         }
 
         // Fuzzy, with wildcards.
-        Collection<String> results = new LinkedList<>();
+        Collection<String> results = new ArrayList<>();
         results.add(type);
         if (packageName != null && !packageName.equals(""))
             results.add(packageName + "." + type);

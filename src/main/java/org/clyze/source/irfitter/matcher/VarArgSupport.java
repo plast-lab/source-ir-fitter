@@ -17,7 +17,7 @@ public class VarArgSupport {
     /** The matching object. */
     private final Matcher matcher;
     /** The candidate source/IR invocations for vararg resolution. */
-    private final List<Candidate> candidates = new LinkedList<>();
+    private final List<Candidate> candidates = new ArrayList<>();
     /** Debugging mode. */
     private final boolean debug;
 

@@ -1,6 +1,6 @@
 package org.clyze.source.irfitter.source.kotlin;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import org.antlr.grammars.KotlinParser.*;
 import org.antlr.grammars.KotlinParserBaseVisitor;
@@ -93,7 +93,7 @@ public class KotlinModifierPack extends SourceModifierPack {
     }
 
     private static List<String> getAnnotationNames(AnnotationContext ac) {
-        List<String> names = new LinkedList<>();
+        List<String> names = new ArrayList<>();
         ac.accept(new KotlinParserBaseVisitor<Void>() {
             @Override
             public Void visitUserType(UserTypeContext ctx) {

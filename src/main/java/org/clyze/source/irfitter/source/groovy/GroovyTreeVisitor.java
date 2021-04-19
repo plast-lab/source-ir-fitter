@@ -111,7 +111,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         if (retCtx != null)
             addTypeUsagesInType(retTypeUsages, retCtx.type());
         logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
-        List<JVariable> parameters = new LinkedList<>();
+        List<JVariable> parameters = new ArrayList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
         if (paramsCtx == null)
@@ -394,7 +394,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
      * @return            the list of all variables declared
      */
     private List<JVariable> processVariableDeclaration(VariableDeclarationContext vDeclCtxt) {
-        List<JVariable> ret = new LinkedList<>();
+        List<JVariable> ret = new ArrayList<>();
         if (vDeclCtxt == null)
             return ret;
 
@@ -497,7 +497,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         boolean isInner = parent != null && !mp.isStatic();
         String name = classId.getText();
 
-        List<TypeUsage> superTypeUsages = new LinkedList<>();
+        List<TypeUsage> superTypeUsages = new ArrayList<>();
         addTypeUsagesInTypeList(superTypeUsages, classDecl.scs);
         addTypeUsagesInTypeList(superTypeUsages, classDecl.is);
         List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());

@@ -1,8 +1,7 @@
 package org.clyze.source.irfitter.source.kotlin;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
-
 import org.antlr.grammars.KotlinParser;
 import org.antlr.grammars.KotlinParserBaseVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
@@ -46,7 +45,7 @@ public class StringScanner<T> extends KotlinParserBaseVisitor<Void> {
         Position pos = KotlinUtils.createPositionFromTokens(ctx.start, ctx.stop);
         String value = Utils.stripQuotes(ctx.getText());
         if (strs == null)
-            strs = new LinkedList<>();
+            strs = new ArrayList<>();
         strs.add(new JStringConstant<>(sourceFile, pos, srcElement, value));
         return null;
     }

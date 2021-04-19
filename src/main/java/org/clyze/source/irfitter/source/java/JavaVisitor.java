@@ -39,7 +39,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(ClassOrInterfaceDeclaration td, JBlock block) {
-        List<TypeUsage> superTypeUsages = new LinkedList<>();
+        List<TypeUsage> superTypeUsages = new ArrayList<>();
         updateFromTypes(superTypeUsages, td.getExtendedTypes());
         updateFromTypes(superTypeUsages, td.getImplementedTypes());
         List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
@@ -198,7 +198,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     void visit(CallableDeclaration<T> md, String retType, Collection<TypeUsage> retTypeUsages,
                Runnable methodProcessor) {
         SimpleName name = md.getName();
-        List<JVariable> parameters = new LinkedList<>();
+        List<JVariable> parameters = new ArrayList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         boolean isVarArgs = false;
         for (Parameter param : md.getParameters()) {

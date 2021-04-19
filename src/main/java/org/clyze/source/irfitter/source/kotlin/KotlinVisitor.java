@@ -47,7 +47,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         boolean isAnonymous = false;
 
         Set<TypeUsage> delegTypeUsages = new HashSet<>();
-        List<String> superTypes = new LinkedList<>();
+        List<String> superTypes = new ArrayList<>();
         if (delegSpecs != null)
             for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier()) {
                 delegTypeUsages.addAll((new KotlinModifierPack(sourceFile, aDSpec.annotation())).getAnnotationUses());
@@ -261,7 +261,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String retType = getType(fmdType);
         Collection<TypeUsage> retTypeUsages = new HashSet<>();
         addTypeUsagesInType(retTypeUsages, fmdType);
-        List<JVariable> parameters = new LinkedList<>();
+        List<JVariable> parameters = new ArrayList<>();
         Collection<TypeUsage> paramTypeUsages = new HashSet<>();
         FunctionValueParametersContext funParamsCtx = funMemDecl.functionValueParameters();
         if (funParamsCtx != null) {

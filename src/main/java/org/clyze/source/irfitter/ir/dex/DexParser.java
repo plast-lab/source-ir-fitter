@@ -53,7 +53,7 @@ public class DexParser {
                 else {
                     String typeId = replaceSlashesWithDots(className.substring(1, className.length()-1));
                     DexModifierPack irTypeMods = new DexModifierPack(dexClass);
-                    List<String> superTypes = new LinkedList<>();
+                    List<String> superTypes = new ArrayList<>();
                     superTypes.add(raiseLowLevelType(dexClass.getSuperclass()));
                     dexClass.getInterfaces().forEach(intf -> superTypes.add(raiseLowLevelType(intf)));
                     IRType irType = new IRType(typeId, superTypes, irTypeMods);

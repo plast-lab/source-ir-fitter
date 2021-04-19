@@ -19,11 +19,11 @@ implements AbstractMethod {
     private final JType parent;
     public Position outerPos;
     /** The method invocations found in the method body. */
-    public final List<JMethodInvocation> invocations = new LinkedList<>();
+    public final List<JMethodInvocation> invocations = new ArrayList<>();
     /** The object allocations found in the method body. */
-    public final List<JAllocation> allocations = new LinkedList<>();
+    public final List<JAllocation> allocations = new ArrayList<>();
     /** The field accesses (reads/writes) that appear in the method body. */
-    public final List<JFieldAccess> fieldAccesses = new LinkedList<>();
+    public final List<JFieldAccess> fieldAccesses = new ArrayList<>();
     /** The annotations found in the source code. */
     public final Set<String> annotations;
     /** The method references found in the source code. */
@@ -49,8 +49,8 @@ implements AbstractMethod {
     @Override
     public Collection<String> getIds() {
         if (cachedIds == null) {
-            cachedIds = new LinkedList<>();
-            List<String[]> variants = new LinkedList<>();
+            cachedIds = new ArrayList<>();
+            List<String[]> variants = new ArrayList<>();
             variants.add(resolveType(retType).toArray(new String[0]));
             for (JVariable param : parameters)
                 variants.add(resolveType(param.type).toArray(new String[0]));
@@ -62,7 +62,7 @@ implements AbstractMethod {
     private List<String> flattenVariants(List<String[]> variants) {
         String packageName = getSourceFile().packageName;
         String[][] components = computeCartesianProduct(variants.toArray(new String[0][0]));
-        List<String> ids = new LinkedList<>();
+        List<String> ids = new ArrayList<>();
         for (String[] component : components) {
             StringBuilder sb = new StringBuilder();
             sb.append("<");
@@ -115,8 +115,8 @@ implements AbstractMethod {
     @Override
     public void initSymbolFromIRElement(IRMethod irMethod) {
         if (symbol == null) {
-            List<String> paramNames = new LinkedList<>();
-            List<String> paramTypes = new LinkedList<>();
+            List<String> paramNames = new ArrayList<>();
+            List<String> paramTypes = new ArrayList<>();
             for (JVariable param : parameters) {
                 paramNames.add(param.name);
                 paramTypes.add(param.type);

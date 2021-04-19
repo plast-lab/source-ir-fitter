@@ -25,7 +25,7 @@ public class BytecodeParser {
         reader.accept(node, ClassReader.EXPAND_FRAMES);
         String className = replaceSlashesWithDots(node.name);
         BytecodeModifierPack irTypeMods = new BytecodeModifierPack(node);
-        List<String> superTypes = new LinkedList<>();
+        List<String> superTypes = new ArrayList<>();
         superTypes.add(replaceSlashesWithDots(node.superName));
         node.interfaces.forEach(intf -> superTypes.add(replaceSlashesWithDots(intf)));
         IRType irType = new IRType(className, superTypes, irTypeMods);

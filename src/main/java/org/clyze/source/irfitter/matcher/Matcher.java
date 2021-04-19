@@ -394,7 +394,7 @@ public class Matcher {
         Map<String, List<T>> map = new HashMap<>();
         if (elems != null)
             for (T elem : elems)
-                map.computeIfAbsent(keyExtractor.apply(elem), (k -> new LinkedList<>())).add(elem);
+                map.computeIfAbsent(keyExtractor.apply(elem), (k -> new ArrayList<>())).add(elem);
         return map;
     }
 
@@ -660,7 +660,7 @@ public class Matcher {
         }
         Collection<SRC_ELEM_T> sourceElements = mapping.get(id);
         if (sourceElements == null)
-            sourceElements = new LinkedList<>();
+            sourceElements = new ArrayList<>();
         sourceElements.add(srcElem);
         if (srcElem.matchId == null) {
             srcElem.matchId = id;

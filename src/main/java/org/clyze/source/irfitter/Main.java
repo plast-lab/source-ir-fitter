@@ -1,11 +1,10 @@
 package org.clyze.source.irfitter;
 
 import java.io.*;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
-
 import org.apache.commons.cli.*;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.source.Driver;
@@ -116,7 +115,7 @@ public class Main {
 
             // Process IR (such as Java bytecode).
             Set<String> vaIrMethods = new ConcurrentSkipListSet<>();
-            List<IRType> irTypes = new LinkedList<>();
+            List<IRType> irTypes = new ArrayList<>();
             for (String i : irs)
                 irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug));
             if (debug)
@@ -127,7 +126,7 @@ public class Main {
             Driver driver = new Driver(out, db, "1.0", false, debug, vaIrMethods);
 
             // Process source code.
-            List<SourceFile> sources = new LinkedList<>();
+            List<SourceFile> sources = new ArrayList<>();
             for (String s : srcs) {
                 File srcFile = new File(s);
                 if (!srcFile.exists()) {

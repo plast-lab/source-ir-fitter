@@ -29,7 +29,7 @@ public class JField extends TypedNamedElementWithPosition<IRField, JvmField> {
     @Override
     public Collection<String> getIds() {
         if (cachedIds == null) {
-            cachedIds = new LinkedList<>();
+            cachedIds = new ArrayList<>();
             for (String t : resolveType(type))
                 cachedIds.add("<" + parent.getFullyQualifiedName(srcFile.packageName) + ": " + t + " " + name + ">");
         }

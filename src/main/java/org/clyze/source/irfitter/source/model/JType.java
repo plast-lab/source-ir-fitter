@@ -1,7 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
-
 import org.clyze.persistent.model.jvm.JvmClass;
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRType;
@@ -25,9 +24,9 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
     private final boolean isInner;
     public final JInit classInitializer;
     public final JInit initBlock;
-    public final List<JField> fields = new LinkedList<>();
-    public final List<JMethod> methods = new LinkedList<>();
-    public final List<TypeUsage> typeUsages = new LinkedList<>();
+    public final List<JField> fields = new ArrayList<>();
+    public final List<JMethod> methods = new ArrayList<>();
+    public final List<TypeUsage> typeUsages = new ArrayList<>();
     private int anonymousClassCounter = 1;
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,

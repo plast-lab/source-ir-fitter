@@ -10,8 +10,8 @@ import org.clyze.utils.TypeUtils;
  * A low-level representation of a method.
  */
 public class IRMethod extends IRElement implements AbstractMethod {
-    public final List<IRMethodInvocation> invocations = new LinkedList<>();
-    public final List<IRAllocation> allocations = new LinkedList<>();
+    public final List<IRMethodInvocation> invocations = new ArrayList<>();
+    public final List<IRAllocation> allocations = new ArrayList<>();
     public final List<IRFieldAccess> fieldAccesses = new ArrayList<>();
     private final Map<String, Integer> invocationCounters = new HashMap<>();
     private final Map<String, Integer> allocationCounters = new HashMap<>();

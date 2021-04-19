@@ -3,13 +3,16 @@ package org.clyze.source.irfitter.source.java;
 import com.github.javaparser.Position;
 import com.github.javaparser.ast.nodeTypes.NodeWithRange;
 import org.clyze.source.irfitter.source.model.JBlock;
+import org.clyze.source.irfitter.source.model.JMethod;
 
 import java.util.*;
 
 /** A collection of utilities used during parsing of Java sources. */
 public class JavaUtils {
-    public static JBlock newBlock(NodeWithRange<?> sn, JBlock block) {
-        return new JBlock(createPositionFromNode(sn), block);
+    public static JBlock newBlock(NodeWithRange<?> sn, JBlock block, JMethod method) {
+        JBlock innerBlock = new JBlock(createPositionFromNode(sn), block);
+        method.blocks.add(innerBlock);
+        return innerBlock;
     }
 
     public static org.clyze.persistent.model.Position createPositionFromNode(NodeWithRange<?> sn) {

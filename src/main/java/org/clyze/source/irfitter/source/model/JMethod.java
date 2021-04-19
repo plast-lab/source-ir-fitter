@@ -26,6 +26,8 @@ implements AbstractMethod {
     public final List<JFieldAccess> fieldAccesses = new ArrayList<>();
     /** The annotations found in the source code. */
     public final Set<String> annotations;
+    /** The blocks contained in the method. */
+    public final List<JBlock> blocks = new ArrayList<>();
     /** The method references found in the source code. */
     private List<JMethodRef> methodRefs = null;
     private Collection<String> cachedIds = null;

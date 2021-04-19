@@ -407,7 +407,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (sourceFile.debug)
             for (Statement statement : n.getStatements())
                 System.out.println("STATEMENT: " + statement.getClass().getSimpleName());
-        super.visit(n, JavaUtils.newBlock(n, block));
+        super.visit(n, JavaUtils.newBlock(n, block, scope.getEnclosingMethod()));
     }
 
     @Override

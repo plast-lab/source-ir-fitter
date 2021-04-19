@@ -35,6 +35,10 @@ public class JBlock {
         variables.add(v);
     }
 
+    public List<JVariable> getVariables() {
+        return this.variables;
+    }
+
     public JVariable lookup(String name) {
         if (name == null)
             return null;

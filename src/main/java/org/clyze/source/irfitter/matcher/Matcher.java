@@ -1,12 +1,9 @@
 package org.clyze.source.irfitter.matcher;
 
-import java.io.*;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
-import org.clyze.persistent.model.SymbolAlias;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -157,27 +154,17 @@ public class Matcher {
      * @param srcMethod     the source method being processed
      */
     private void matchVariables(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
-        for (JMethodInvocation srcInvo : srcMethod.invocations) {
-            matchVariable(variableMap, srcMethod, srcInvo.getBase());
-            matchVariable(variableMap, srcMethod, srcInvo.getTarget());
+        for (JBlock block : srcMethod.blocks) {
+            List<JVariable> variables = block.getVariables();
+            if (variables != null)
+                for (JVariable variable : variables) {
+                    if (variable == null)
+                        continue;
+                    if (variable.symbol == null)
+                        variable.initSyntheticIRVariable(srcMethod.matchId);
+                    variableMap.computeIfAbsent(variable.symbol.getSymbolId(), (k -> new ArrayList<>())).add(variable);
+                }
         }
-        for (JAllocation allocation : srcMethod.allocations)
-            matchVariable(variableMap, srcMethod, allocation.getTarget());
-    }
-
-    /**
-     * Process local variables by introducing synthetic IR elements for source
-     * variables without existing related IR information.
-     * @param variableMap   the variable map to update
-     * @param srcMethod     the source method being processed
-     * @param v             the variable being processed
-     */
-    private void matchVariable(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod, JVariable v) {
-        if (v == null)
-            return;
-        if (v.symbol == null)
-            v.initSyntheticIRVariable(srcMethod.matchId);
-        variableMap.computeIfAbsent(v.symbol.getSymbolId(), (k -> new ArrayList<>())).add(v);
     }
 
     private void matchParameters(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {

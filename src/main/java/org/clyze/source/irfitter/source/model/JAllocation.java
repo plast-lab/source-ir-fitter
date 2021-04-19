@@ -7,8 +7,10 @@ import org.clyze.source.irfitter.ir.model.IRAllocation;
 
 /** An object allocation site in the source code. */
 public class JAllocation extends NamedElementWithPosition<IRAllocation, JvmHeapAllocation>
-implements AbstractAllocation {
+implements AbstractAllocation, Targetable {
     public final String simpleType;
+    /** The target of the allocation (such as "x" in {@code x = new T()}). */
+    private JVariable target = null;
 
     /**
      * Create an object allocation.
@@ -39,6 +41,16 @@ implements AbstractAllocation {
 
     @Override
     public String toString() {
-        return "new " + simpleType + "() " + getLocation();
+        return "new " + simpleType + "() " + getLocation() + " [target=" + target + "]";
+    }
+
+    @Override
+    public void setTarget(JVariable target) {
+        this.target = target;
+    }
+
+    @Override
+    public JVariable getTarget() {
+        return this.target;
     }
 }

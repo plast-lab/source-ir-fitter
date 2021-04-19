@@ -19,7 +19,11 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     /** The scoping object. */
     private final Scope scope = new Scope();
-
+    /** The mapping from AST nodes to heap sites. */
+    private final Map<Expression, JAllocation> heapSites = new HashMap<>();
+    /** The mapping from AST nodes to call sites. */
+    private final Map<Expression, JMethodInvocation> callSites = new HashMap<>();
+    /** The source code file. */
     private final SourceFile sourceFile;
 
     public JavaVisitor(SourceFile sourceFile) {
@@ -111,7 +115,11 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 System.out.println("Adding variable [" + v + "] to block [" + block + "]");
             block.addVariable(v);
             Optional<Expression> initializer = variable.getInitializer();
-            initializer.ifPresent(expression -> expression.accept(this, block));
+            if (initializer.isPresent()) {
+                Expression initExpr = initializer.get();
+                initExpr.accept(this, block);
+                registerTarget(heapSites, v, initExpr);
+            }
         }
     }
 
@@ -315,7 +323,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             String base = getName(objCExpr.getScope());
             parentMethod.addInvocation(this.scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile, block, base);
             // If anonymous, add placeholder allocation, to be matched later.
-            parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
+            JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
+            heapSites.put(objCExpr, alloc);
         }
         objCExpr.getArguments().forEach(p -> p.accept(this, block));
     }
@@ -369,8 +378,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
         if (parentMethod == null)
             System.out.println("TODO: array creation in initializers: " + sourceFile + ": " + pos);
-        else
-            parentMethod.addAllocation(sourceFile, pos, arrayCreationExpr.createdType().asString());
+        else {
+            JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, arrayCreationExpr.createdType().asString());
+            heapSites.put(arrayCreationExpr, alloc);
+        }
 
         arrayCreationExpr.getInitializer().ifPresent(initializer -> initializer.accept(this, block));
     }
@@ -446,7 +457,34 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             visitFieldAccess(fieldAcc, false);
         } else
             target.accept(this, block);
-        assignExpr.getValue().accept(this, block);
+        Expression value = assignExpr.getValue();
+        value.accept(this, block);
+
+        // Finally, record "x" variable information for "x = new ..." / "x = m()" expressions.
+        if ((block != null) && (target instanceof NameExpr)) {
+            if (value instanceof ObjectCreationExpr || value instanceof ArrayCreationExpr)
+                registerTarget(heapSites, block, target, value);
+            else if (value instanceof MethodCallExpr)
+                registerTarget(callSites, block, target, value);
+        }
+    }
+
+    private void registerTarget(Map<Expression, ? extends Targetable> map, JBlock block,
+                                Expression target, Expression value) {
+        JVariable v = block.lookup(((NameExpr) target).getNameAsString());
+        if (v == null)
+            return;
+        registerTarget(map, v, value);
+    }
+
+    private void registerTarget(Map<Expression, ? extends Targetable> map,
+                                JVariable target, Expression value) {
+        Targetable element = map.get(value);
+        if (element == null)
+            return;
+        element.setTarget(target);
+        if (sourceFile.debug)
+            System.out.println("ALLOC_ASSIGNMENT: " + target + " := " + element);
     }
 
     private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read) {

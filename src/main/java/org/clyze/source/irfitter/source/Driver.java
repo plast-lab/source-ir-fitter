@@ -9,6 +9,7 @@ import org.clyze.doop.sarif.SARIFGenerator;
 import org.clyze.sarif.model.Result;
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.matcher.DoopMatcher;
 import org.clyze.source.irfitter.matcher.Matcher;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
@@ -152,7 +153,7 @@ public class Driver {
         }
 
         if (resolveVars)
-            Matcher.resolveDoopVariables(db, idMapper, debug);
+            (new DoopMatcher(db, debug, idMapper)).resolveDoopVariables();
 
         System.out.println(unmatched + " elements not matched.");
 

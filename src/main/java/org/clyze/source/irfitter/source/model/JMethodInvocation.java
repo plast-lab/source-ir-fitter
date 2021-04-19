@@ -7,7 +7,7 @@ import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 
 /** A method invocation in the source code. */
 public class JMethodInvocation extends NamedElementWithPosition<IRMethodInvocation, JvmMethodInvocation>
-implements AbstractMethodInvocation {
+implements AbstractMethodInvocation, Targetable {
     /** The method containing the invocation line. */
     public final JMethod parent;
     /** The name of the invoked method. */
@@ -18,6 +18,8 @@ implements AbstractMethodInvocation {
     public final boolean inIIB;
     private final JBlock block;
     private final String base;
+    /** The target of the allocation (such as "x" in {@code x = obj.m()}). */
+    private JVariable target = null;
 
     /**
      * Create a method invocation.
@@ -78,5 +80,15 @@ implements AbstractMethodInvocation {
         if (block == null)
             return null;
         return block.lookup(base);
+    }
+
+    @Override
+    public void setTarget(JVariable target) {
+        this.target = target;
+    }
+
+    @Override
+    public JVariable getTarget() {
+        return this.target;
     }
 }

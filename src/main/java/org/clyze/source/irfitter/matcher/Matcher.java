@@ -2,12 +2,11 @@ package org.clyze.source.irfitter.matcher;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import org.clyze.persistent.metadata.jvm.JvmMetadata;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.SymbolAlias;
-import org.clyze.persistent.model.jvm.JvmVariable;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -152,15 +151,33 @@ public class Matcher {
         generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
     }
 
+    /**
+     * Process the local variables of the source method.
+     * @param variableMap   the variable map to update
+     * @param srcMethod     the source method being processed
+     */
     private void matchVariables(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
         for (JMethodInvocation srcInvo : srcMethod.invocations) {
-            JVariable base = srcInvo.getBase();
-            if (base != null) {
-                if (base.symbol == null)
-                    base.initSyntheticIRVariable(srcMethod.matchId);
-                variableMap.computeIfAbsent(base.symbol.getSymbolId(), (k -> new ArrayList<>())).add(base);
-            }
+            matchVariable(variableMap, srcMethod, srcInvo.getBase());
+            matchVariable(variableMap, srcMethod, srcInvo.getTarget());
         }
+        for (JAllocation allocation : srcMethod.allocations)
+            matchVariable(variableMap, srcMethod, allocation.getTarget());
+    }
+
+    /**
+     * Process local variables by introducing synthetic IR elements for source
+     * variables without existing related IR information.
+     * @param variableMap   the variable map to update
+     * @param srcMethod     the source method being processed
+     * @param v             the variable being processed
+     */
+    private void matchVariable(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod, JVariable v) {
+        if (v == null)
+            return;
+        if (v.symbol == null)
+            v.initSyntheticIRVariable(srcMethod.matchId);
+        variableMap.computeIfAbsent(v.symbol.getSymbolId(), (k -> new ArrayList<>())).add(v);
     }
 
     private void matchParameters(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
@@ -490,6 +507,8 @@ public class Matcher {
 
     /**
      * Match two invocation lists, pairwise.
+     * @param invocationMap   the id-to-invocations map
+     * @param srcInvoMap      the id-to-invocation map
      * @param srcInvos        the first list (assumed to come from sources)
      * @param irInvos         the second list (assumed to come from the IR)
      * @param srcName         the method name (used for error reporting)
@@ -661,76 +680,6 @@ public class Matcher {
             srcOverloading.computeIfAbsent(mName, (k -> new HashSet<>())).add(method);
         }
         return srcOverloading;
-    }
-
-    public static void resolveDoopVariables(File db, IdMapper idMapper, boolean debug) {
-        System.out.println("Resolving variables from facts in " + db);
-        // Keep a map of encountered IR variables to avoid recomputation.
-        Map<String, JvmVariable> jvmVars = new HashMap<>();
-        processInstanceInvocations(db, idMapper, debug, jvmVars, "SpecialMethodInvocation.facts", 5, 0, 3, 4);
-        processInstanceInvocations(db, idMapper, debug, jvmVars, "SuperMethodInvocation.facts", 5, 0, 3, 4);
-        processInstanceInvocations(db, idMapper, debug, jvmVars, "VirtualMethodInvocation.facts", 5, 0, 3, 4);
-    }
-
-    /**
-     * Process a facts file representing an instance method invocation, to
-     * match "base" variables.
-     * @param db              the Doop database
-     * @param idMapper        the mapper object to update
-     * @param debug           debugging mode
-     * @param jvmVars         the map of already encountered JVM variables
-     * @param factsFileName   the file name of the facts file
-     * @param columns         the number of relation columns
-     * @param invoIdx         the index of the invocation-id column
-     * @param baseIdx         the index of the base-variable-id column
-     * @param methIdx         the index of the declaring-method-id column
-     */
-    @SuppressWarnings("SameParameterValue")
-    private static void processInstanceInvocations(File db, IdMapper idMapper, boolean debug,
-                                                   Map<String, JvmVariable> jvmVars,
-                                                   String factsFileName, int columns,
-                                                   int invoIdx, int baseIdx, int methIdx) {
-        File factsFile = new File(db, factsFileName);
-        if (factsFile.exists()) {
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(factsFile))))  {
-                br.lines().forEach(line -> {
-                    String[] parts = line.split("\t");
-                    if (parts.length < columns) {
-                        System.out.println("Ignoring line: " + line);
-                        return;
-                    }
-                    String irInvoId = parts[invoIdx];
-                    String baseId = parts[baseIdx];
-                    String declaringMethoId = parts[methIdx];
-                    JMethodInvocation srcInvo = idMapper.srcInvoMap.get(irInvoId);
-                    if (srcInvo != null) {
-                        if (debug)
-                            System.out.println("FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
-                        JVariable base = srcInvo.getBase();
-                        if (base != null) {
-                            if (debug)
-                                System.out.println("FACTS: Variable alias: " + base + " -> " + baseId);
-                            JvmMetadata jvmMetadata = srcInvo.srcFile.getJvmMetadata();
-                            if (base.symbol == null)
-                                jvmMetadata.jvmVariables.add(base.getSymbol());
-                            String sourceFileName = srcInvo.srcFile.getRelativePath();
-                            if (jvmVars.get(baseId) == null) {
-                                String name = baseId.substring(baseId.indexOf(">/") + 2);
-                                boolean inIIB = false;
-                                jvmMetadata.jvmVariables.add(new JvmVariable(null, sourceFileName, false, name, baseId, base.type, declaringMethoId, true, false, inIIB));
-                            }
-                            SymbolAlias alias = new SymbolAlias(sourceFileName, baseId, base.symbol.getSymbolId());
-                            jvmMetadata.aliases.add(alias);
-                            if (debug)
-                                System.out.println("FACTS: alias = " + alias);
-                        }
-                    }
-                });
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else
-            System.err.println("ERROR: could not read " + factsFile);
     }
 }
 

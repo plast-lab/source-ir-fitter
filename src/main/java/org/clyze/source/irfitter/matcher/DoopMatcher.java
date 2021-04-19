@@ -97,8 +97,10 @@ public class DoopMatcher {
                 ((String[] parts) -> {
                     String irInvoId = parts[invoIdx];
                     String baseId = parts[baseIdx];
-                    JMethodInvocation srcInvo = idMapper.srcInvoMap.get(irInvoId);
-                    if (srcInvo != null) {
+                    Collection<JMethodInvocation> srcInvos = idMapper.invocationMap.get(irInvoId);
+                    if (srcInvos == null)
+                        return;
+                    for (JMethodInvocation srcInvo : srcInvos) {
                         if (debug)
                             System.out.println("INVOCATION_FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
                         JVariable base = srcInvo.getBase();

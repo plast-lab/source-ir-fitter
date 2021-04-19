@@ -135,7 +135,7 @@ public class Matcher {
         if (debug)
             System.out.println("* Matching method invocations by name/arity...");
         for (JMethod srcMethod : srcMethods) {
-            matchInvocations(idMapper.invocationMap, idMapper.srcInvoMap, srcMethod);
+            matchInvocations(idMapper.invocationMap, srcMethod);
             if (srcMethod.matchId != null) {
                 matchParameters(idMapper.variableMap, srcMethod);
                 matchAllocations(idMapper.allocationMap, srcMethod);
@@ -432,7 +432,6 @@ public class Matcher {
      * @param srcMethod      the source method to process
      */
     private void matchInvocations(Map<String, Collection<JMethodInvocation>> invocationMap,
-                                  Map<String, JMethodInvocation> srcInvoMap,
                                   JMethod srcMethod) {
         IRMethod irMethod = srcMethod.matchElement;
         Map<String, Map<Integer, List<AbstractMethodInvocation>>> irSigs = computeAbstractSignatures(irMethod);
@@ -463,14 +462,14 @@ public class Matcher {
                     va.recordInvocations(srcName, arity, srcArityMap, irArityMap);
                     continue;
                 }
-                matchInvocationLists(invocationMap, srcInvoMap, srcInvos, irInvos, srcName, arity);
+                matchInvocationLists(invocationMap, srcInvos, irInvos, srcName, arity);
             }
         }
-        va.resolve(invocationMap, srcInvoMap);
+        va.resolve(invocationMap);
 
         // Last step: generate metadata for unmatched IR elements that have
         // source line information.
-        generateUnknownMethodMetadata(invocationMap, srcInvoMap, srcMethod, irMethod);
+        generateUnknownMethodMetadata(invocationMap, srcMethod, irMethod);
     }
 
     /**
@@ -495,14 +494,12 @@ public class Matcher {
     /**
      * Match two invocation lists, pairwise.
      * @param invocationMap   the id-to-invocations map
-     * @param srcInvoMap      the id-to-invocation map
      * @param srcInvos        the first list (assumed to come from sources)
      * @param irInvos         the second list (assumed to come from the IR)
      * @param srcName         the method name (used for error reporting)
      * @param arity           the arity (used for error reporting)
      */
     public void matchInvocationLists(Map<String, Collection<JMethodInvocation>> invocationMap,
-                                     Map<String, JMethodInvocation> srcInvoMap,
                                      List<AbstractMethodInvocation> srcInvos,
                                      List<AbstractMethodInvocation> irInvos,
                                      String srcName, Integer arity) {
@@ -513,7 +510,7 @@ public class Matcher {
             for (int i = 0; i < srcCount; i++) {
                 IRMethodInvocation irInvo = (IRMethodInvocation) irInvos.get(i);
                 JMethodInvocation srcInvo = (JMethodInvocation) srcInvos.get(i);
-                recordInvoMatch(irInvo, srcInvo, invocationMap, srcInvoMap);
+                recordMatch(invocationMap, "invocation", irInvo, srcInvo);
             }
         else if (debug)
             System.out.println("WARNING: name/arity invocation combination (" +
@@ -530,7 +527,6 @@ public class Matcher {
      * @param irMethod         the IR method that corresponds to the source method
      */
     private void generateUnknownMethodMetadata(Map<String, Collection<JMethodInvocation>> invocationMap,
-                                               Map<String, JMethodInvocation> srcInvoMap,
                                                JMethod srcMethod, IRMethod irMethod) {
         for (IRMethodInvocation irInvo : irMethod.invocations)
             if (!irInvo.matched) {
@@ -542,7 +538,7 @@ public class Matcher {
                     JBlock block = new JBlock(mName, null);
                     JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null);
                     srcMethod.invocations.add(fakeSrcInvo);
-                    recordInvoMatch(irInvo, fakeSrcInvo, invocationMap, srcInvoMap);
+                    recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
                     fakeSrcInvo.symbol.setSource(false);
                 }
             }
@@ -619,14 +615,6 @@ public class Matcher {
             }
         }
     }
-
-    public void recordInvoMatch(IRMethodInvocation irInvo, JMethodInvocation srcInvo,
-                                Map<String, Collection<JMethodInvocation>> invocationMap,
-                                Map<String, JMethodInvocation> srcInvoMap) {
-        srcInvoMap.put(irInvo.getId(), srcInvo);
-        recordMatch(invocationMap, "invocation", irInvo, srcInvo);
-    }
-
 
     /**
      * The core method that records a match between an IR and a source element.

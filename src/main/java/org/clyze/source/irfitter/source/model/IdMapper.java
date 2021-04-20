@@ -1,8 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This data structure holds all mappings between ids and source code
@@ -33,5 +31,50 @@ public class IdMapper {
         mapping.putAll(methodRefMap);
         mapping.putAll(variableMap);
         return mapping;
+    }
+
+    public void printStats(Collection<SourceFile> sources) {
+        long allTypes = 0, matchedTypes = 0, allMethods = 0, matchedMethods = 0;
+        long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;
+        long allAllocs = 0, matchedAllocs = 0, allMethodRefs = 0, matchedMethodRefs = 0;
+        for (SourceFile sf : sources) {
+            Set<JType> srcTypes = sf.jTypes;
+            allTypes += srcTypes.size();
+            for (JType srcType : srcTypes) {
+                if (srcType.matchId != null)
+                    matchedTypes++;
+                List<JMethod> srcMethods = srcType.methods;
+                allMethods += srcMethods.size();
+                for (JMethod srcMethod : srcMethods) {
+                    if (srcMethod.matchId != null)
+                        matchedMethods++;
+                    List<JMethodInvocation> srcInvos = srcMethod.invocations;
+                    allInvos += srcInvos.size();
+                    matchedInvos += countUnmatched(srcInvos);
+                    List<JAllocation> srcAllocs = srcMethod.allocations;
+                    allAllocs += srcAllocs.size();
+                    matchedAllocs += countUnmatched(srcAllocs);
+                    List<JMethodRef> methodRefs = srcMethod.getMethodRefs();
+                    if (methodRefs != null) {
+                        allMethodRefs += methodRefs.size();
+                        matchedMethodRefs += countUnmatched(methodRefs);
+                    }
+                }
+                List<JField> srcFields = srcType.fields;
+                allFields += srcFields.size();
+                matchedFields += countUnmatched(srcFields);
+            }
+        }
+        System.out.println("== Statistics ==");
+        System.out.printf("Matched (source) types       : %6.2f%%%n", (100.0 * matchedTypes) / allTypes);
+        System.out.printf("Matched (source) fields      : %6.2f%%%n", (100.0 * matchedFields) / allFields);
+        System.out.printf("Matched (source) methods     : %6.2f%%%n", (100.0 * matchedMethods) / allMethods);
+        System.out.printf("Matched (source) invocations : %6.2f%%%n", (100.0 * matchedInvos) / allInvos);
+        System.out.printf("Matched (source) allocations : %6.2f%%%n", (100.0 * matchedAllocs) / allAllocs);
+        System.out.printf("Matched (source) method-refs : %6.2f%%%n", (100.0 * matchedMethodRefs) / allMethodRefs);
+    }
+
+    private static <T extends NamedElementWithPosition<?, ?>> long countUnmatched(Collection<T> elems) {
+        return elems.stream().filter(e -> e.matchId != null).count();
     }
 }

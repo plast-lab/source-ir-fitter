@@ -10,7 +10,6 @@ import org.clyze.sarif.model.Result;
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.matcher.DoopMatcher;
-import org.clyze.source.irfitter.matcher.Matcher;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
 import org.clyze.source.irfitter.source.kotlin.KotlinProcessor;
@@ -162,6 +161,9 @@ public class Driver {
             process(flatMapping, sarif);
         if (json)
             generateJSON(flatMapping, sources);
+
+        if (debug)
+            idMapper.printStats(sources);
 
         return new RunResult(unmatched);
     }

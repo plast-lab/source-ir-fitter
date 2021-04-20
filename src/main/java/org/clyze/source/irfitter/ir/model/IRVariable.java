@@ -6,6 +6,10 @@ package org.clyze.source.irfitter.ir.model;
  * registers or Jimple variables).
  */
 public class IRVariable extends IRElement {
+    /** The prefix of formal parameters (Doop/Jimple convention). */
+    public static final String PARAM_PRE = "/@parameter";
+    /** The name of the method receiver (Doop/Jimple convention). */
+    public static final String THIS_NAME = "/@this";
     /** A simple parameter name (not the original source name). */
     public final String name;
     /** The method that takes this parameter. */
@@ -30,7 +34,7 @@ public class IRVariable extends IRElement {
      * @return           the parameter object
      */
     public static IRVariable newParam(String methodId, int idx) {
-        return new IRVariable(methodId + "/@parameter" + idx, "@parameter" + idx, methodId);
+        return new IRVariable(methodId + PARAM_PRE + idx, "@parameter" + idx, methodId);
     }
 
     /**
@@ -39,6 +43,6 @@ public class IRVariable extends IRElement {
      * @return          the receiver variable of the instance method
      */
     public static IRVariable newThis(String methodId) {
-        return new IRVariable(methodId + "/@this", "@this", methodId);
+        return new IRVariable(methodId + THIS_NAME, "@this", methodId);
     }
 }

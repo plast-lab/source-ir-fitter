@@ -4,11 +4,9 @@ import java.io.*;
 import java.util.Collection;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.clyze.persistent.model.SymbolAlias;
-import org.clyze.source.irfitter.source.model.IdMapper;
-import org.clyze.source.irfitter.source.model.JAllocation;
-import org.clyze.source.irfitter.source.model.JMethodInvocation;
-import org.clyze.source.irfitter.source.model.JVariable;
+import java.util.function.Function;
+import org.clyze.source.irfitter.ir.model.IRVariable;
+import org.clyze.source.irfitter.source.model.*;
 
 /**
  * This class implements Doop-specific functionality for matching IR (Jimple)
@@ -34,6 +32,7 @@ public class DoopMatcher {
         processInstanceInvocations("SuperMethodInvocation.facts", 5, 0, 3);
         processInstanceInvocations("VirtualMethodInvocation.facts", 5, 0, 3);
         processAssignHeap();
+        processAssignLocal();
     }
 
     private void processFacts(String factsFileName, int columns, Consumer<String[]> proc) {
@@ -55,32 +54,61 @@ public class DoopMatcher {
             System.err.println("ERROR: could not read " + factsFile);
     }
 
+    /**
+     * Process the assignments from heap allocations to IR "variables".
+     */
     private void processAssignHeap() {
         processFacts("AssignHeapAllocation.facts", 6, ((String[] parts) -> {
-            String irAllocId = parts[2];
-            String irVarId = parts[3];
+            String irAllocId = parts[2], irVarId = parts[3];
             Map<String, Collection<JAllocation>> allocationMap = idMapper.allocationMap;
             Collection<JAllocation> srcAllocs = allocationMap.get(irAllocId);
             if (srcAllocs != null) {
-                for (JAllocation srcAlloc : srcAllocs) {
+                for (Targetable srcAlloc : srcAllocs) {
                     if (debug)
                         System.out.println("ALLOC_FACTS: IR allocation: " + irAllocId + " -> " + srcAlloc);
                     JVariable srcVar = srcAlloc.getTarget();
                     if (srcVar != null)
-                        addIrAlias("ALLOC_FACTS", srcVar, irVarId);
+                        Matcher.addIrAlias("ALLOC_FACTS", srcVar, irVarId, debug);
                 }
             }
         }));
     }
 
-    private void addIrAlias(String TAG, JVariable srcVar, String irVarId) {
-        if (debug)
-            System.out.println(TAG + ": variable alias " + srcVar + " -> " + irVarId);
-        SymbolAlias alias = new SymbolAlias(srcVar.srcFile.getRelativePath(), irVarId, srcVar.symbol.getSymbolId());
-        srcVar.srcFile.getJvmMetadata().aliases.add(alias);
-        if (debug)
-            System.out.println(TAG + ": alias = " + alias);
+    /**
+     * Process local variable assignments. Used to detect formal parameter aliases.
+     */
+    private void processAssignLocal() {
+        processFacts("AssignLocal.facts", 5, ((String[] parts) -> {
+            String fromVar = parts[2];
+            // The variable extractor (only defined for interesting relation entries).
+            Function<JMethod, JVariable> varSupplier = null;
+            int preIdx = fromVar.indexOf(IRVariable.PARAM_PRE);
+            if (preIdx >= 0)
+                varSupplier = ((JMethod srcMethod) -> {
+                    try {
+                        int paramIdx = Integer.parseInt(fromVar.substring(preIdx + IRVariable.PARAM_PRE.length()));
+                        return srcMethod.parameters.get(paramIdx);
+                    } catch (Exception ex) {
+                        System.err.println("ERROR: could not create alias for variable: " + fromVar + ": " + ex.getMessage());
+                        return null;
+                    }
+                });
+            else if (fromVar.endsWith(IRVariable.THIS_NAME))
+                varSupplier = ((JMethod srcMethod) -> srcMethod.receiver);
+            if (varSupplier != null) {
+                String toIrVarId = parts[3], declaringMethodId = parts[4];
+                Collection<JMethod> srcMethods = idMapper.methodMap.get(declaringMethodId);
+                if (srcMethods != null)
+                    for (JMethod srcMethod : srcMethods) {
+                        JVariable srcVar = varSupplier.apply(srcMethod);
+                        if (srcVar != null)
+                            Matcher.addIrAlias("LOCAL_FACTS", srcVar, toIrVarId, debug);
+                    }
+            }
+        }));
     }
+
+
 
     /**
      * Process a facts file representing an instance method invocation, to
@@ -105,7 +133,7 @@ public class DoopMatcher {
                             System.out.println("INVOCATION_FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
                         JVariable base = srcInvo.getBase();
                         if (base != null)
-                            addIrAlias("INVOCATION_FACTS", base, baseId);
+                            Matcher.addIrAlias("INVOCATION_FACTS", base, baseId, debug);
                     }
                 }));
     }

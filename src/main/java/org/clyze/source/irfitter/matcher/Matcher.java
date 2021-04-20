@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.SymbolAlias;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -157,29 +158,41 @@ public class Matcher {
         for (JBlock block : srcMethod.blocks) {
             List<JVariable> variables = block.getVariables();
             if (variables != null)
-                for (JVariable variable : variables) {
-                    if (variable == null)
-                        continue;
-                    if (variable.symbol == null)
-                        variable.initSyntheticIRVariable(srcMethod.matchId);
-                    variableMap.computeIfAbsent(variable.symbol.getSymbolId(), (k -> new ArrayList<>())).add(variable);
-                }
+                for (JVariable variable : variables)
+                    registerSourceVariable(variableMap, srcMethod, variable);
         }
+    }
+
+    private void registerSourceVariable(Map<String, Collection<JVariable>> variableMap,
+                                        JMethod srcMethod, JVariable variable) {
+        if (variable == null)
+            return;
+        if (variable.symbol == null) {
+            variable.initSyntheticIRVariable(srcMethod.matchId);
+            if (debug)
+                System.out.println("Initialized source variable: " + variable + " -> " + variable.symbol);
+        }
+        variableMap.computeIfAbsent(variable.symbol.getSymbolId(), (k -> new ArrayList<>())).add(variable);
     }
 
     private void matchParameters(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
         IRMethod irMethod = srcMethod.matchElement;
         JVariable srcReceiver = srcMethod.receiver;
         IRVariable irReceiver = irMethod.receiver;
-        if (srcReceiver != null && irReceiver != null)
-            recordMatch(variableMap, "receiver", irReceiver, srcReceiver);
+        if (srcReceiver != null && irReceiver != null) {
+            registerSourceVariable(variableMap, srcMethod, srcReceiver);
+            addIrAlias("THIS", srcReceiver, irReceiver.getId(), debug);
+        }
         List<JVariable> srcParameters = srcMethod.parameters;
         List<IRVariable> irParameters = irMethod.parameters;
         int irParamSize = irParameters.size();
         int srcParamSize = srcParameters.size();
         if (irParamSize == srcParamSize) {
-            for (int i = 0; i < irParamSize; i++)
-                recordMatch(variableMap, "parameter", irParameters.get(i), srcParameters.get(i));
+            for (int i = 0; i < irParamSize; i++) {
+                JVariable srcVar = srcParameters.get(i);
+                registerSourceVariable(variableMap, srcMethod, srcVar);
+                addIrAlias("PARAMETER", srcVar, irParameters.get(i).getId(), debug);
+            }
         } else
             System.out.println("WARNING: different number of parameters, source: " +
                     srcParamSize + " vs. IR: " + irParamSize + " for method: " +
@@ -656,6 +669,28 @@ public class Matcher {
         }
         return srcOverloading;
     }
+
+    /**
+     * Adds a symbol alias: "IR variable i is an alias for source variable x".
+     * @param TAG            a tag to use when printing debugging information
+     * @param srcVar         the source variable
+     * @param irVarId        the symbol id of the IR variable
+     * @param debug          debugging mode
+     */
+    public static void addIrAlias(String TAG, JVariable srcVar, String irVarId, boolean debug) {
+        if (debug)
+            System.out.println(TAG + ": variable alias " + srcVar + " -> " + irVarId);
+        if (srcVar.symbol == null) {
+            if (debug)
+                System.out.println(TAG + ": aborting due to null symbol.");
+            return;
+        }
+        SymbolAlias alias = new SymbolAlias(srcVar.srcFile.getRelativePath(), irVarId, srcVar.symbol.getSymbolId());
+        srcVar.srcFile.getJvmMetadata().aliases.add(alias);
+        if (debug)
+            System.out.println(TAG + ": alias = " + alias);
+    }
+
 }
 
 /** Helper exception to control match failures. */

@@ -53,7 +53,7 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
      * @param declaringMethodId   the declaring method
      */
     public void initSyntheticIRVariable(String declaringMethodId) {
-        IRVariable irVar = new IRVariable(declaringMethodId + "/" + type + "_" + name + "@SRC", name, declaringMethodId);
+        IRVariable irVar = new IRVariable(declaringMethodId + "/VAR@" + type + "@" + name, name, declaringMethodId);
         initSymbolFromIRElement(irVar);
         this.matchId = irVar.getId();
     }

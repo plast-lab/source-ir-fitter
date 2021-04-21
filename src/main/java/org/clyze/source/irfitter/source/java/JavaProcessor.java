@@ -8,17 +8,20 @@ import java.util.Optional;
 import java.util.Set;
 
 import org.clyze.source.irfitter.SourceProcessor;
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** This class handles Java source processing. */
 public class JavaProcessor implements SourceProcessor {
     @Override
-    public SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, Set<String> vaIrMethods) {
+    public SourceFile process(File topDir, File srcFile, boolean debug,
+                              boolean synthesizeTypes, boolean lossy,
+                              Aliaser aliaser, Set<String> vaIrMethods) {
         JavaParser jp = new JavaParser();
         try {
             Optional<CompilationUnit> optCu = jp.parse(srcFile).getResult();
             if (optCu.isPresent()) {
-                SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy);
+                SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser);
                 optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf), null));
                 return sf;
             } else

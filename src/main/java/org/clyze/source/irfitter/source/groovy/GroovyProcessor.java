@@ -8,13 +8,16 @@ import java.util.Set;
 import org.apache.groovy.parser.antlr4.GroovyLangLexer;
 import org.apache.groovy.parser.antlr4.GroovyLangParser;
 import org.clyze.source.irfitter.SourceProcessor;
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** This class handles Groovy source processing. */
 public class GroovyProcessor implements SourceProcessor {
     @Override
-    public SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, Set<String> vaIrMethods) {
-        SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy);
+    public SourceFile process(File topDir, File srcFile, boolean debug,
+                              boolean synthesizeTypes, boolean lossy,
+                              Aliaser aliaser, Set<String> vaIrMethods) {
+        SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser);
         try {
             GroovyLangLexer gll = new GroovyLangLexer(CharStreams.fromFile(srcFile));
             CommonTokenStream tokens = new CommonTokenStream(gll);

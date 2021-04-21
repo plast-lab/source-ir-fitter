@@ -30,7 +30,7 @@ dependencies {
     implementation "commons-cli:commons-cli:${commonsCliVersion}"
     implementation "org.clyze:clue-common:${clueCommonVersion}"
     implementation "org.clyze:metadata-model:2.1.2"
-    implementation "org.clyze:code-processor:4.23.7"
+    implementation "org.clyze:code-processor:4.24.1"
     // SARIF library
     implementation 'org.clyze:mini-sarif:0.1.2'
     // Bytecode parser, BSD

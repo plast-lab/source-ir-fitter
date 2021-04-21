@@ -7,6 +7,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.cli.*;
 import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.Driver;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.clyze.source.irfitter.ir.IRProcessor;
@@ -46,6 +47,11 @@ public class Main {
         Option dbopt = new Option("f", "database", true, "The database directory.");
         dbopt.setArgName("PATH");
         options.addOption(dbopt);
+
+        Option relOpt = new Option("r", "relation-variables", true, "Configure relation variable columns. Format: Relation.csv:0,1");
+        relOpt.setArgName("REL_VARS");
+        relOpt.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(relOpt);
 
         Option debugOpt = new Option("d", "debug", false, "Enable debug mode.");
         options.addOption(debugOpt);
@@ -116,6 +122,7 @@ public class Main {
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
+            String[] relVars = cli.getOptionValues(relOpt.getOpt());
 
             // Process IR (such as Java bytecode).
             Set<String> vaIrMethods = new ConcurrentSkipListSet<>();
@@ -130,6 +137,7 @@ public class Main {
             Driver driver = new Driver(outPath, db, "1.0", false, debug, vaIrMethods);
 
             // Process source code.
+            Aliaser aliaser = new Aliaser(translateResults, debug, json);
             List<SourceFile> sources = new ArrayList<>();
             for (String s : srcs) {
                 File srcFile = new File(s);
@@ -137,11 +145,11 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy));
+                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy, aliaser));
             }
 
             // Match information between IR and sources.
-            return driver.match(irTypes, sources, json, sarif, resolveVars, translateResults);
+            return driver.match(irTypes, sources, json, sarif, resolveVars, translateResults, aliaser, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

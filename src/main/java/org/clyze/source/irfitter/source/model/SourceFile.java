@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.*;
 import org.clyze.persistent.metadata.FileInfo;
 import org.clyze.persistent.metadata.jvm.JvmMetadata;
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.matcher.Matcher;
 
 /**
@@ -39,12 +40,13 @@ public class SourceFile {
     private JvmMetadata cachedJvmMetadata = null;
     public final Matcher matcher;
 
-    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes, boolean lossy) {
+    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes,
+                      boolean lossy, Aliaser aliaser) {
         this.topDir = topDir;
         this.file = file;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
-        this.matcher = new Matcher(this, debug, lossy);
+        this.matcher = new Matcher(this, debug, lossy, aliaser);
     }
 
     /**

@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
-import org.clyze.persistent.model.SymbolAlias;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -21,16 +20,20 @@ public class Matcher {
     private final boolean debug;
     /** The source file where matching will happen. */
     private final SourceFile sourceFile;
+    /** The symbol-id aliasing handler. */
+    private final Aliaser aliaser;
 
     /**
      * @param sourceFile   the source file where matching will happen
      * @param debug        debugging mode
      * @param lossy        if true, use unsafe heuristics
+     * @param aliaser      the symbol aliasing helper
      */
-    public Matcher(SourceFile sourceFile, boolean debug, boolean lossy) {
+    public Matcher(SourceFile sourceFile, boolean debug, boolean lossy, Aliaser aliaser) {
         this.sourceFile = sourceFile;
         this.lossy = lossy;
         this.debug = debug;
+        this.aliaser = aliaser;
     }
 
     /**
@@ -181,7 +184,7 @@ public class Matcher {
         IRVariable irReceiver = irMethod.receiver;
         if (srcReceiver != null && irReceiver != null) {
             registerSourceVariable(variableMap, srcMethod, srcReceiver);
-            addIrAlias("THIS", srcReceiver, irReceiver.getId(), debug);
+            aliaser.addIrAlias("THIS", srcReceiver, irReceiver.getId());
         }
         List<JVariable> srcParameters = srcMethod.parameters;
         List<IRVariable> irParameters = irMethod.parameters;
@@ -191,7 +194,7 @@ public class Matcher {
             for (int i = 0; i < irParamSize; i++) {
                 JVariable srcVar = srcParameters.get(i);
                 registerSourceVariable(variableMap, srcMethod, srcVar);
-                addIrAlias("PARAMETER", srcVar, irParameters.get(i).getId(), debug);
+                aliaser.addIrAlias("PARAMETER", srcVar, irParameters.get(i).getId());
             }
         } else
             System.out.println("WARNING: different number of parameters, source: " +
@@ -668,27 +671,6 @@ public class Matcher {
             srcOverloading.computeIfAbsent(mName, (k -> new HashSet<>())).add(method);
         }
         return srcOverloading;
-    }
-
-    /**
-     * Adds a symbol alias: "IR variable i is an alias for source variable x".
-     * @param TAG            a tag to use when printing debugging information
-     * @param srcVar         the source variable
-     * @param irVarId        the symbol id of the IR variable
-     * @param debug          debugging mode
-     */
-    public static void addIrAlias(String TAG, JVariable srcVar, String irVarId, boolean debug) {
-        if (debug)
-            System.out.println(TAG + ": variable alias " + srcVar + " -> " + irVarId);
-        if (srcVar.symbol == null) {
-            if (debug)
-                System.out.println(TAG + ": aborting due to null symbol.");
-            return;
-        }
-        SymbolAlias alias = new SymbolAlias(srcVar.srcFile.getRelativePath(), irVarId, srcVar.symbol.getSymbolId());
-        srcVar.srcFile.getJvmMetadata().aliases.add(alias);
-        if (debug)
-            System.out.println(TAG + ": alias = " + alias);
     }
 
 }

@@ -1,8 +1,8 @@
 package org.clyze.source.irfitter.matcher;
 
 import java.io.*;
-import java.util.Collection;
-import java.util.Map;
+import java.nio.file.Files;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.clyze.source.irfitter.ir.model.IRVariable;
@@ -19,11 +19,17 @@ public class DoopMatcher {
     private final boolean debug;
     /** The mapper object to update while matching elements. */
     private final IdMapper idMapper;
+    /** The symbol-id aliasing handler. */
+    private final Aliaser aliaser;
+    /** The variable columns in interesting Doop outputs. */
+    private final Map<String, int[]> relationVarColumns;
 
-    public DoopMatcher(File db, boolean debug, IdMapper idMapper) {
+    public DoopMatcher(File db, boolean debug, IdMapper idMapper, Aliaser aliaser, String[] relVars) {
         this.db = db;
         this.debug = debug;
         this.idMapper = idMapper;
+        this.aliaser = aliaser;
+        this.relationVarColumns = initRelationVarColumns(relVars);
     }
 
     public void resolveDoopVariables() {
@@ -68,7 +74,7 @@ public class DoopMatcher {
                         System.out.println("ALLOC_FACTS: IR allocation: " + irAllocId + " -> " + srcAlloc);
                     JVariable srcVar = srcAlloc.getTarget();
                     if (srcVar != null)
-                        Matcher.addIrAlias("ALLOC_FACTS", srcVar, irVarId, debug);
+                        aliaser.addIrAlias("ALLOC_FACTS", srcVar, irVarId);
                 }
             }
         }));
@@ -102,7 +108,7 @@ public class DoopMatcher {
                     for (JMethod srcMethod : srcMethods) {
                         JVariable srcVar = varSupplier.apply(srcMethod);
                         if (srcVar != null)
-                            Matcher.addIrAlias("LOCAL_FACTS", srcVar, toIrVarId, debug);
+                            aliaser.addIrAlias("LOCAL_FACTS", srcVar, toIrVarId);
                     }
             }
         }));
@@ -133,8 +139,81 @@ public class DoopMatcher {
                             System.out.println("INVOCATION_FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
                         JVariable base = srcInvo.getBase();
                         if (base != null)
-                            Matcher.addIrAlias("INVOCATION_FACTS", base, baseId, debug);
+                            aliaser.addIrAlias("INVOCATION_FACTS", base, baseId);
                     }
                 }));
+    }
+
+    public static Map<String, int[]> initRelationVarColumns(String[] relVars) {
+        Map<String, int[]> ret = new HashMap<>();
+        if (relVars != null) {
+            for (String relVarDesc : relVars) {
+                try {
+                    String[] parts = relVarDesc.split(":");
+                    String relName = parts[0];
+                    int[] cols = Arrays.stream(parts[1].split(",")).mapToInt(Integer::parseInt).toArray();
+                    ret.put(relName, cols);
+                    System.out.println("Relation variables: " + relName + " / " + Arrays.toString(cols));
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return ret;
+    }
+
+    public void translateResults() {
+        System.out.println("Translating results in " + db);
+        for (Map.Entry<String, int[]> entry : relationVarColumns.entrySet()) {
+            File rel = new File(db, entry.getKey());
+            if (rel.exists()) {
+                File newFile = new File(db, entry.getKey() + ".new");
+                System.out.println("Translating relation: " + rel);
+                int[] varCols = entry.getValue();
+                OptionalInt max = Arrays.stream(varCols).max();
+                // Sanity check: there is at least one usable column index.
+                if (!max.isPresent())
+                    return;
+                int maxCol = max.getAsInt();
+                try (BufferedWriter bw = new BufferedWriter(new FileWriter(newFile)))  {
+                    Files.lines(rel.toPath()).forEach(line -> {
+                        String[] parts = line.split("\t");
+                        if (parts.length < maxCol) {
+                            System.out.println("Ignoring line: " + line);
+                            return;
+                        }
+                        // Filter flag: only translated lines survive.
+                        boolean write = false;
+                        for (int i : varCols) {
+                            Collection<String> aliases = aliaser.aliases.get(parts[i]);
+                            if (aliases != null) {
+                                if (aliases.size() == 1) {
+                                    for (String alias : aliases) {
+                                        if (debug)
+                                            System.out.println("Translating: " + parts[i] + " -> " + alias);
+                                        parts[i] = alias;
+                                        write = true;
+                                    }
+                                } else
+                                    System.out.println("ERROR: multi-aliases not yet supported: " + parts[i]);
+                            }
+                        }
+                        if (write)
+                            try {
+                                bw.write(String.join("\t", parts) + '\n');
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                    });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                System.out.println("Replacing " + rel + " with " + newFile);
+                boolean delete = rel.delete();
+                boolean rename = newFile.renameTo(rel);
+                if (debug)
+                    System.out.println("Move operation: delete=" + delete + ", rename=" + rename);
+            }
+        }
     }
 }

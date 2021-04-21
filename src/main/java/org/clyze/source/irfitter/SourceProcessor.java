@@ -3,6 +3,7 @@ package org.clyze.source.irfitter;
 import java.io.File;
 import java.util.Set;
 
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** Source code processor interface. */
@@ -18,5 +19,5 @@ public interface SourceProcessor {
      * @param vaIrMethods the vararg methods found in the IR
      * @return          the source file object
      */
-    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, Set<String> vaIrMethods);
+    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, Aliaser aliaser, Set<String> vaIrMethods);
 }

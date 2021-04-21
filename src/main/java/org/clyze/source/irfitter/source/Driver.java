@@ -9,6 +9,7 @@ import org.clyze.doop.sarif.SARIFGenerator;
 import org.clyze.sarif.model.Result;
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.matcher.DoopMatcher;
 import org.clyze.source.irfitter.source.groovy.GroovyProcessor;
 import org.clyze.source.irfitter.source.java.JavaProcessor;
@@ -67,25 +68,26 @@ public class Driver {
      * @return                    the processed source file objects
      */
     public Collection<SourceFile> readSources(File srcFile, boolean debug,
-                                              boolean synthesizeTypes, boolean lossy) {
+                                              boolean synthesizeTypes, boolean lossy,
+                                              Aliaser aliaser) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = Files.createTempDirectory("extracted-sources").toFile();
                 tmpDir.deleteOnExit();
                 ZipUtil.unpack(srcFile, tmpDir);
-                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy);
+                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy, aliaser);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy);
+            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy, aliaser);
     }
 
     private Collection<SourceFile> readSources(File topDir, File srcFile,
                                                boolean debug, boolean synthesizeTypes,
-                                               boolean lossy) {
+                                               boolean lossy, Aliaser aliaser) {
         Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -93,18 +95,18 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy));
+                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy, aliaser));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, varargIrMethods));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
             }
         }
         return sources;
@@ -125,7 +127,8 @@ public class Driver {
      * @return          the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                           boolean json, boolean sarif, boolean resolveVars, boolean translateResults) {
+                           boolean json, boolean sarif, boolean resolveVars,
+                           boolean translateResults, Aliaser aliaser, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
         for (SourceFile sf : sources) {
@@ -151,14 +154,19 @@ public class Driver {
             }
         }
 
-        if (resolveVars)
-            (new DoopMatcher(db, debug, idMapper)).resolveDoopVariables();
+        if (resolveVars) {
+            DoopMatcher doopMatcher = new DoopMatcher(db, debug, idMapper, aliaser, relVars);
+            doopMatcher.resolveDoopVariables();
+            if (translateResults)
+                doopMatcher.translateResults();
+
+        }
 
         System.out.println(unmatched + " elements not matched.");
 
         Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
-        if (translateResults)
-            process(flatMapping, sarif);
+        if (sarif)
+            processJimpleForSARIF(flatMapping);
         if (json)
             generateJSON(flatMapping, sources);
 
@@ -286,15 +294,7 @@ public class Driver {
                 System.out.println("Creating new output directory: " + out);
     }
 
-    void process(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
-                 boolean sarif) {
-        boolean metadataExist = sarifGenerator.metadataExist();
-        if (!metadataExist) {
-            if (debug)
-                System.out.println("No metadata found.");
-            return;
-        }
-
+    void processJimpleForSARIF(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping) {
         List<Result> results = new ArrayList<>();
         AtomicInteger elements = new AtomicInteger(0);
 
@@ -308,13 +308,11 @@ public class Driver {
                     System.out.println("Source element has no symbol: " + srcElem);
                     continue;
                 }
-                if (sarif)
-                    sarifGenerator.processElement(metadataExist, results, symbol, elements);
+                sarifGenerator.processElement(results, symbol, elements);
             }
         }
         System.out.println("Elements processed: " + elements);
 
-        if (sarif)
-            sarifGenerator.generateSARIF(results);
+        sarifGenerator.generateSARIF(results);
     }
 }

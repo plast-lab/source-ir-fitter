@@ -40,7 +40,6 @@ public class Main {
         options.addOption(irOpt);
 
         Option outOpt = new Option("o", "out", true, "The output directory.");
-        outOpt.setRequired(true);
         outOpt.setArgName("PATH");
         options.addOption(outOpt);
 
@@ -108,6 +107,11 @@ public class Main {
                 return null;
             }
             boolean json = cli.hasOption(jsonOpt.getOpt());
+            boolean out = cli.hasOption(outOpt.getOpt());
+            if (json && !out) {
+                System.err.println("ERROR: --" + jsonOpt.getLongOpt() + " requires -" + outOpt.getOpt() + "/--" + outOpt.getLongOpt());
+                return null;
+            }
             boolean synthesizeTypes = cli.hasOption(synthOpt.getLongOpt());
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
@@ -122,8 +126,8 @@ public class Main {
                 System.out.println("IR vararg methods: " + vaIrMethods);
 
             File db = dbVal == null ? null : new File(dbVal);
-            File out = new File(cli.getOptionValue(outOpt.getOpt()));
-            Driver driver = new Driver(out, db, "1.0", false, debug, vaIrMethods);
+            File outPath = out ? new File(cli.getOptionValue(outOpt.getOpt())) : null;
+            Driver driver = new Driver(outPath, db, "1.0", false, debug, vaIrMethods);
 
             // Process source code.
             List<SourceFile> sources = new ArrayList<>();

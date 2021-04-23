@@ -209,10 +209,10 @@ public class DoopMatcher {
                     e.printStackTrace();
                 }
                 System.out.println("Replacing " + rel + " with " + newFile);
-                boolean delete = rel.delete();
+                boolean relAction = debug ? rel.renameTo(new File(rel.getParentFile(), rel.getName() + ".backup")) : rel.delete();
                 boolean rename = newFile.renameTo(rel);
                 if (debug)
-                    System.out.println("Move operation: delete=" + delete + ", rename=" + rename);
+                    System.out.println("Move operation: relAction=" + relAction + ", rename=" + rename);
             }
         }
     }

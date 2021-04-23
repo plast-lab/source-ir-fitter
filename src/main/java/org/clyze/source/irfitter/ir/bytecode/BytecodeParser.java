@@ -35,10 +35,8 @@ public class BytecodeParser {
         for (FieldNode fNode : node.fields) {
             String fieldType = TypeUtils.raiseTypeId(replaceSlashesWithDots(fNode.desc));
             String fieldName = fNode.name;
-            if (fieldName.equals("this$0"))
-                irType.addOuterType(fieldType);
             String fieldId = classPrefix + fieldType + " " + fieldName + ">";
-            irType.fields.add(new IRField(fieldId, fieldName, fieldType, new BytecodeModifierPack(fNode)));
+            irType.addField(new IRField(fieldId, fieldName, fieldType, new BytecodeModifierPack(fNode)));
             if (debug)
                 System.out.println("IR field: " + fieldId);
         }

@@ -38,9 +38,15 @@ public class IRType extends IRElement {
      * Add an outer type of this inner class.
      * @param typeId  the type id
      */
-    public final void addOuterType(String typeId) {
+    private void addOuterType(String typeId) {
         if (outerTypes == null)
             outerTypes = new ArrayList<>();
         outerTypes.add(typeId);
+    }
+
+    public void addField(IRField field) {
+        fields.add(field);
+        if (field.name.equals("this$0"))
+            addOuterType(field.type);
     }
 }

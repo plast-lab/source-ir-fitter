@@ -67,7 +67,7 @@ public class DexParser {
                         String fieldId = classPrefix + fieldType + " " + fieldName + ">";
                         if (debug)
                             System.out.println("IR field: " + fieldId);
-                        irType.fields.add(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField)));
+                        irType.addField(new IRField(fieldId, fieldName, fieldType, new DexModifierPack(dexField)));
                     }
                     for (DexBackedMethod dexMethod : dexClass.getMethods()) {
                         StringJoiner sj = new StringJoiner(",");

@@ -61,6 +61,7 @@ public class Driver {
      * @param debug               debug mode
      * @param synthesizeTypes     if true, attempt to synthesize erased types
      * @param lossy               if true, enable lossy heuristics
+     * @param aliaser             the symbol aliasing helper
      * @return                    the processed source file objects
      */
     public Collection<SourceFile> readSources(File srcFile, boolean debug,
@@ -114,14 +115,16 @@ public class Driver {
 
     /**
      * Main entry point that performs IR-vs-source element matching.
-     * @param irTypes   the set of all IR types
-     * @param sources   the set of source files
-     * @param json      if true, generate JSON metadata
-     * @param sarif     if true, translate SARIF results
+     * @param irTypes            the set of all IR types
+     * @param sources            the set of source files
+     * @param json               if true, generate JSON metadata
+     * @param sarif              if true, translate SARIF results
      * @param resolveInvocations if true, resolve invocation targets
-     * @param resolveVars       if true, resolve variables from Doop facts
-     * @param translateResults  if true, map Doop results to sources
-     * @return          the result of the matching operation
+     * @param resolveVars        if true, resolve variables from Doop facts
+     * @param translateResults   if true, map Doop results to sources
+     * @param aliaser            the symbol aliasing helper
+     * @param relVars            the column-variable relation spec
+     * @return                   the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                            boolean json, boolean sarif,

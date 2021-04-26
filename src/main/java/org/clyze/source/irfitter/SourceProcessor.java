@@ -16,6 +16,7 @@ public interface SourceProcessor {
      * @param debug     if true, run extra debug code
      * @param synthesizeTypes if true, try to synthesize high-level types from source/IR types
      * @param lossy     if true, enable lossy heuristics
+     * @param aliaser   the symbol aliasing helper
      * @param vaIrMethods the vararg methods found in the IR
      * @return          the source file object
      */

@@ -4,6 +4,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.cli.*;
 import org.clyze.source.irfitter.ir.model.IRType;
@@ -44,9 +45,9 @@ public class Main {
         outOpt.setArgName("PATH");
         options.addOption(outOpt);
 
-        Option dbopt = new Option("f", "database", true, "The database directory.");
-        dbopt.setArgName("PATH");
-        options.addOption(dbopt);
+        Option dbOpt = new Option("f", "database", true, "The database directory.");
+        dbOpt.setArgName("PATH");
+        options.addOption(dbOpt);
 
         Option relOpt = new Option("r", "relation-variables", true, "Configure relation variable columns. Format: Relation.csv:0,1");
         relOpt.setArgName("REL_VARS");
@@ -56,7 +57,7 @@ public class Main {
         Option debugOpt = new Option("d", "debug", false, "Enable debug mode.");
         options.addOption(debugOpt);
 
-        Option sarifOpt = new Option(null, "sarif", false, "Enable SARIF output.");
+        Option sarifOpt = new Option(null, "translate-sarif", false, "Translate SARIF results.");
         options.addOption(sarifOpt);
 
         Option resolveVarsOpt = new Option(null, "resolve-variables", false, "Map variables from Doop facts to source variables.");
@@ -104,14 +105,12 @@ public class Main {
             boolean sarif = cli.hasOption(sarifOpt.getLongOpt());
             boolean resolveVars = cli.hasOption(resolveVarsOpt.getLongOpt());
             boolean translateResults = cli.hasOption(translateResultsOpt.getLongOpt());
-            String dbVal = cli.getOptionValue(dbopt.getOpt());
-            if (resolveVars && (dbVal == null)) {
-                System.err.println("ERROR: --" + resolveVarsOpt.getLongOpt() + " requires -" + dbopt.getOpt() + "/--" + dbopt.getLongOpt());
+            String dbVal = cli.getOptionValue(dbOpt.getOpt());
+            if (missingOption(cli, resolveVarsOpt, dbOpt) ||
+                missingOption(cli, translateResultsOpt, dbOpt) ||
+                missingOption(cli, sarifOpt, dbOpt) ||
+                missingOption(cli, sarifOpt, outOpt))
                 return null;
-            } else if (translateResults && (dbVal == null)) {
-                System.err.println("ERROR: --" + translateResultsOpt.getLongOpt() + " requires -" + dbopt.getOpt() + "/--" + dbopt.getLongOpt());
-                return null;
-            }
             boolean json = cli.hasOption(jsonOpt.getOpt());
             boolean out = cli.hasOption(outOpt.getOpt());
             if (json && !out) {
@@ -134,7 +133,7 @@ public class Main {
 
             File db = dbVal == null ? null : new File(dbVal);
             File outPath = out ? new File(cli.getOptionValue(outOpt.getOpt())) : null;
-            Driver driver = new Driver(outPath, db, "1.0", false, debug, vaIrMethods);
+            Driver driver = new Driver(outPath, db, debug, vaIrMethods);
 
             // Process source code.
             Aliaser aliaser = new Aliaser(translateResults, debug, json);
@@ -160,5 +159,21 @@ public class Main {
         HelpFormatter formatter = new HelpFormatter();
         formatter.setWidth(100);
         formatter.printHelp("source-ir-fitter [OPTION]...", options);
+    }
+
+    private static boolean missingOption(CommandLine cli, Option opt, Option depOpt) {
+        for (String optLabel : new String[] {opt.getLongOpt(), opt.getOpt()})
+            if (optLabel != null)
+                if (cli.hasOption(optLabel))
+                    if (!cli.hasOption(depOpt.getOpt()) && !cli.hasOption(depOpt.getLongOpt())) {
+                        StringJoiner sj = new StringJoiner("/");
+                        if (depOpt.getOpt() != null)
+                            sj.add(depOpt.getOpt());
+                        if (depOpt.getLongOpt() != null)
+                            sj.add(depOpt.getLongOpt());
+                        System.err.println("ERROR: --" + opt.getLongOpt() + " requires " + sj);
+                        return true;
+                    }
+        return false;
     }
 }

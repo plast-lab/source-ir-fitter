@@ -40,10 +40,10 @@ The output .json files can be found in directory `app-out`.
 
 ## Use with Doop
 
-This program can be used to map results of Doop static analyses
-(originally on bytecode) to sources. The results can be viewed in a
-tool with SARIF support, such as Visual Studio Code with the SARIF
-viewer extension.
+This tool can map results of Doop static analyses (in SARIF format,
+originally on bytecode) to sources. The translated results can be
+viewed in a tool with SARIF support, such as Visual Studio Code with
+the SARIF viewer extension or as part of a custom GitHub Action.
 
 Assume a Doop analysis with SARIF output enabled:
 
@@ -55,7 +55,7 @@ cd $DOOP_HOME
 Then, run the code processor:
 
 ```
-build/install/source-ir-fitter/bin/source-ir-fitter --sarif --ir path/to/app.jar --source path/to/app/src --out app-out --translate-results --database ${DOOP_HOME}/out/context-insensitive/app/database
+build/install/source-ir-fitter/bin/source-ir-fitter --translate-sarif --ir path/to/app.jar --source path/to/app/src --out app-out --database ${DOOP_HOME}/out/app/database
 ```
 
 Finally, run Visual Studio Code on the results:

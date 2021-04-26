@@ -4,9 +4,7 @@ import com.google.common.collect.ImmutableSet;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.clyze.doop.sarif.SARIFGenerator;
-import org.clyze.sarif.model.Result;
+
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.matcher.Aliaser;
@@ -34,7 +32,6 @@ public class Driver {
      */
     private static final Set<String> BOXED_REPRESENTATIONS = ImmutableSet.of("java.lang.Boolean", "java.lang.Byte", "java.lang.Character", "java.lang.Double", "java.lang.Float", "java.lang.Integer", "java.lang.Long", "java.lang.Short");
 
-    private final SARIFGenerator sarifGenerator;
     private final File out;
     private final File db;
     /** If true, enable debug reports. */
@@ -46,15 +43,12 @@ public class Driver {
      * Create a new driver / processing pipeline.
      * @param out          the output directory
      * @param db           the database (used in SARIF mode)
-     * @param version      the results version (used in SARIF mode)
-     * @param standalone   false if to be used as a library
      * @param debug        debug mode
      * @param vaIrMethods  the vararg methods found in the IR
      */
-    public Driver(File out, File db, String version, boolean standalone, boolean debug, Set<String> vaIrMethods) {
+    public Driver(File out, File db, boolean debug, Set<String> vaIrMethods) {
         this.varargIrMethods = vaIrMethods;
         this.db = db;
-        this.sarifGenerator = new SARIFGenerator(db, out, version, standalone);
         this.out = out;
         this.debug = debug;
     }
@@ -121,7 +115,7 @@ public class Driver {
      * @param irTypes   the set of all IR types
      * @param sources   the set of source files
      * @param json      if true, generate JSON metadata
-     * @param sarif     if true, generate SARIF results
+     * @param sarif     if true, translate SARIF results
      * @param resolveVars       if true, resolve variables from Doop facts
      * @param translateResults  if true, map Doop results to sources
      * @return          the result of the matching operation
@@ -166,7 +160,7 @@ public class Driver {
 
         Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
         if (sarif)
-            processJimpleForSARIF(flatMapping);
+            (new DoopSARIFGenerator(db, out, "1.0", false, flatMapping, debug)).process();
         if (json)
             generateJSON(flatMapping, sources);
 
@@ -258,7 +252,7 @@ public class Driver {
         for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
-                System.out.println("Processing id: " + doopId);
+                System.out.println("[JSON] Processing id: " + doopId);
             for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
@@ -292,27 +286,5 @@ public class Driver {
         if (!out.exists())
             if (out.mkdirs())
                 System.out.println("Creating new output directory: " + out);
-    }
-
-    void processJimpleForSARIF(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping) {
-        List<Result> results = new ArrayList<>();
-        AtomicInteger elements = new AtomicInteger(0);
-
-        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
-            String doopId = entry.getKey();
-            if (debug)
-                System.out.println("Processing id: " + doopId);
-            for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
-                SymbolWithId symbol = srcElem.getSymbol();
-                if (symbol == null) {
-                    System.out.println("Source element has no symbol: " + srcElem);
-                    continue;
-                }
-                sarifGenerator.processElement(results, symbol, elements);
-            }
-        }
-        System.out.println("Elements processed: " + elements);
-
-        sarifGenerator.generateSARIF(results);
     }
 }

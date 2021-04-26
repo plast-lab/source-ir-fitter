@@ -28,6 +28,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public final int arity;
     public final boolean isInterface;
     public IRVariable receiver = null;
+    private String cachedParamTypes = null;
 
     public IRMethod(String id, String name, String returnType, List<String> paramTypes,
                     List<IRVariable> parameters, IRModifierPack mp, boolean isInterface) {
@@ -42,13 +43,16 @@ public class IRMethod extends IRElement implements AbstractMethod {
     }
 
     public IRMethodInvocation addInvocation(String methodName, int arity,
-                                            String invokedMethodId,
+                                            String invokedMethodId, String targetType,
+                                            String targetReturnType, String targetParamTypes,
                                             Integer sourceLine, boolean debug) {
         String methodId = getId();
         return addNumberedElement(invocationCounters, invocations, methodId, invokedMethodId,
                 ((counter, elemId) -> {
-                    IRMethodInvocation irInvo = new IRMethodInvocation(elemId, methodId,
-                            methodName, arity, invokedMethodId, counter, sourceLine);
+                    IRMethodInvocation irInvo = new IRMethodInvocation(elemId,
+                            methodId, methodName, arity, invokedMethodId,
+                            targetType, targetReturnType, targetParamTypes,
+                            counter, sourceLine);
                     if (debug)
                         System.out.println("IR invocation: " + irInvo);
                     return irInvo;
@@ -185,5 +189,15 @@ public class IRMethod extends IRElement implements AbstractMethod {
      */
     public void setReceiver() {
         this.receiver = IRVariable.newThis(getId());
+    }
+
+    public String getParamTypesAsString() {
+        if (cachedParamTypes == null) {
+            StringJoiner sj = new StringJoiner(",");
+            for (String paramType : paramTypes)
+                sj.add(paramType);
+            cachedParamTypes = sj.toString();
+        }
+        return cachedParamTypes;
     }
 }

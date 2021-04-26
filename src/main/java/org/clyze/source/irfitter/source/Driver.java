@@ -6,6 +6,8 @@ import java.nio.file.Files;
 import java.util.*;
 
 import org.clyze.source.irfitter.RunResult;
+import org.clyze.source.irfitter.ir.model.IRMethod;
+import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.matcher.DoopMatcher;
@@ -116,12 +118,14 @@ public class Driver {
      * @param sources   the set of source files
      * @param json      if true, generate JSON metadata
      * @param sarif     if true, translate SARIF results
+     * @param resolveInvocations if true, resolve invocation targets
      * @param resolveVars       if true, resolve variables from Doop facts
      * @param translateResults  if true, map Doop results to sources
      * @return          the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                           boolean json, boolean sarif, boolean resolveVars,
+                           boolean json, boolean sarif,
+                           boolean resolveInvocations, boolean resolveVars,
                            boolean translateResults, Aliaser aliaser, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
@@ -137,6 +141,12 @@ public class Driver {
         for (IRType irType : irTypes) {
             allIrTypes.add(irType.getId());
             irType.addReferencedTypesTo(allIrTypes);
+        }
+
+        if (resolveInvocations) {
+            if (debug)
+                System.out.println("Trying to (statically) resolve invocation targets...");
+            resolveInvocationTargets(sources);
         }
 
         if (debug)
@@ -168,6 +178,65 @@ public class Driver {
             idMapper.printStats(sources);
 
         return new RunResult(unmatched);
+    }
+
+    private void resolveInvocationTargets(Collection<SourceFile> sources) {
+        Map<String, IRType> irTypes = new HashMap<>();
+        Map<String, IRMethod> irMethods = new HashMap<>();
+        List<JMethodInvocation> srcInvos = new ArrayList<>();
+        for (SourceFile sf : sources) {
+            for (JType srcType : sf.jTypes) {
+                IRType irType = srcType.matchElement;
+                if (irType == null)
+                    continue;
+                irTypes.put(irType.getId(), irType);
+                for (IRMethod irMethod : irType.methods)
+                    irMethods.put(irMethod.getId(), irMethod);
+                for (JMethod srcMethod : srcType.methods) {
+                    for (JMethodInvocation srcInvo : srcMethod.invocations) {
+                        IRMethodInvocation irInvo = srcInvo.matchElement;
+                        if (irInvo == null)
+                            continue;
+                        srcInvos.add(srcInvo);
+                    }
+                }
+            }
+        }
+
+        for (JMethodInvocation srcInvo : srcInvos) {
+            IRMethodInvocation irInvo = srcInvo.matchElement;
+            JvmMethodInvocation jvmInvo = srcInvo.symbol;
+            String irTypeName = irInvo.targetType;
+            String retType = irInvo.targetReturnType;
+            String name = irInvo.getMethodName();
+            String paramTypes = irInvo.targetParamTypes;
+            // If resolution fails, use the original low-level signature.
+            if (!resolveTarget(irTypes, jvmInvo, irTypes.get(irTypeName), retType, name, paramTypes))
+                jvmInvo.targetMethodId = genMethodId(irTypeName, retType, name, paramTypes);
+            if (debug)
+                System.out.println("Resolved: " + irInvo + " => " + jvmInvo.targetMethodId);
+        }
+    }
+
+    private static boolean resolveTarget(Map<String, IRType> irTypes,
+                                         JvmMethodInvocation jvmInvo, IRType irType,
+                                         String retType, String name, String paramTypes) {
+        if (irType == null)
+            return false;
+        String irTypeName = irType.getId();
+        if (irType.declaresMethod(retType, name, paramTypes)) {
+            jvmInvo.targetMethodId = genMethodId(irTypeName, retType, name, paramTypes);
+            return true;
+        } else if (!irTypeName.equals("java.lang.Object"))
+            for (String superType : irType.superTypes) {
+                if (resolveTarget(irTypes, jvmInvo, irTypes.get(superType), retType, name, paramTypes))
+                    return true;
+            }
+        return false;
+    }
+
+    private static String genMethodId(String type, String retType, String name, String paramTypes) {
+        return "<" + type + ": " + retType + " " + name + "(" + paramTypes + ")>";
     }
 
     /**

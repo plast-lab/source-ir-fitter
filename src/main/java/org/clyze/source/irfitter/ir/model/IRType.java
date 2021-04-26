@@ -49,4 +49,12 @@ public class IRType extends IRElement {
         if (field.name.equals("this$0"))
             addOuterType(field.type);
     }
+
+    public boolean declaresMethod(String retType, String name, String paramTypes) {
+        for (IRMethod method : methods) {
+            if (method.name.equals(name) && method.returnType.equals(retType) && method.getParamTypesAsString().equals(paramTypes))
+                return true;
+        }
+        return false;
+    }
 }

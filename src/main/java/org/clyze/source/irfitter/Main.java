@@ -63,6 +63,9 @@ public class Main {
         Option resolveVarsOpt = new Option(null, "resolve-variables", false, "Map variables from Doop facts to source variables.");
         options.addOption(resolveVarsOpt);
 
+        Option resolveInvocationsOpt = new Option(null, "resolve-invocations", false, "Resolve invocation targets.");
+        options.addOption(resolveInvocationsOpt);
+
         Option translateResultsOpt = new Option(null, "translate-results", false, "Translate Doop results to source results.");
         options.addOption(translateResultsOpt);
 
@@ -119,6 +122,7 @@ public class Main {
             }
             boolean synthesizeTypes = cli.hasOption(synthOpt.getLongOpt());
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
+            boolean resolveInvocations = cli.hasOption(resolveInvocationsOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
             String[] relVars = cli.getOptionValues(relOpt.getOpt());
@@ -148,7 +152,7 @@ public class Main {
             }
 
             // Match information between IR and sources.
-            return driver.match(irTypes, sources, json, sarif, resolveVars, translateResults, aliaser, relVars);
+            return driver.match(irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, aliaser, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

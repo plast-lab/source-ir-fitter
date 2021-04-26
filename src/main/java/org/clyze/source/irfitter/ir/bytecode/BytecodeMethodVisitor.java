@@ -101,9 +101,16 @@ public class BytecodeMethodVisitor extends MethodVisitor {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-        int arity = TypeUtils.raiseSignature(descriptor).size() - 1;
-        String invokedMethodId = TypeUtils.replaceSlashesWithDots(owner) + "." + name;
-        IRMethodInvocation irInvo = irMethod.addInvocation(name, arity, invokedMethodId, getLastLine(), debug);
+        List<String> sigParts = TypeUtils.raiseSignature(descriptor);
+        int arity = sigParts.size() - 1;
+        String invokedOwner = TypeUtils.replaceSlashesWithDots(owner);
+        String invokedMethodId = invokedOwner + "." + name;
+        StringJoiner sigStr = new StringJoiner(",");
+        for (int paramIdx = 0; paramIdx < arity; paramIdx++)
+            sigStr.add(sigParts.get(paramIdx + 1));
+        IRMethodInvocation irInvo = irMethod.addInvocation(name, arity,
+                invokedMethodId, invokedOwner, sigParts.get(0),
+                sigStr.toString(), getLastLine(), debug);
         if (debug)
             System.out.println("IR invocation: " + irInvo);
         super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);

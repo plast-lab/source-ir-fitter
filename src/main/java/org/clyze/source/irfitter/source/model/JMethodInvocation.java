@@ -50,6 +50,9 @@ implements AbstractMethodInvocation, Targetable {
             matchElement = irMethodInvocation;
             symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(), true,
                     methodName, irMethodInvocation.getId(),
+                    irMethodInvocation.targetType,
+                    irMethodInvocation.targetReturnType,
+                    irMethodInvocation.targetParamTypes,
                     irMethodInvocation.invokingMethodId, inIIB);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

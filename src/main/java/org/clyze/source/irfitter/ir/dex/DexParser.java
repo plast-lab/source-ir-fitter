@@ -157,10 +157,15 @@ public class DexParser {
                         DexBackedMethodReference mRef = (DexBackedMethodReference) ((ReferenceInstruction)instr).getReference();
                         int arity = mRef.getParameterTypes().size();
                         String methodName = mRef.getName();
-                        String invokedMethodId = TypeUtils.raiseTypeId(mRef.getDefiningClass()) + '.' + methodName;
+                        String targetType = TypeUtils.raiseTypeId(mRef.getDefiningClass());
+                        String invokedMethodId = targetType + '.' + methodName;
+                        StringJoiner sigStr = new StringJoiner(",");
+                        for (String parameterType : mRef.getParameterTypes())
+                            sigStr.add(raiseLowLevelType(parameterType));
+                        String targetRetType = raiseLowLevelType(mRef.getReturnType());
                         // TODO: read source line
                         Integer sourceLine = null;
-                        irMethod.addInvocation(methodName, arity, invokedMethodId, sourceLine, debug);
+                        irMethod.addInvocation(methodName, arity, invokedMethodId, targetType, targetRetType, sigStr.toString(), sourceLine, debug);
                         break;
                     }
                 }

@@ -1,6 +1,8 @@
 package org.clyze.source.irfitter.source.kotlin;
 
 import java.util.*;
+import java.util.function.Consumer;
+
 import org.antlr.grammars.KotlinParserBaseVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
@@ -46,15 +48,15 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, mc);
         boolean isAnonymous = false;
 
-        Set<TypeUsage> delegTypeUsages = new HashSet<>();
+        Set<TypeUse> delegTypeUses = new HashSet<>();
         List<String> superTypes = new ArrayList<>();
         if (delegSpecs != null)
             for (AnnotatedDelegationSpecifierContext aDSpec : delegSpecs.annotatedDelegationSpecifier()) {
-                delegTypeUsages.addAll((new KotlinModifierPack(sourceFile, aDSpec.annotation())).getAnnotationUses());
+                delegTypeUses.addAll((new KotlinModifierPack(sourceFile, aDSpec.annotation())).getAnnotationUses());
                 DelegationSpecifierContext dSpec = aDSpec.delegationSpecifier();
                 UserTypeContext dSpecType = dSpec.userType();
                 if (dSpecType != null) {
-                    addTypeUsagesInUserType(delegTypeUsages, dSpecType);
+                    addTypeUsesInUserType(delegTypeUses, dSpecType);
                     superTypes.add(getType(dSpecType));
                 }
             }
@@ -63,8 +65,8 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 pos, scope.getEnclosingElement(), parent, mp.isInner(), mp.isPublic(),
                 mp.isPrivate(), mp.isProtected(), mp.isAbstract(), mp.isFinal(),
                 isAnonymous);
-        jt.typeUsages.addAll(mp.getAnnotationUses());
-        jt.typeUsages.addAll(delegTypeUsages);
+        jt.typeUses.addAll(mp.getAnnotationUses());
+        jt.typeUses.addAll(delegTypeUses);
         sourceFile.jTypes.add(jt);
 
         if (sourceFile.debug)
@@ -102,6 +104,17 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     }
 
     @Override
+    public Void visitThisExpression(ThisExpressionContext thisExpr) {
+        JMethod enclosingMethod = scope.getEnclosingMethod();
+        Position position = KotlinUtils.createPositionFromTokens(thisExpr.start, thisExpr.stop);
+        if (enclosingMethod == null)
+            System.out.println("ERROR: found 'this' outside method: " + position);
+        else
+            enclosingMethod.addThisAccess(position);
+        return super.visitThisExpression(thisExpr);
+    }
+
+    @Override
     public Void visitPrimaryConstructor(PrimaryConstructorContext primaryConstr) {
         ClassParametersContext classParams = primaryConstr.classParameters();
         if (classParams != null)
@@ -119,7 +132,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     if (sourceFile.debug)
                         System.out.println("Adding field: " + srcField);
                     jt.fields.add(srcField);
-                    addTypeUsagesInType(jt.typeUsages, fType);
+                    addTypeUssInType(jt.typeUses, fType);
                 }
             }
         return null;
@@ -194,7 +207,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     @Override
     public Void visitPropertyDeclaration(PropertyDeclarationContext propMemDecl) {
         if (sourceFile.debug)
-            System.out.println("Visiting property declaration: " + propMemDecl);
+            System.out.println("Visiting property declaration: " + propMemDecl.getText());
         JType jt = scope.getEnclosingType();
         ModifiersContext modifiers = propMemDecl.modifiers();
         VariableDeclarationContext vDecl = propMemDecl.variableDeclaration();
@@ -236,7 +249,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
             System.out.println("ERROR: top-level field found: " + srcField);
         else {
             jt.fields.add(srcField);
-            addTypeUsagesInType(jt.typeUsages, fType);
+            addTypeUssInType(jt.typeUses, fType);
         }
         if (vExpr != null) {
             if (mp.isConst()) {
@@ -255,14 +268,17 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
 
     @Override
     public Void visitFunctionDeclaration(FunctionDeclarationContext funMemDecl) {
+        Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
         SimpleIdentifierContext fNameCtx = funMemDecl.simpleIdentifier();
         String fName = fNameCtx.getText();
+        if (sourceFile.debug)
+            System.out.println("Visiting function declaration: " + fName + "@" + outerPos);
         Type_Context fmdType = funMemDecl.type_();
         String retType = getType(fmdType);
-        Collection<TypeUsage> retTypeUsages = new HashSet<>();
-        addTypeUsagesInType(retTypeUsages, fmdType);
+        Collection<TypeUse> retTypeUses = new HashSet<>();
+        addTypeUssInType(retTypeUses, fmdType);
         List<JVariable> parameters = new ArrayList<>();
-        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
+        Collection<TypeUse> paramTypeUses = new HashSet<>();
         FunctionValueParametersContext funParamsCtx = funMemDecl.functionValueParameters();
         if (funParamsCtx != null) {
             for (FunctionValueParameterContext funParamCtx : funParamsCtx.functionValueParameter()) {
@@ -273,10 +289,9 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
                 KotlinModifierPack mp = new KotlinModifierPack(sourceFile, funParam.type_().typeModifiers());
                 parameters.add(new JVariable(sourceFile, paramPos, paramName, funType, mp));
-                addTypeUsagesInType(paramTypeUsages, funTypeCtx);
+                addTypeUssInType(paramTypeUses, funTypeCtx);
             }
         }
-        Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, funMemDecl.modifiers());
         JType jt = scope.getEnclosingType();
         if (jt == null)
@@ -289,7 +304,10 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs);
             jt.methods.add(jm);
             jm.setReceiver();
-            Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
+            Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
+            FunctionBodyContext funBody = funMemDecl.functionBody();
+            if (funBody != null)
+                scope.enterMethodScope(jm, (jm0 -> funBody.accept(this)));
         }
         return null;
     }
@@ -314,6 +332,127 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         }
         kfc.topLevelObject().forEach(this::visitChildren);
         return null;
+    }
+
+    /**
+     * Process an expression that may be an invocation. If the expression is
+     * not an invocation, nothing happens.
+     * @param expr  the expression
+     */
+    private void processInvocation(ExpressionContext expr) {
+        if (expr == null)
+            return;
+        if (sourceFile.debug)
+            System.out.println("Processing invocation: " + expr.getText());
+        processExprPostfixU(expr, ((PostfixUnaryExpressionContext postfixU) -> {
+            List<PostfixUnarySuffixContext> postUSufs = postfixU.postfixUnarySuffix();
+            if (postUSufs == null)
+                return;
+            for (PostfixUnarySuffixContext postUSuf : postUSufs) {
+                CallSuffixContext callSuffix = postUSuf.callSuffix();
+                if (callSuffix == null)
+                    continue;
+                ValueArgumentsContext valArgs = callSuffix.valueArguments();
+                if (valArgs == null)
+                    continue;
+                List<ValueArgumentContext> valArgList = valArgs.valueArgument();
+                if (valArgList == null)
+                    continue;
+                for (ValueArgumentContext valArg : valArgList) {
+                    if (sourceFile.debug)
+                        System.out.println("Processing argument: " + valArg.getText());
+                    processExprPostfixU(valArg.expression(),
+                            ((PostfixUnaryExpressionContext argPostfixU) -> {
+                                PrimaryExpressionContext primExpr = argPostfixU.primaryExpression();
+                                if (primExpr == null)
+                                    return;
+                                SimpleIdentifierContext simpleId = primExpr.simpleIdentifier();
+                                if (simpleId == null)
+                                    return;
+                                if (simpleId.getText().equals("this")) {
+                                    JMethod enclosingMethod = scope.getEnclosingMethod();
+                                    if (enclosingMethod == null)
+                                        System.out.println("ERROR: found 'this' without enclosing method: " + expr.getText());
+                                    else
+                                        enclosingMethod.addThisAccess(KotlinUtils.createPositionFromTokens(primExpr.start, primExpr.stop));
+                                }
+                            }));
+                }
+            }
+        }));
+    }
+
+    /**
+     * Process an "Expression" up to its "PostfixUnaryExpression" node and apply
+     * a processing function on that last node.
+     * @param expr  the expression to process
+     * @param proc  the processing function
+     */
+    private void processExprPostfixU(ExpressionContext expr, Consumer<PostfixUnaryExpressionContext> proc) {
+        if (expr == null)
+            return;
+        DisjunctionContext disj = expr.disjunction();
+        if (disj == null)
+            return;
+        for (ConjunctionContext conj : disj.conjunction()) {
+            List<EqualityContext> equalities = conj.equality();
+            if (equalities == null)
+                continue;
+            for (EqualityContext equ : equalities) {
+                List<ComparisonContext> comps = equ.comparison();
+                if (comps == null)
+                    continue;
+                for (ComparisonContext comp : comps) {
+                    List<InfixOperationContext> infOps = comp.infixOperation();
+                    if (infOps == null)
+                        continue;
+                    for (InfixOperationContext infOp : infOps) {
+                        List<ElvisExpressionContext> elvs = infOp.elvisExpression();
+                        if (elvs == null)
+                            continue;
+                        for (ElvisExpressionContext elv : elvs) {
+                            List<InfixFunctionCallContext> infCalls = elv.infixFunctionCall();
+                            if (infCalls == null)
+                                continue;
+                            for (InfixFunctionCallContext infCall : infCalls) {
+                                List<RangeExpressionContext> ranges = infCall.rangeExpression();
+                                if (ranges == null)
+                                    continue;
+                                for (RangeExpressionContext range : ranges) {
+                                    List<AdditiveExpressionContext> adds = range.additiveExpression();
+                                    if (adds == null)
+                                        continue;
+                                    for (AdditiveExpressionContext add : adds) {
+                                        List<MultiplicativeExpressionContext> mults = add.multiplicativeExpression();
+                                        if (mults != null) {
+                                            for (MultiplicativeExpressionContext mult : mults) {
+                                                List<AsExpressionContext> asExprs = mult.asExpression();
+                                                if (asExprs == null)
+                                                    continue;
+                                                for (AsExpressionContext asExpr : asExprs) {
+                                                    PrefixUnaryExpressionContext prefixU = asExpr.prefixUnaryExpression();
+                                                    if (prefixU == null)
+                                                        continue;
+                                                    PostfixUnaryExpressionContext postfixU = prefixU.postfixUnaryExpression();
+                                                    if (postfixU != null)
+                                                        proc.accept(postfixU);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Override
+    public Void visitExpression(ExpressionContext expr) {
+        processInvocation(expr);
+        return super.visitExpression(expr);
     }
 
     private static boolean isColonColonClass(NavigationSuffixContext ctx) {
@@ -370,9 +509,9 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 System.out.println("Encountered type reference: " + type);
             JType jt = scope.getEnclosingType();
             if (jt == null)
-                System.out.println("ERROR: cannot process top-level usage for type " + type);
+                System.out.println("ERROR: cannot process top-level use for type " + type);
             else
-                jt.typeUsages.add(new TypeUsage(type, KotlinUtils.createPositionFromTokens(ctx.start, ctx.stop), sourceFile));
+                jt.typeUses.add(new TypeUse(type, KotlinUtils.createPositionFromTokens(ctx.start, ctx.stop), sourceFile));
         }
         return super.visitPostfixUnaryExpression(ctx);
     }
@@ -427,43 +566,43 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         return sj.toString();
     }
 
-    private void addTypeUsagesInType(Collection<TypeUsage> target, Type_Context t) {
+    private void addTypeUssInType(Collection<TypeUse> target, Type_Context t) {
         if (t == null)
             return;
-        addTypeUsagesInParenType(target, t.parenthesizedType());
-        addTypeUsagesInNullableType(target, t.nullableType());
-        addTypeUsagesInRefType(target, t.typeReference());
+        addTypeUsesInParenType(target, t.parenthesizedType());
+        addTypeUsesInNullableType(target, t.nullableType());
+        addTypeUsesInRefType(target, t.typeReference());
 
     }
-    private void addTypeUsagesInParenType(Collection<TypeUsage> target, ParenthesizedTypeContext t) {
+    private void addTypeUsesInParenType(Collection<TypeUse> target, ParenthesizedTypeContext t) {
         if (t != null)
-            addTypeUsagesInType(target, t.type_());
+            addTypeUssInType(target, t.type_());
     }
-    private void addTypeUsagesInNullableType(Collection<TypeUsage> target, NullableTypeContext t) {
+    private void addTypeUsesInNullableType(Collection<TypeUse> target, NullableTypeContext t) {
         if (t != null) {
-            addTypeUsagesInParenType(target, t.parenthesizedType());
-            addTypeUsagesInRefType(target, t.typeReference());
+            addTypeUsesInParenType(target, t.parenthesizedType());
+            addTypeUsesInRefType(target, t.typeReference());
         }
     }
-    private void addTypeUsagesInUserType(Collection<TypeUsage> target, UserTypeContext userType) {
+    private void addTypeUsesInUserType(Collection<TypeUse> target, UserTypeContext userType) {
         if (userType != null) {
             List<SimpleUserTypeContext> simpleUserTypes = userType.simpleUserType();
             if (simpleUserTypes != null)
                 for (SimpleUserTypeContext simpleUserType : simpleUserTypes) {
                     SimpleIdentifierContext simpleId = simpleUserType.simpleIdentifier();
                     if (simpleId != null)
-                        target.add(new TypeUsage(simpleId.getText(), KotlinUtils.createPositionFromTokens(simpleId.start, simpleId.stop), sourceFile));
+                        target.add(new TypeUse(simpleId.getText(), KotlinUtils.createPositionFromTokens(simpleId.start, simpleId.stop), sourceFile));
                     TypeArgumentsContext typeArgs = simpleUserType.typeArguments();
                     if (typeArgs != null)
                         for (TypeProjectionContext typeProj : typeArgs.typeProjection())
-                            addTypeUsagesInType(target, typeProj.type_());
+                            addTypeUssInType(target, typeProj.type_());
                 }
         }
 
     }
 
-    private void addTypeUsagesInRefType(Collection<TypeUsage> target, TypeReferenceContext t) {
+    private void addTypeUsesInRefType(Collection<TypeUse> target, TypeReferenceContext t) {
         if (t != null)
-            addTypeUsagesInUserType(target, t.userType());
+            addTypeUsesInUserType(target, t.userType());
     }
 }

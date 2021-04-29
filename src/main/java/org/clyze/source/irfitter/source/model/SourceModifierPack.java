@@ -16,7 +16,7 @@ public abstract class SourceModifierPack extends ModifierPack {
     protected boolean isEnum = false;
     protected boolean isNative = false;
     protected boolean isVarArgs = false;
-    protected final Set<TypeUsage> annotationUses = new HashSet<>();
+    protected final Set<TypeUse> annotationUses = new HashSet<>();
 
     @Override
     public boolean isAbstract() {
@@ -63,12 +63,12 @@ public abstract class SourceModifierPack extends ModifierPack {
         return this.isVarArgs;
     }
 
-    public Set<TypeUsage> getAnnotationUses() {
+    public Set<TypeUse> getAnnotationUses() {
         return annotationUses;
     }
 
     protected void registerAnnotation(SourceFile sourceFile, String annotationType, Position annotationPos) {
         annotations.add(annotationType);
-        annotationUses.add(new TypeUsage(annotationType, annotationPos, sourceFile));
+        annotationUses.add(new TypeUse(annotationType, annotationPos, sourceFile));
     }
 }

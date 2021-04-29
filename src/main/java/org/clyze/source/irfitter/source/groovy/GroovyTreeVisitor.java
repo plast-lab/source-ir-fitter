@@ -107,12 +107,12 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         // Return types may be missing.
         ReturnTypeContext retCtx = ctx.returnType();
         String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
-        Collection<TypeUsage> retTypeUsages = new HashSet<>();
+        Collection<TypeUse> retTypeUses = new HashSet<>();
         if (retCtx != null)
-            addTypeUsagesInType(retTypeUsages, retCtx.type());
+            addTypeUsesInType(retTypeUses, retCtx.type());
         logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
         List<JVariable> parameters = new ArrayList<>();
-        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
+        Collection<TypeUse> paramTypeUses = new HashSet<>();
         FormalParametersContext paramsCtx = ctx.formalParameters();
         if (paramsCtx == null)
             System.err.println("WARNING: no formal parameters for " + name);
@@ -123,7 +123,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     String paramName = frmCtx.variableDeclaratorId().identifier().getText();
                     TypeContext frmType = frmCtx.type();
                     String paramType = getType(frmType);
-                    addTypeUsagesInType(paramTypeUsages, frmType);
+                    addTypeUsesInType(paramTypeUses, frmType);
                     Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
                     GroovyModifierPack mp = new GroovyModifierPack(frmCtx.variableModifiersOpt());
                     JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, mp);
@@ -141,7 +141,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos, isVarArgs);
         if (!mp.isStatic())
             jm.setReceiver();
-        registerMethodSigTypeUsages(ctx, jt, retTypeUsages, paramTypeUsages);
+        registerMethodSigTypeUses(ctx, jt, retTypeUses, paramTypeUses);
 
         if (jt == null)
             System.out.println("WARNING: top-level Groovy methods are not yet supported.");
@@ -153,27 +153,27 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return null;
     }
 
-    private void registerMethodSigTypeUsages(MethodDeclarationContext ctx, JType jt,
-                                             Collection<TypeUsage> retTypeUsages,
-                                             Collection<TypeUsage> paramTypeUsages) {
+    private void registerMethodSigTypeUses(MethodDeclarationContext ctx, JType jt,
+                                           Collection<TypeUse> retTypeUses,
+                                           Collection<TypeUse> paramTypeUses) {
         // Signature return/parameter types.
-        Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
+        Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
         // Thrown exception types.
         QualifiedClassNameListContext thrownQTypes = ctx.qualifiedClassNameList();
         if (thrownQTypes != null)
             for (AnnotatedQualifiedClassNameContext thrownQType : thrownQTypes.annotatedQualifiedClassName())
-                addTypeUsageFromQClassName(jt.typeUsages, thrownQType.qualifiedClassName());
+                addTypeUseFromQClassName(jt.typeUses, thrownQType.qualifiedClassName());
     }
 
-    private void addTypeUsageFromQClassName(Collection<TypeUsage> target, QualifiedClassNameContext qClassName) {
+    private void addTypeUseFromQClassName(Collection<TypeUse> target, QualifiedClassNameContext qClassName) {
         if (qClassName != null)
-            addTypeUsageFromName(target, qClassName.getText(), qClassName.start, qClassName.stop);
+            addTypeUseFromName(target, qClassName.getText(), qClassName.start, qClassName.stop);
     }
 
-    private void addTypeUsageFromName(Collection<TypeUsage> target, String name, Token start, Token stop) {
-        TypeUsage tu = new TypeUsage(name, GroovyUtils.createPositionFromTokens(start, stop), sourceFile);
+    private void addTypeUseFromName(Collection<TypeUse> target, String name, Token start, Token stop) {
+        TypeUse tu = new TypeUse(name, GroovyUtils.createPositionFromTokens(start, stop), sourceFile);
         if (sourceFile.debug)
-            System.out.println("Adding type usage: " + tu);
+            System.out.println("Adding type use: " + tu);
         target.add(tu);
     }
 
@@ -306,10 +306,17 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                                 superTypes, scope.getEnclosingElement(), pos, true);
                         logDebug(() -> "Adding type [anonymous]: " + anonymousType);
                         sourceFile.jTypes.add(anonymousType);
-                        anonymousType.typeUsages.add(new TypeUsage(createdNameValue, GroovyUtils.createPositionFromTokens(createdName.start, createdName.stop), sourceFile));
+                        anonymousType.typeUses.add(new TypeUse(createdNameValue, GroovyUtils.createPositionFromTokens(createdName.start, createdName.stop), sourceFile));
                         processClassBody(anonymousType, anonDecl.classBody());
                     }
                 }
+            } else if (primary instanceof ThisPrmrAltContext && ((ThisPrmrAltContext)primary).THIS() != null) {
+                JMethod enclosingMethod = scope.getEnclosingMethod();
+                Position position = GroovyUtils.createPositionFromTokens(primary.start, primary.stop);
+                if (enclosingMethod == null)
+                    System.err.println("ERROR: 'this' outside method at " + position);
+                else
+                    enclosingMethod.addThisAccess(position);
             } else
 	            primary.accept(this);
         }
@@ -456,9 +463,9 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     public Void visitFieldDeclaration(FieldDeclarationContext fieldDeclCtx) {
         JType jt = scope.getEnclosingType();
         VariableDeclarationContext varDecl = fieldDeclCtx.variableDeclaration();
-        Collection<TypeUsage> typeUsages = new ArrayList<>();
-        addTypeUsagesInType(typeUsages, varDecl.type());
-        jt.typeUsages.addAll(typeUsages);
+        Collection<TypeUse> typeUses = new ArrayList<>();
+        addTypeUsesInType(typeUses, varDecl.type());
+        jt.typeUses.addAll(typeUses);
         for (JVariable jVar : processVariableDeclaration(varDecl)) {
             ModifierPack mp = jVar.mp;
             JField field = new JField(sourceFile, jVar.type, jVar.name, mp.getAnnotations(), jVar.pos, jt);
@@ -497,16 +504,16 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         boolean isInner = parent != null && !mp.isStatic();
         String name = classId.getText();
 
-        List<TypeUsage> superTypeUsages = new ArrayList<>();
-        addTypeUsagesInTypeList(superTypeUsages, classDecl.scs);
-        addTypeUsagesInTypeList(superTypeUsages, classDecl.is);
-        List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
+        List<TypeUse> superTypeUses = new ArrayList<>();
+        addTypeUsesInTypeList(superTypeUses, classDecl.scs);
+        addTypeUsesInTypeList(superTypeUses, classDecl.is);
+        List<String> superTypes = superTypeUses.stream().map(tu -> tu.type).collect(Collectors.toList());
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
                 mp.isAbstract(), mp.isFinal(), false);
-        jt.typeUsages.addAll(mp.getAnnotationUses());
-        jt.typeUsages.addAll(superTypeUsages);
+        jt.typeUses.addAll(mp.getAnnotationUses());
+        jt.typeUses.addAll(superTypeUses);
         sourceFile.jTypes.add(jt);
 
         processClassBody(jt, classDecl.classBody());
@@ -524,28 +531,28 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         }));
     }
 
-    private void addTypeUsagesInTypeList(List<TypeUsage> target, TypeListContext tlc) {
+    private void addTypeUsesInTypeList(List<TypeUse> target, TypeListContext tlc) {
         if (tlc == null)
             return;
         List<? extends TypeContext> types = tlc.type();
         if (types != null)
             for (TypeContext t : types)
-                addTypeUsagesInType(target, t);
+                addTypeUsesInType(target, t);
     }
 
-    private void addTypeUsagesInType(Collection<TypeUsage> target, TypeContext t) {
+    private void addTypeUsesInType(Collection<TypeUse> target, TypeContext t) {
         if (t == null)
             return;
         ClassOrInterfaceTypeContext classOrIntfType = t.classOrInterfaceType();
         if (classOrIntfType != null) {
             QualifiedStandardClassNameContext stdClassName = classOrIntfType.qualifiedStandardClassName();
             if (stdClassName != null)
-                addTypeUsageFromName(target, stdClassName.getText(), stdClassName.start, stdClassName.stop);
-            addTypeUsageFromQClassName(target, classOrIntfType.qualifiedClassName());
+                addTypeUseFromName(target, stdClassName.getText(), stdClassName.start, stdClassName.stop);
+            addTypeUseFromQClassName(target, classOrIntfType.qualifiedClassName());
             TypeArgumentsContext typeArgs = classOrIntfType.typeArguments();
             if (typeArgs != null)
                 for (TypeArgumentContext typeArg : typeArgs.typeArgument())
-                    addTypeUsagesInType(target, typeArg.type());
+                    addTypeUsesInType(target, typeArg.type());
         }
     }
 

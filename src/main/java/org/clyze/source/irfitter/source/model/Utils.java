@@ -140,18 +140,18 @@ public class Utils {
 
     /**
      * Record type references found in method signatures.
-     * @param jt              the type that will record the type usages
-     * @param retTypeUsages   the type usages found in the return type (may be null)
-     * @param paramTypeUsages the type usages found in the parameter types
+     * @param jt            the type that will record the type uses
+     * @param retTypeUses   the type uses found in the return type (may be null)
+     * @param paramTypeUses the type uses found in the parameter types
      */
-    public static void addSigTypeRefs(JType jt, Collection<TypeUsage> retTypeUsages,
-                                      Collection<TypeUsage> paramTypeUsages) {
-        if (paramTypeUsages != null)
-            jt.typeUsages.addAll(paramTypeUsages);
-        if (retTypeUsages != null)
-            for (TypeUsage retTypeUsage : retTypeUsages)
-                if (!TypeUtils.isPrimitiveType(retTypeUsage.type))
-                    jt.typeUsages.add(retTypeUsage);
+    public static void addSigTypeRefs(JType jt, Collection<TypeUse> retTypeUses,
+                                      Collection<TypeUse> paramTypeUses) {
+        if (paramTypeUses != null)
+            jt.typeUses.addAll(paramTypeUses);
+        if (retTypeUses != null)
+            for (TypeUse retTypeUse : retTypeUses)
+                if (!TypeUtils.isPrimitiveType(retTypeUse.type))
+                    jt.typeUses.add(retTypeUse);
     }
 
 }

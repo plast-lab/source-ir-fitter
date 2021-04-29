@@ -1,6 +1,8 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
+
+import org.clyze.persistent.model.UsageKind;
 import org.clyze.persistent.model.jvm.JvmMethod;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
@@ -30,6 +32,8 @@ implements AbstractMethod {
     public final List<JBlock> blocks = new ArrayList<>();
     /** The method references found in the source code. */
     private List<JMethodRef> methodRefs = null;
+    /** The element uses found in the source code. */
+    public List<ElementUse> elementUses = new ArrayList<>();
     private Collection<String> cachedIds = null;
     /** True if this method accepts varargs. */
     private final boolean isVarArgs;
@@ -240,5 +244,29 @@ implements AbstractMethod {
      */
     public void setReceiver() {
         this.receiver = new JVariable(getSourceFile(), pos, "this", parent.getSimpleName(), null);
+    }
+
+    /**
+     * Add a variabe access (read/write).
+     * @param position      the position in the source code
+     * @param kind          the kind (READ/WRITE)
+     * @param var           the source variable
+     */
+    public void addVarAccess(Position position, UsageKind kind, JVariable var) {
+        VarUse vu = new VarUse(srcFile, position, kind, var);
+        if (srcFile.debug)
+            System.out.println("Adding variable use: " + vu);
+        elementUses.add(vu);
+    }
+
+    /**
+     * Add a (read) access to "this".
+     * @param position      the position of "this" in the source code
+     */
+    public void addThisAccess(Position position) {
+        if (receiver == null)
+            System.err.println("ERROR: found var 'this' in method without a receiver: " + this);
+        else
+            addVarAccess(position, UsageKind.DATA_READ, receiver);
     }
 }

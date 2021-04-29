@@ -1,15 +1,14 @@
 package org.clyze.source.irfitter.source.model;
 
+import java.util.Collection;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.Usage;
 import org.clyze.persistent.model.UsageKind;
 import org.clyze.source.irfitter.ir.model.IRMethodRef;
 
-import java.util.Collection;
-
 /**
  * Method references (<code>A::meth</code> in Java/Kotlin or {@code A.&meth} in Groovy).
- * The model of this feature reuses type usage machinery to be able to resolve
+ * The model of this feature reuses type-use machinery to be able to resolve
  * the type part of the reference.
  */
 public class JMethodRef extends TypedNamedElementWithPosition<IRMethodRef, Usage> {

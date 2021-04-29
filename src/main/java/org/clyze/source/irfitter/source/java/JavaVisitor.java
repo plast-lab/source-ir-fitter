@@ -39,21 +39,21 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(ClassOrInterfaceDeclaration td, JBlock block) {
-        List<TypeUsage> superTypeUsages = new ArrayList<>();
-        updateFromTypes(superTypeUsages, td.getExtendedTypes());
-        updateFromTypes(superTypeUsages, td.getImplementedTypes());
-        List<String> superTypes = superTypeUsages.stream().map(tu -> tu.type).collect(Collectors.toList());
+        List<TypeUse> superTypeUses = new ArrayList<>();
+        updateFromTypes(superTypeUses, td.getExtendedTypes());
+        updateFromTypes(superTypeUses, td.getImplementedTypes());
+        List<String> superTypes = superTypeUses.stream().map(tu -> tu.type).collect(Collectors.toList());
         JType jt = recordType(td, superTypes, false, td.isInterface());
-        jt.typeUsages.addAll(superTypeUsages);
+        jt.typeUses.addAll(superTypeUses);
         scope.enterTypeScope(jt, (jt0 -> super.visit(td, block)));
     }
 
-    void updateFromTypes(List<TypeUsage> types, NodeList<ClassOrInterfaceType> nl) {
+    void updateFromTypes(List<TypeUse> types, NodeList<ClassOrInterfaceType> nl) {
         if (nl != null)
             for (ClassOrInterfaceType t : nl) {
                 SimpleName name = t.getName();
                 Position pos = JavaUtils.createPositionFromNode(name);
-                types.add(new TypeUsage(name.asString(), pos, sourceFile));
+                types.add(new TypeUse(name.asString(), pos, sourceFile));
             }
     }
 
@@ -87,9 +87,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(MethodDeclaration md, JBlock block) {
         String retType = md.getTypeAsString();
-        Collection<TypeUsage> retTypeUsages = new HashSet<>();
-        addTypeUsagesFromType(retTypeUsages, md.getType());
-        visit(md, retType, retTypeUsages, (() -> super.visit(md, block)));
+        Collection<TypeUse> retTypeUses = new HashSet<>();
+        addTypeUsesFromType(retTypeUses, md.getType());
+        visit(md, retType, retTypeUses, (() -> super.visit(md, block)));
     }
 
     @Override
@@ -100,10 +100,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             return;
         }
         JavaModifierPack mp = new JavaModifierPack(sourceFile, vDecl);
-        jt.typeUsages.addAll(mp.getAnnotationUses());
+        jt.typeUses.addAll(mp.getAnnotationUses());
         for (VariableDeclarator variable : vDecl.getVariables()) {
             Type type = variable.getType();
-            addTypeUsagesFromType(jt.typeUsages, type);
+            addTypeUsesFromType(jt.typeUses, type);
             Position pos = JavaUtils.createPositionFromNode(variable);
             String name = variable.getNameAsString();
             if (block == null) {
@@ -124,15 +124,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     /**
-     * Helper method that recursively traverses a type and records all type usages.
+     * Helper method that recursively traverses a type and records all type uses.
      * @param target        the collection to populate
      * @param type          the type to traverse
      */
-    private void addTypeUsagesFromType(Collection<TypeUsage> target, Type type) {
+    private void addTypeUsesFromType(Collection<TypeUse> target, Type type) {
         if (type.isPrimitiveType() || type.isVoidType())
             return;
 
-        // Add all annotation type usages.
+        // Add all annotation type uses.
         target.addAll((new JavaModifierPack(sourceFile, type.getAnnotations())).getAnnotationUses());
 
         // Nothing else to do for unknown types.
@@ -142,31 +142,31 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
             SimpleName name = classOrIntf.getName();
-            TypeUsage tu = new TypeUsage(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
+            TypeUse tu = new TypeUse(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
             target.add(tu);
             if (sourceFile.debug)
-                System.out.println("Added type usage: " + tu);
+                System.out.println("Added type use: " + tu);
             classOrIntf.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
-                    addTypeUsagesFromType(target, typeArg);
+                    addTypeUsesFromType(target, typeArg);
             });
         } else if (type.isArrayType())
-            addTypeUsagesFromType(target, ((ArrayType) type).getComponentType());
+            addTypeUsesFromType(target, ((ArrayType) type).getComponentType());
         else if (type.isIntersectionType())
-            System.err.println("WARNING: intersection type usages are not yet recorded.");
+            System.err.println("WARNING: intersection type uses are not yet recorded.");
         else if (type.isTypeParameter())
-            System.err.println("WARNING: type parameter usages are not yet recorded.");
+            System.err.println("WARNING: type parameter uses are not yet recorded.");
         else if (type.isUnionType()) {
             UnionType uType = (UnionType) type;
-            uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsagesFromType(target, refType)));
+            uType.getElements().ifNonEmpty(nl -> nl.forEach(refType -> addTypeUsesFromType(target, refType)));
         } else if (type.isVarType())
-            System.err.println("WARNING: var-type usages are not yet recorded.");
+            System.err.println("WARNING: var-type uses are not yet recorded.");
         else if (type.isWildcardType()) {
             WildcardType wType = ((WildcardType)type);
-            wType.getExtendedType().ifPresent(refType -> addTypeUsagesFromType(target, refType));
-            wType.getSuperType().ifPresent(refType -> addTypeUsagesFromType(target, refType));
+            wType.getExtendedType().ifPresent(refType -> addTypeUsesFromType(target, refType));
+            wType.getSuperType().ifPresent(refType -> addTypeUsesFromType(target, refType));
         } else
-            System.err.println("WARNING: unknown type usage for element: " + type.getClass().getSimpleName());
+            System.err.println("WARNING: unknown type use for element: " + type.getClass().getSimpleName());
     }
 
 //    @Override
@@ -183,7 +183,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.out.println("ERROR: found initializer declaration outside type: " + init);
             return;
         }
-        jt.typeUsages.addAll(new JavaModifierPack(sourceFile, init.getAnnotations()).getAnnotationUses());
+        jt.typeUses.addAll(new JavaModifierPack(sourceFile, init.getAnnotations()).getAnnotationUses());
 
         JInit initMethod = init.isStatic() ? jt.classInitializer : jt.initBlock;
         initMethod.setSource(true);
@@ -195,17 +195,17 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     private <T extends CallableDeclaration<?>>
-    void visit(CallableDeclaration<T> md, String retType, Collection<TypeUsage> retTypeUsages,
+    void visit(CallableDeclaration<T> md, String retType, Collection<TypeUse> retTypeUses,
                Runnable methodProcessor) {
         SimpleName name = md.getName();
         List<JVariable> parameters = new ArrayList<>();
-        Collection<TypeUsage> paramTypeUsages = new HashSet<>();
+        Collection<TypeUse> paramTypeUses = new HashSet<>();
         boolean isVarArgs = false;
         for (Parameter param : md.getParameters()) {
             if (param.isVarArgs())
                 isVarArgs = true;
             Type pType = param.getType();
-            addTypeUsagesFromType(paramTypeUsages, pType);
+            addTypeUsesFromType(paramTypeUses, pType);
             Position paramPos = JavaUtils.createPositionFromNode(param);
             JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
             parameters.add(new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), mp));
@@ -217,10 +217,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 JavaUtils.createPositionFromNode(name), isVarArgs);
         if (!mp.isStatic())
             jm.setReceiver();
-        jt.typeUsages.addAll(mp.getAnnotationUses());
-        Utils.addSigTypeRefs(jt, retTypeUsages, paramTypeUsages);
+        jt.typeUses.addAll(mp.getAnnotationUses());
+        Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
         for (ReferenceType thrownException : md.getThrownExceptions())
-            addTypeUsagesFromType(jt.typeUsages, thrownException);
+            addTypeUsesFromType(jt.typeUses, thrownException);
         if (sourceFile.debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);
@@ -232,15 +232,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(FieldDeclaration fd, JBlock block) {
         for (VariableDeclarator vd : fd.getVariables()) {
-            Collection<TypeUsage> fieldTypeUsages = new ArrayList<>();
-            addTypeUsagesFromType(fieldTypeUsages, vd.getType());
+            Collection<TypeUse> fieldTypeUses = new ArrayList<>();
+            addTypeUsesFromType(fieldTypeUses, vd.getType());
             JType jt = scope.getEnclosingType();
-            jt.typeUsages.addAll(fieldTypeUsages);
+            jt.typeUses.addAll(fieldTypeUses);
 
             JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false, false);
             JField srcField = new JField(sourceFile, typeOf(vd), vd.getNameAsString(),
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
-            jt.typeUsages.addAll(mp.getAnnotationUses());
+            jt.typeUses.addAll(mp.getAnnotationUses());
             if (sourceFile.debug)
                 System.out.println("Adding field: " + srcField);
             jt.fields.add(srcField);
@@ -300,10 +300,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         JMethod parentMethod = scope.getEnclosingMethod();
         Optional<NodeList<BodyDeclaration<?>>> anonymousClassBody = objCExpr.getAnonymousClassBody();
         boolean isAnonymousClassDecl = anonymousClassBody.isPresent();
-        Collection<TypeUsage> typeUsages = new ArrayList<>();
-        addTypeUsagesFromType(typeUsages, objCExpr.getType());
+        Collection<TypeUse> typeUses = new ArrayList<>();
+        addTypeUsesFromType(typeUses, objCExpr.getType());
         JType enclosingType = scope.getEnclosingType();
-        enclosingType.typeUsages.addAll(typeUsages);
+        enclosingType.typeUses.addAll(typeUses);
         String simpleType = Utils.getSimpleType(typeOf(objCExpr));
         if (isAnonymousClassDecl) {
             List<String> superTypes = Collections.singletonList(simpleType);
@@ -372,7 +372,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         }
 
         for (ArrayCreationLevel level : arrayCreationExpr.getLevels())
-            jt.typeUsages.addAll((new JavaModifierPack(sourceFile, level.getAnnotations())).getAnnotationUses());
+            jt.typeUses.addAll((new JavaModifierPack(sourceFile, level.getAnnotations())).getAnnotationUses());
 
         JMethod parentMethod = scope.getEnclosingMethod();
         Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
@@ -413,10 +413,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(ClassExpr classExpr, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(classExpr);
-        TypeUsage tu = new TypeUsage(classExpr.getTypeAsString(), pos, sourceFile);
+        TypeUse tu = new TypeUse(classExpr.getTypeAsString(), pos, sourceFile);
         if (sourceFile.debug)
-            System.out.println("Registering type usage: " + tu);
-        scope.getEnclosingType().typeUsages.add(tu);
+            System.out.println("Registering type use: " + tu);
+        scope.getEnclosingType().typeUses.add(tu);
     }
 
     @Override
@@ -430,8 +430,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(Parameter param, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null) {
-            addTypeUsagesFromType(jt.typeUsages, param.getType());
-            jt.typeUsages.addAll(new JavaModifierPack(sourceFile, param).getAnnotationUses());
+            addTypeUsesFromType(jt.typeUses, param.getType());
+            jt.typeUses.addAll(new JavaModifierPack(sourceFile, param).getAnnotationUses());
         } else
             System.err.println("WARNING: found parameter outside type: " + param);
     }
@@ -440,7 +440,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(CastExpr castExpr, JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null)
-            addTypeUsagesFromType(jt.typeUsages, castExpr.getType());
+            addTypeUsesFromType(jt.typeUses, castExpr.getType());
         else
             System.err.println("WARNING: found cast outside type: " + castExpr);
         super.visit(castExpr, block);
@@ -504,7 +504,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         else
             fieldAccess.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
-                    addTypeUsagesFromType(jt.typeUsages, typeArg);
+                    addTypeUsesFromType(jt.typeUses, typeArg);
             });
     }
 
@@ -512,6 +512,19 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(FieldAccessExpr fieldAccess, JBlock block) {
         // This method is assumed to only find reads and be overridden when visiting field writes.
         visitFieldAccess(fieldAccess, true);
+    }
+
+    @Override
+    public void visit(ThisExpr thisExpr, JBlock block) {
+        System.out.println("thisExpr = " + thisExpr);
+        JMethod enclosingMethod = scope.getEnclosingMethod();
+        if (enclosingMethod == null)
+            System.err.println("ERROR: found variable 'this' outside method: " + thisExpr);
+        else if (thisExpr.getTypeName().isPresent())
+            System.err.println("ERROR: qualified 'this' is not supported yet: " + thisExpr);
+        else
+            enclosingMethod.addThisAccess(JavaUtils.createPositionFromNode(thisExpr));
+        super.visit(thisExpr, block);
     }
 
     private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
@@ -529,7 +542,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 JavaUtils.createPositionFromNode(name), scope.getEnclosingElement(),
                 parent, isInner, mp.isPublic(), mp.isPrivate(), mp.isProtected(),
                 mp.isAbstract(), mp.isFinal(), false);
-        jt.typeUsages.addAll(mp.getAnnotationUses());
+        jt.typeUses.addAll(mp.getAnnotationUses());
         return jt;
     }
 }

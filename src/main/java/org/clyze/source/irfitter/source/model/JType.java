@@ -26,7 +26,7 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
     public final JInit initBlock;
     public final List<JField> fields = new ArrayList<>();
     public final List<JMethod> methods = new ArrayList<>();
-    public final List<TypeUsage> typeUsages = new ArrayList<>();
+    public final List<TypeUse> typeUses = new ArrayList<>();
     private int anonymousClassCounter = 1;
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,

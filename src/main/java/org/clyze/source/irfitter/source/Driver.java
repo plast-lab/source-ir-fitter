@@ -6,7 +6,6 @@ import java.nio.file.Files;
 import java.util.*;
 
 import org.clyze.source.irfitter.RunResult;
-import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.source.irfitter.matcher.Aliaser;
@@ -133,7 +132,7 @@ public class Driver {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
         for (SourceFile sf : sources) {
-            addImportUsages(sf.getJvmMetadata(), sf);
+            addImportUses(sf.getJvmMetadata(), sf);
             System.out.println("==> Matching elements in " + sf.getRelativePath());
             sf.matcher.matchTypes(idMapper, irTypes);
             unmatched += sf.reportUmatched(debug);
@@ -153,11 +152,12 @@ public class Driver {
         }
 
         if (debug)
-            System.out.println("* Performing fuzzy type matching for type/field references...");
+            System.out.println("* Matching type/field/variable references...");
         for (SourceFile sf : sources) {
             JvmMetadata bm = sf.getJvmMetadata();
             for (JType jt : sf.jTypes) {
-                matchTypeUsages(allIrTypes, bm, jt);
+                matchTypeUses(allIrTypes, bm, jt);
+                processElementUses(bm, jt);
             }
         }
 
@@ -183,9 +183,14 @@ public class Driver {
         return new RunResult(unmatched);
     }
 
+    private void processElementUses(JvmMetadata bm, JType jt) {
+        for (JMethod srcMethod : jt.methods)
+            for (ElementUse elemUse : srcMethod.elementUses)
+                registerSymbol(bm, elemUse.getUse());
+    }
+
     private void resolveInvocationTargets(Collection<SourceFile> sources) {
         Map<String, IRType> irTypes = new HashMap<>();
-        Map<String, IRMethod> irMethods = new HashMap<>();
         List<JMethodInvocation> srcInvos = new ArrayList<>();
         for (SourceFile sf : sources) {
             for (JType srcType : sf.jTypes) {
@@ -193,8 +198,6 @@ public class Driver {
                 if (irType == null)
                     continue;
                 irTypes.put(irType.getId(), irType);
-                for (IRMethod irMethod : irType.methods)
-                    irMethods.put(irMethod.getId(), irMethod);
                 for (JMethod srcMethod : srcType.methods) {
                     for (JMethodInvocation srcInvo : srcMethod.invocations) {
                         IRMethodInvocation irInvo = srcInvo.matchElement;
@@ -243,59 +246,59 @@ public class Driver {
     }
 
     /**
-     * Update the metadata with the usages calculated from "import" statements.
+     * Update the metadata with the uses calculated from "import" statements.
      * @param bm   the metadata to update
      * @param sf   the source file
      */
-    private void addImportUsages(JvmMetadata bm, SourceFile sf) {
+    private void addImportUses(JvmMetadata bm, SourceFile sf) {
         for (Import imp : sf.imports)
             if (!imp.isAsterisk && !imp.isStatic)
                 bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), true, imp.getUniqueId(sf), imp.name, UsageKind.TYPE));
     }
 
     /**
-     * Match type usages against the IR types. This may not resolve all such
+     * Match type uses against the IR types. This may not resolve all such
      * type references, e.g. compile-time-only annotations may be missed.
      * @param allIrTypes     the set of all IR types found
      * @param bm             the object to use to write the metadata
-     * @param jt             the type that contains the unresolved type usages
+     * @param jt             the type that contains the unresolved type uses
      */
-    private void matchTypeUsages(Set<String> allIrTypes, JvmMetadata bm, JType jt) {
-        List<TypeUsage> typeUsages = jt.typeUsages;
-        if (typeUsages.isEmpty() || jt.matchElement == null)
+    private void matchTypeUses(Set<String> allIrTypes, JvmMetadata bm, JType jt) {
+        List<TypeUse> typeUses = jt.typeUses;
+        if (typeUses.isEmpty() || jt.matchElement == null)
             return;
 
         Set<String> irAnnotations = jt.matchElement.mp.getAnnotations();
         Set<String> irTypeRefs = new HashSet<>();
         jt.matchElement.addReferencedTypesTo(irTypeRefs);
-        for (TypeUsage typeUsage : typeUsages) {
+        for (TypeUse typeUse : typeUses) {
             if (debug)
-                System.out.println("Examining type usage: " + typeUsage);
-            Collection<String> irTypeIds = typeUsage.getIds();
+                System.out.println("Examining type use: " + typeUse);
+            Collection<String> irTypeIds = typeUse.getIds();
             for (String irTypeId : irTypeIds) {
                 // Match type uses against local annotation uses or the global IR types.
                 if (irAnnotations.contains(irTypeId) || irTypeRefs.contains(irTypeId))
-                    matchTypeUsage(typeUsage, irTypeId);
+                    matchTypeUse(typeUse, irTypeId);
             }
-            if (typeUsage.matchId == null) {
+            if (typeUse.referenceId == null) {
                 if (debug)
-                    System.out.println("Type usage still unresolved, trying slow global matching: " + typeUsage + " with type ids = " + irTypeIds);
+                    System.out.println("Type use still unresolved, trying slow global matching: " + typeUse + " with type ids = " + irTypeIds);
                 for (String irTypeId : irTypeIds) {
                     if (allIrTypes.contains(irTypeId) || BOXED_REPRESENTATIONS.contains(irTypeId))
-                        matchTypeUsage(typeUsage, irTypeId);
+                        matchTypeUse(typeUse, irTypeId);
                 }
             }
-            if (typeUsage.matchId != null)
-                registerSymbol(bm, typeUsage.getUsage());
+            if (typeUse.referenceId != null)
+                registerSymbol(bm, typeUse.getUse());
             else if (debug)
-                System.out.println("Type usage could not be resolved: " + typeUsage);
+                System.out.println("Type use could not be resolved: " + typeUse);
         }
     }
 
-    private void matchTypeUsage(TypeUsage typeUsage, String irTypeId) {
+    private void matchTypeUse(TypeUse typeUse, String irTypeId) {
         if (debug)
-            System.out.println("Matched use for type '" + typeUsage.type + "': " + irTypeId);
-        typeUsage.matchId = irTypeId;
+            System.out.println("Matched use for type '" + typeUse.type + "': " + irTypeId);
+        typeUse.referenceId = irTypeId;
     }
 
     private void registerSymbol(JvmMetadata bm, SymbolWithId symbol) {

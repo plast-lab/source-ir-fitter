@@ -516,7 +516,6 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(ThisExpr thisExpr, JBlock block) {
-        System.out.println("thisExpr = " + thisExpr);
         JMethod enclosingMethod = scope.getEnclosingMethod();
         if (enclosingMethod == null)
             System.err.println("ERROR: found variable 'this' outside method: " + thisExpr);

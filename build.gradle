@@ -16,7 +16,6 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven { url "http://centauri.di.uoa.gr:8081/artifactory/plast-public" }
-    maven { url 'https://dl.bintray.com/gfour/plast-lab' }
 }
 
 mainClassName = 'org.clyze.source.irfitter.Main'

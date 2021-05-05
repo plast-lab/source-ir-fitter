@@ -181,9 +181,9 @@ public class Main {
                     if (!cli.hasOption(depOpt.getOpt()) && !cli.hasOption(depOpt.getLongOpt())) {
                         StringJoiner sj = new StringJoiner("/");
                         if (depOpt.getOpt() != null)
-                            sj.add(depOpt.getOpt());
+                            sj.add("-" + depOpt.getOpt());
                         if (depOpt.getLongOpt() != null)
-                            sj.add(depOpt.getLongOpt());
+                            sj.add("--" + depOpt.getLongOpt());
                         System.err.println("ERROR: --" + opt.getLongOpt() + " requires " + sj);
                         return true;
                     }

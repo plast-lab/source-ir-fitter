@@ -177,10 +177,11 @@ implements AbstractMethod {
      * @param sourceFile     the source file
      * @param block          the containing block
      * @param base           the receiver variable (if it exists)
+     * @return               the invocation that was added
      */
-    public void addInvocation(Scope scope, String name, int arity,
-                              Position pos, SourceFile sourceFile,
-                              JBlock block, String base) {
+    public JMethodInvocation
+    addInvocation(Scope scope, String name, int arity, Position pos,
+                  SourceFile sourceFile, JBlock block, String base) {
         boolean inIIB = scope.inInitializer || parent == null;
         JMethodInvocation invo = new JMethodInvocation(sourceFile, pos,
                 name, arity, this, inIIB, block, base);
@@ -191,6 +192,7 @@ implements AbstractMethod {
                 System.out.println("Adding invocation: " + invo);
             invocations.add(invo);
         }
+        return invo;
     }
 
     /**

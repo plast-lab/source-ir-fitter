@@ -76,7 +76,7 @@ implements AbstractMethodInvocation, Targetable {
     @Override
     public String getId() {
         String parentDesc = parent == null ? "{}" : (parent.matchId == null ? parent.toString() : parent.matchId);
-        return "method: [base: " + base + ", parent:" + parentDesc + "]/" + methodName + ":" + arity + getLocation();
+        return "method: [base: " + base + ", target:" + target + ", parent:" + parentDesc + "]/" + methodName + ":" + arity + getLocation();
     }
 
     public JVariable getBase() {

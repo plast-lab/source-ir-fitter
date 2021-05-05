@@ -43,11 +43,14 @@ public class DoopMatcher {
         processInstanceInvocations("VirtualMethodInvocation.facts", 5, 0, 3);
         processAssignHeap();
         processAssignLocal();
+        processAssignReturnValue();
     }
 
     private void processFacts(String factsFileName, int columns, Consumer<String[]> proc) {
         File factsFile = new File(db, factsFileName);
         if (factsFile.exists()) {
+            if (debug)
+                System.err.println("Processing file: " + factsFileName);
             try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(factsFile))))  {
                 br.lines().forEach(line -> {
                     String[] parts = line.split("\t");
@@ -64,23 +67,37 @@ public class DoopMatcher {
             System.err.println("ERROR: could not read " + factsFile);
     }
 
+    private <T extends Targetable>
+    void processTargetVariable(String TAG, Map<String, Collection<T>> map,
+                               String irInstrId, String irVarId) {
+        Collection<? extends Targetable> srcInstrs = map.get(irInstrId);
+        if (srcInstrs != null)
+            for (Targetable srcInstr : srcInstrs) {
+                if (debug)
+                    System.out.println(TAG + ": IR targetable: " + irInstrId + " -> " + srcInstr);
+                JVariable srcVar = srcInstr.getTarget();
+                if (srcVar != null)
+                    aliaser.addIrAlias(TAG, srcVar, irVarId);
+            }
+    }
+
+    /**
+     * Process the assignments from heap allocations to IR "variables".
+     */
+    private void processAssignReturnValue() {
+        processFacts("AssignReturnValue.facts", 2, ((String[] parts) -> {
+            String irInvoId = parts[0], irVarId = parts[1];
+            processTargetVariable("ASSIGN_RETURN_FACTS", idMapper.invocationMap, irInvoId, irVarId);
+        }));
+    }
+
     /**
      * Process the assignments from heap allocations to IR "variables".
      */
     private void processAssignHeap() {
         processFacts("AssignHeapAllocation.facts", 6, ((String[] parts) -> {
             String irAllocId = parts[2], irVarId = parts[3];
-            Map<String, Collection<JAllocation>> allocationMap = idMapper.allocationMap;
-            Collection<JAllocation> srcAllocs = allocationMap.get(irAllocId);
-            if (srcAllocs != null) {
-                for (Targetable srcAlloc : srcAllocs) {
-                    if (debug)
-                        System.out.println("ALLOC_FACTS: IR allocation: " + irAllocId + " -> " + srcAlloc);
-                    JVariable srcVar = srcAlloc.getTarget();
-                    if (srcVar != null)
-                        aliaser.addIrAlias("ALLOC_FACTS", srcVar, irVarId);
-                }
-            }
+            processTargetVariable("ALLOC_FACTS", idMapper.allocationMap, irAllocId, irVarId);
         }));
     }
 

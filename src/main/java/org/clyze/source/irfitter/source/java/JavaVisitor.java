@@ -9,7 +9,9 @@ import com.github.javaparser.ast.nodeTypes.modifiers.NodeWithStaticModifier;
 import com.github.javaparser.ast.stmt.*;
 import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+import com.github.javaparser.printer.YamlPrinter;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.source.model.*;
@@ -22,7 +24,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     /** The mapping from AST nodes to heap sites. */
     private final Map<Expression, JAllocation> heapSites = new HashMap<>();
     /** The mapping from AST nodes to call sites. */
-    private final Map<Expression, JMethodInvocation> callSites = new HashMap<>();
+    private final Map<Node, JMethodInvocation> callSites = new HashMap<>();
     /** The source code file. */
     private final SourceFile sourceFile;
 
@@ -31,10 +33,13 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     @Override
-    public void visit(CompilationUnit n, JBlock block) {
+    public void visit(CompilationUnit cu, JBlock block) {
         // Add default Java imports.
         sourceFile.imports.add(new Import(null, "java.lang", true, false));
-        super.visit(n, block);
+        super.visit(cu, block);
+
+        if (sourceFile.debug)
+            System.out.println(new YamlPrinter(true).output(cu));
     }
 
     @Override
@@ -118,7 +123,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             if (initializer.isPresent()) {
                 Expression initExpr = initializer.get();
                 initExpr.accept(this, block);
-                registerTarget(heapSites, v, initExpr);
+                registerPossibleTarget(() -> v, initExpr);
             }
         }
     }
@@ -248,7 +253,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             if (optInitializer != null && optInitializer.isPresent()) {
                 final boolean isStaticField = mp.isStatic();
                 Expression initExpr = optInitializer.get();
-                if (isStaticField && fd.isFinal() && (initExpr instanceof StringLiteralExpr)) {
+                if (isStaticField && fd.isFinal() && (initExpr.isStringLiteralExpr())) {
                     StringLiteralExpr s = (StringLiteralExpr) initExpr;
                     String sValue = s.getValue();
                     if (sourceFile.debug)
@@ -289,8 +294,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: explicit constructors in initializers");
-        else
-            parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile, block, null);
+        else {
+            JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile, block, null);
+            callSites.put(constrInvo, invo);
+        }
         super.visit(constrInvo, block);
     }
 
@@ -321,7 +328,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.out.println("ERROR: allocations/invocations in object creation in initializers");
         else {
             String base = getName(objCExpr.getScope());
-            parentMethod.addInvocation(this.scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile, block, base);
+            JMethodInvocation invo = parentMethod.addInvocation(this.scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile, block, base);
+            callSites.put(objCExpr, invo);
             // If anonymous, add placeholder allocation, to be matched later.
             JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
             heapSites.put(objCExpr, alloc);
@@ -344,7 +352,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Expression baseExpr = mRef.getScope();
         if (id.equals("new"))
             id = "<init>";
-        if (baseExpr instanceof TypeExpr) {
+        if (baseExpr.isTypeExpr()) {
             // TypeExpr tScope = (TypeExpr) baseExpr;
             Position pos = JavaUtils.createPositionFromNode(mRef);
             JType jt = scope.getEnclosingType();
@@ -390,16 +398,14 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(MethodCallExpr call, JBlock block) {
         int arity = call.getArguments().size();
         Position pos = JavaUtils.createPositionFromNode(call);
-        recordInvocation(call.getName().getIdentifier(), arity, pos, block, getName(call.getScope()));
-        super.visit(call, block);
-    }
-
-    private void recordInvocation(String name, int arity, Position pos, JBlock block, String base) {
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
-        else
-            parentMethod.addInvocation(scope, name, arity, pos, sourceFile, block, base);
+        else {
+            JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
+            callSites.put(call, invo);
+        }
+        super.visit(call, block);
     }
 
     @Override
@@ -449,7 +455,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(AssignExpr assignExpr, JBlock block) {
         Expression target = assignExpr.getTarget();
-        if (target instanceof FieldAccessExpr) {
+        if (target.isFieldAccessExpr()) {
             FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
             // Any field accesses in the "scope" should be reads.
             fieldAcc.getScope().accept(this, block);
@@ -460,31 +466,35 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Expression value = assignExpr.getValue();
         value.accept(this, block);
 
-        // Finally, record "x" variable information for "x = new ..." / "x = m()" expressions.
-        if ((block != null) && (target instanceof NameExpr)) {
-            if (value instanceof ObjectCreationExpr || value instanceof ArrayCreationExpr)
-                registerTarget(heapSites, block, target, value);
-            else if (value instanceof MethodCallExpr)
-                registerTarget(callSites, block, target, value);
-        }
+        if ((block != null) && (target.isNameExpr()))
+            registerPossibleTarget((() -> block.lookup(((NameExpr) target).getNameAsString())), value);
     }
 
-    private void registerTarget(Map<Expression, ? extends Targetable> map, JBlock block,
-                                Expression target, Expression value) {
-        JVariable v = block.lookup(((NameExpr) target).getNameAsString());
+    /**
+     * Record "x" variable information ("x = new ..." / "x = m()" / "x = (T) m()").
+     * Ordering matters: this method must be called after visiting the
+     * expression/statement that assigns the value to the target variable.
+     */
+    private void registerPossibleTarget(Supplier<JVariable> target, Expression value) {
+        if (value.isObjectCreationExpr() || value.isArrayCreationExpr())
+            registerTarget(heapSites, target, value);
+        else if (value.isMethodCallExpr())
+            registerTarget(callSites, target, value);
+        else if (value.isCastExpr())
+            registerPossibleTarget(target, value.asCastExpr().getExpression());
+    }
+
+    private void registerTarget(Map<? extends Node, ? extends Targetable> map,
+                                Supplier<JVariable> target, Expression value) {
+        JVariable v = target.get();
         if (v == null)
             return;
-        registerTarget(map, v, value);
-    }
-
-    private void registerTarget(Map<Expression, ? extends Targetable> map,
-                                JVariable target, Expression value) {
         Targetable element = map.get(value);
         if (element == null)
             return;
-        element.setTarget(target);
+        element.setTarget(v);
         if (sourceFile.debug)
-            System.out.println("ALLOC_ASSIGNMENT: " + target + " := " + element);
+            System.out.println("TARGET_ASSIGNMENT: " + v + " := " + element);
     }
 
     private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read) {

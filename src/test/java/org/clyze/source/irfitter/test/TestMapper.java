@@ -34,7 +34,7 @@ public class TestMapper {
         String outDir = "build/test-out-kotlin";
         RunResult rr = generateJson("noarg-compiler-plugin.jar", "noarg-compiler-plugin-sources.zip", outDir);
         assert (new File(outDir).listFiles() != null);
-        assert (rr.unmatched == 8);
+        assert (rr.unmatched == 25);
     }
 
     RunResult generateJson(String jarRes, String sourcesJarRes, String outDir) throws IOException {

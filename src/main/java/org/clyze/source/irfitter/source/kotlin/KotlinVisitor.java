@@ -244,7 +244,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers);
         JField srcField = new JField(sourceFile, fTypeName, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (sourceFile.debug)
-            System.out.println("Found source field: " + srcField + " : " + mp.toString());
+            System.out.println("Found source field: " + srcField + " : " + mp);
         if (jt == null)
             System.out.println("ERROR: top-level field found: " + srcField);
         else {
@@ -288,7 +288,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 String funType = getType(funTypeCtx);
                 Position paramPos = KotlinUtils.createPositionFromTokens(funParam.start, funParam.stop);
                 KotlinModifierPack mp = new KotlinModifierPack(sourceFile, funParam.type_().typeModifiers());
-                parameters.add(new JVariable(sourceFile, paramPos, paramName, funType, mp));
+                parameters.add(new JVariable(sourceFile, paramPos, paramName, funType, false, mp));
                 addTypeUssInType(paramTypeUses, funTypeCtx);
             }
         }

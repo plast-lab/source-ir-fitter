@@ -11,6 +11,8 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
     public final String name;
     /** The element type. Can be null when the type is omitted (Groovy, Kotlin). */
     public final String type;
+    /** If true, this is a local variable; if false, this is a method parameter. */
+    private final boolean isLocal;
     /** The modifiers of the element. */
     public final ModifierPack mp;
     /** The initial string value. */
@@ -22,13 +24,15 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
      * @param position   the position of the variable
      * @param name       the name of the variable
      * @param type       the type of the variable (may be null)
+     * @param isLocal    true for method locals, false for method parameters
      * @param mp         the modifiers of this variable
      */
     public JVariable(SourceFile sourceFile, Position position, String name,
-                     String type, ModifierPack mp) {
+                     String type, boolean isLocal, ModifierPack mp) {
         super(sourceFile, position);
         this.name = name;
         this.type = type;
+        this.isLocal = isLocal;
         this.mp = mp;
     }
 
@@ -42,7 +46,7 @@ public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable>
         if (symbol == null)
             symbol = new JvmVariable(pos, srcFile.getRelativePath(), true,
                     irElement.name, irElement.getId(), type,
-                    irElement.declaringMethodId, false, true, false);
+                    irElement.declaringMethodId, isLocal, !isLocal, false);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }

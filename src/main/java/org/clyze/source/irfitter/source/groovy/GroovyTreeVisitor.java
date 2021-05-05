@@ -126,7 +126,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                     addTypeUsesInType(paramTypeUses, frmType);
                     Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
                     GroovyModifierPack mp = new GroovyModifierPack(frmCtx.variableModifiersOpt());
-                    JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, mp);
+                    JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, false, mp);
                     logDebug(() -> "param: " + param);
                     parameters.add(param);
                 }
@@ -413,7 +413,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
             for (VariableDeclaratorContext vDecl : vDecls) {
                 IdentifierContext vId = vDecl.variableDeclaratorId().identifier();
                 String vName = vId.getText();
-                JVariable jv = new JVariable(sourceFile, GroovyUtils.createPositionFromToken(vId.start), vName, vType, mp);
+                JVariable jv = new JVariable(sourceFile, GroovyUtils.createPositionFromToken(vId.start), vName, vType, true, mp);
                 VariableInitializerContext vInit = vDecl.variableInitializer();
                 if (vInit != null) {
                     EnhancedStatementExpressionContext eStmtExpr = vInit.enhancedStatementExpression();

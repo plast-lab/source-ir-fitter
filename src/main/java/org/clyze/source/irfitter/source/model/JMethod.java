@@ -81,7 +81,7 @@ implements AbstractMethod {
             StringJoiner sj = new StringJoiner(",");
             for (int i = 1; i < component.length; i++)
                 sj.add(component[i]);
-            sb.append(sj.toString());
+            sb.append(sj);
             sb.append(")>");
             ids.add(sb.toString());
         }
@@ -115,7 +115,7 @@ implements AbstractMethod {
             sj.add(param.toString());
         String parentName = parent.getUnqualifiedName();
         String parentDesc = parentName == null ? parent.toString() : parentName;
-        return "method{name=" + name + ", type=" + retType + "(" + sj.toString() + "), parent=" + parentDesc + ", low-level-name=" + getLowLevelName() + "}";
+        return "method{name=" + name + ", type=" + retType + "(" + sj + "), parent=" + parentDesc + ", low-level-name=" + getLowLevelName() + "}";
     }
 
     @Override
@@ -243,7 +243,7 @@ implements AbstractMethod {
      * Sets up the hidden receiver parameter for instance methods.
      */
     public void setReceiver() {
-        this.receiver = new JVariable(getSourceFile(), pos, "this", parent.getSimpleName(), null);
+        this.receiver = new JVariable(getSourceFile(), pos, "this", parent.getSimpleName(), false, null);
     }
 
     /**

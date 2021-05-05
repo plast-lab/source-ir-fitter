@@ -110,7 +110,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 System.err.println("ERROR: null block in " + pos);
                 continue;
             }
-            JVariable v = new JVariable(sourceFile, pos, name, type.asString(), mp);
+            JVariable v = new JVariable(sourceFile, pos, name, type.asString(), true, mp);
             if (sourceFile.debug)
                 System.out.println("Adding variable [" + v + "] to block [" + block + "]");
             block.addVariable(v);
@@ -208,7 +208,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             addTypeUsesFromType(paramTypeUses, pType);
             Position paramPos = JavaUtils.createPositionFromNode(param);
             JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
-            parameters.add(new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), mp));
+            parameters.add(new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), false, mp));
         }
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);

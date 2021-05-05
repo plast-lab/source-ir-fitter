@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.*;
 
 import org.apache.commons.io.IOUtils;
+import org.clyze.source.irfitter.ir.IRProcessor;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRVariable;
@@ -28,13 +29,9 @@ import org.jf.dexlib2.iface.value.EncodedValue;
 import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
 
 /** The .dex parser for Dalvik opcodes. */
-public class DexParser {
-    private final boolean debug;
-    private final Set<String> varArgMethods;
-
-    public DexParser(boolean debug, Set<String> varArgMethods) {
-        this.debug = debug;
-        this.varArgMethods = varArgMethods;
+public class DexParser extends IRProcessor {
+    public DexParser(boolean debug, boolean enterMethods, Set<String> varArgMethods) {
+        super(debug, enterMethods, varArgMethods);
     }
 
     public void processDex(List<IRType> irTypes, InputStream is) {

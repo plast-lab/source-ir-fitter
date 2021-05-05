@@ -54,6 +54,11 @@ public class Main {
         relOpt.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(relOpt);
 
+        Option platformOpt = new Option(null, "platform", false, "Use code as platform (skip method bodies).");
+        platformOpt.setArgName("ARCHIVE");
+        platformOpt.setArgs(Option.UNLIMITED_VALUES);
+        options.addOption(platformOpt);
+
         Option debugOpt = new Option("d", "debug", false, "Enable debug mode.");
         options.addOption(debugOpt);
 
@@ -124,6 +129,7 @@ public class Main {
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             boolean resolveInvocations = cli.hasOption(resolveInvocationsOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
+            String[] platforms = cli.getOptionValues(platformOpt.getLongOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
             String[] relVars = cli.getOptionValues(relOpt.getOpt());
 
@@ -131,7 +137,10 @@ public class Main {
             Set<String> vaIrMethods = new ConcurrentSkipListSet<>();
             List<IRType> irTypes = new ArrayList<>();
             for (String i : irs)
-                irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug));
+                irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug, true));
+            if (platforms != null)
+                for (String p : platforms)
+                    irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(p), debug, false));
             if (debug)
                 System.out.println("IR vararg methods: " + vaIrMethods);
 

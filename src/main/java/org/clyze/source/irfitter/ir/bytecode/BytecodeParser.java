@@ -3,6 +3,8 @@ package org.clyze.source.irfitter.ir.bytecode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
+
+import org.clyze.source.irfitter.ir.IRProcessor;
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.ClassReader;
@@ -11,13 +13,9 @@ import org.objectweb.asm.tree.*;
 
 import static org.clyze.utils.TypeUtils.replaceSlashesWithDots;
 
-public class BytecodeParser {
-    private final boolean debug;
-    private final Set<String> varArgMethods;
-
-    public BytecodeParser(boolean debug, Set<String> varArgMethods) {
-        this.debug = debug;
-        this.varArgMethods = varArgMethods;
+public class BytecodeParser extends IRProcessor {
+    public BytecodeParser(boolean debug, boolean enterMethods, Set<String> varArgMethods) {
+        super(debug, enterMethods, varArgMethods);
     }
 
     public IRType processBytecode(ClassReader reader) {
@@ -65,7 +63,8 @@ public class BytecodeParser {
                 varArgMethods.add(methodId);
             if (debug)
                 System.out.println("IR method: " + irMethod);
-            processBytecodeInstructions(irMethod, mNode);
+            if (enterMethods)
+                processBytecodeInstructions(irMethod, mNode);
             irType.methods.add(irMethod);
         }
         return irType;

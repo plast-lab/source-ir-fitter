@@ -148,7 +148,7 @@ public class Driver {
         if (resolveInvocations) {
             if (debug)
                 System.out.println("Trying to (statically) resolve invocation targets...");
-            resolveInvocationTargets(sources);
+            resolveInvocationTargets(sources, irTypes);
         }
 
         if (debug)
@@ -189,15 +189,16 @@ public class Driver {
                 registerSymbol(bm, elemUse.getUse());
     }
 
-    private void resolveInvocationTargets(Collection<SourceFile> sources) {
-        Map<String, IRType> irTypes = new HashMap<>();
+    private void resolveInvocationTargets(Collection<SourceFile> sources, Collection<IRType> irTypes) {
+        Map<String, IRType> irTypeLookup = new HashMap<>();
+        for (IRType irType : irTypes)
+            irTypeLookup.put(irType.getId(), irType);
         List<JMethodInvocation> srcInvos = new ArrayList<>();
         for (SourceFile sf : sources) {
             for (JType srcType : sf.jTypes) {
                 IRType irType = srcType.matchElement;
                 if (irType == null)
                     continue;
-                irTypes.put(irType.getId(), irType);
                 for (JMethod srcMethod : srcType.methods) {
                     for (JMethodInvocation srcInvo : srcMethod.invocations) {
                         IRMethodInvocation irInvo = srcInvo.matchElement;
@@ -217,8 +218,11 @@ public class Driver {
             String name = irInvo.getMethodName();
             String paramTypes = irInvo.targetParamTypes;
             // If resolution fails, use the original low-level signature.
-            if (!resolveTarget(irTypes, jvmInvo, irTypes.get(irTypeName), retType, name, paramTypes))
+            if (!resolveTarget(irTypeLookup, jvmInvo, irTypeLookup.get(irTypeName), retType, name, paramTypes)) {
                 jvmInvo.targetMethodId = genMethodId(irTypeName, retType, name, paramTypes);
+                if (debug)
+                    System.out.println("Invocation resolution failed, using: " + jvmInvo.targetMethodId);
+            }
             if (debug)
                 System.out.println("Resolved: " + irInvo + " => " + jvmInvo.targetMethodId);
         }

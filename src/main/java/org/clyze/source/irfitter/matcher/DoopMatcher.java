@@ -33,6 +33,10 @@ public class DoopMatcher {
     }
 
     public void resolveDoopVariables() {
+        if (!db.exists()) {
+            System.err.println("ERROR: cannot resolve variables, database directory "  + db + " does not exist.");
+            return;
+        }
         System.out.println("Resolving variables from facts in " + db);
         processInstanceInvocations("SpecialMethodInvocation.facts", 5, 0, 3);
         processInstanceInvocations("SuperMethodInvocation.facts", 5, 0, 3);

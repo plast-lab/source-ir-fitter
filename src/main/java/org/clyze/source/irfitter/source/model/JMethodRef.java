@@ -11,7 +11,7 @@ import org.clyze.source.irfitter.ir.model.IRMethodRef;
  * The model of this feature reuses type-use machinery to be able to resolve
  * the type part of the reference.
  */
-public class JMethodRef extends TypedNamedElementWithPosition<IRMethodRef, Usage> {
+public class JMethodRef extends ElementWithPosition<IRMethodRef, Usage> {
     /** The name of the method. */
     public final String methodName;
 
@@ -22,7 +22,7 @@ public class JMethodRef extends TypedNamedElementWithPosition<IRMethodRef, Usage
 
     @Override
     public String toString() {
-        return "METHOD-REFERENCE: " + methodName + "@" + getSourceFile() + ", " + pos;
+        return "METHOD-REFERENCE: " + methodName + "@" + this.srcFile + ", " + pos;
     }
 
     @Override
@@ -31,10 +31,5 @@ public class JMethodRef extends TypedNamedElementWithPosition<IRMethodRef, Usage
             symbol = new Usage(pos, srcFile.getRelativePath(), true, irElement.getId(), irElement.methodId, UsageKind.FUNCTION);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
-    }
-
-    @Override
-    public Collection<String> getIds() {
-        return null;
     }
 }

@@ -8,7 +8,7 @@ import org.clyze.persistent.model.Position;
 /**
  * A source field that can be mapped to an IR field.
  */
-public class JField extends TypedNamedElementWithPosition<IRField, JvmField> {
+public class JField extends FuzzyTypeElementWithPosition<IRField, JvmField> {
     /** The type of the field (sources, not necessarily qualified). */
     public final String type;
     /** The name of the field. */

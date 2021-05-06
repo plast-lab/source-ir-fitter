@@ -6,7 +6,7 @@ import org.clyze.persistent.model.UsageKind;
 import org.clyze.source.irfitter.ir.model.IRFieldAccess;
 
 /** A field read/write in the source code. */
-public class JFieldAccess extends NamedElementWithPosition<IRFieldAccess, Usage> {
+public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
     /** If true, this is a field read; otherwise this is a field write. */
     public final boolean read;
     /** The field name. */

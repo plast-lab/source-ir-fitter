@@ -207,7 +207,7 @@ public class Matcher {
         List<IRMethodRef> methodRefs = srcMethod.matchElement.methodRefs;
         if (methodRefs == null)
             return;
-        Map<String, List<JMethodRef>> srcRefsByName = groupElementsBy(srcMethod.getMethodRefs(), (ref -> ref.methodName));
+        Map<String, List<JMethodRef>> srcRefsByName = groupElementsBy(srcMethod.methodRefs, (ref -> ref.methodName));
         Map<String, List<IRMethodRef>> irRefsByName = groupElementsBy(srcMethod.matchElement.methodRefs, (ref -> ref.name));
         for (Map.Entry<String, List<JMethodRef>> srcEntry : srcRefsByName.entrySet()) {
             String mName = srcEntry.getKey();

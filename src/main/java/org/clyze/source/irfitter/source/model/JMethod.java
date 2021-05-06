@@ -11,7 +11,7 @@ import org.clyze.source.irfitter.ir.model.IRModifierPack;
 import org.clyze.persistent.model.Position;
 
 /** A method in the source code. */
-public class JMethod extends TypedNamedElementWithPosition<IRMethod, JvmMethod>
+public class JMethod extends FuzzyTypeElementWithPosition<IRMethod, JvmMethod>
 implements AbstractMethod {
     public final String name;
     private final String retType;
@@ -31,7 +31,7 @@ implements AbstractMethod {
     /** The blocks contained in the method. */
     public final List<JBlock> blocks = new ArrayList<>();
     /** The method references found in the source code. */
-    private List<JMethodRef> methodRefs = null;
+    public List<JMethodRef> methodRefs = null;
     /** The element uses found in the source code. */
     public List<ElementUse> elementUses = new ArrayList<>();
     private Collection<String> cachedIds = null;

@@ -9,10 +9,10 @@ import org.clyze.persistent.model.Position;
 /**
  * A reference type (such as a class, enum, or interface) in the source code.
  */
-public class JType extends NamedElementWithPosition<IRType, JvmClass> {
+public class JType extends ElementWithPosition<IRType, JvmClass> {
     private final String name;
     public final JType parentType;
-    public final NamedElementWithPosition<?, ?> declaringElement;
+    public final ElementWithPosition<?, ?> declaringElement;
     public final List<String> superTypes;
     public final Set<String> annotationTypes;
     private final boolean isPublic;
@@ -31,7 +31,7 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,
                  Set<String> annotationTypes, Position pos,
-                 NamedElementWithPosition<?, ?> declaringElement, JType parentType,
+                 ElementWithPosition<?, ?> declaringElement, JType parentType,
                  boolean isInner, boolean isPublic, boolean isPrivate,
                  boolean isProtected, boolean isAbstract, boolean isFinal,
                  boolean isAnonymous) {
@@ -138,7 +138,7 @@ public class JType extends NamedElementWithPosition<IRType, JvmClass> {
     }
 
     public JType createAnonymousClass(SourceFile srcFile, List<String> superTypes,
-                                      NamedElementWithPosition<?, ?> declaringElement,
+                                      ElementWithPosition<?, ?> declaringElement,
                                       Position pos, boolean isInner) {
         return new AnonymousClass(srcFile, superTypes, this, declaringElement, pos, isInner, anonymousClassCounter++);
     }

@@ -6,7 +6,7 @@ import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.ir.model.IRAllocation;
 
 /** An object allocation site in the source code. */
-public class JAllocation extends NamedElementWithPosition<IRAllocation, JvmHeapAllocation>
+public class JAllocation extends ElementWithPosition<IRAllocation, JvmHeapAllocation>
 implements AbstractAllocation, Targetable {
     public final String simpleType;
     /** The target of the allocation (such as "x" in {@code x = new T()}). */

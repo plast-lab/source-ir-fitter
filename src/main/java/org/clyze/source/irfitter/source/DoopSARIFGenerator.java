@@ -9,17 +9,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.clyze.doop.sarif.SARIFGenerator;
 import org.clyze.persistent.model.SymbolWithId;
 import org.clyze.sarif.model.Result;
-import org.clyze.source.irfitter.source.model.NamedElementWithPosition;
+import org.clyze.source.irfitter.source.model.ElementWithPosition;
 
 /**
  * A SARIF generator that can read Doop results.
  */
 public class DoopSARIFGenerator extends SARIFGenerator {
-    final Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping;
+    final Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping;
     final boolean debug;
 
     public DoopSARIFGenerator(File db, File out, String version, boolean standalone,
-                              Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
+                              Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping,
                               boolean debug) {
         super(db, out, version, standalone);
         this.mapping = mapping;
@@ -31,11 +31,11 @@ public class DoopSARIFGenerator extends SARIFGenerator {
         List<Result> results = new ArrayList<>();
         AtomicInteger elementCount = new AtomicInteger(0);
 
-        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
+        for (Map.Entry<String, Collection<? extends ElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
                 System.out.println("[SARIF] Processing id: " + doopId);
-            for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
+            for (ElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);

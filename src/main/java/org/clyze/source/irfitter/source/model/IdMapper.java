@@ -20,8 +20,8 @@ public class IdMapper {
      * Merge all element information into a single mapping.
      * @return   a mapping containing the correspondence for all source elements
      */
-    public Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> get() {
-        Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping = new HashMap<>();
+    public Map<String, Collection<? extends ElementWithPosition<?, ?>>> get() {
+        Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping = new HashMap<>();
         mapping.putAll(typeMap);
         mapping.putAll(fieldMap);
         mapping.putAll(methodMap);
@@ -54,7 +54,7 @@ public class IdMapper {
                     List<JAllocation> srcAllocs = srcMethod.allocations;
                     allAllocs += srcAllocs.size();
                     matchedAllocs += countUnmatched(srcAllocs);
-                    List<JMethodRef> methodRefs = srcMethod.getMethodRefs();
+                    List<JMethodRef> methodRefs = srcMethod.methodRefs;
                     if (methodRefs != null) {
                         allMethodRefs += methodRefs.size();
                         matchedMethodRefs += countUnmatched(methodRefs);
@@ -74,7 +74,7 @@ public class IdMapper {
         System.out.printf("Matched (source) method-refs : %6.2f%%%n", (100.0 * matchedMethodRefs) / allMethodRefs);
     }
 
-    private static <T extends NamedElementWithPosition<?, ?>> long countUnmatched(Collection<T> elems) {
+    private static <T extends ElementWithPosition<?, ?>> long countUnmatched(Collection<T> elems) {
         return elems.stream().filter(e -> e.matchId != null).count();
     }
 }

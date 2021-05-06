@@ -171,7 +171,7 @@ public class Driver {
 
         System.out.println(unmatched + " elements not matched.");
 
-        Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> flatMapping = idMapper.get();
+        Map<String, Collection<? extends ElementWithPosition<?, ?>>> flatMapping = idMapper.get();
         if (sarif)
             (new DoopSARIFGenerator(db, out, "1.0", false, flatMapping, debug)).process();
         if (json)
@@ -326,13 +326,13 @@ public class Driver {
             System.out.println("WARNING: cannot handle symbol of type " + symbol.getClass().getName() + ": " + symbol.toJSON());
     }
 
-    private void generateJSON(Map<String, Collection<? extends NamedElementWithPosition<?, ?>>> mapping,
+    private void generateJSON(Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping,
                               Collection<SourceFile> sources) {
-        for (Map.Entry<String, Collection<? extends NamedElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
+        for (Map.Entry<String, Collection<? extends ElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
                 System.out.println("[JSON] Processing id: " + doopId);
-            for (NamedElementWithPosition<?, ?> srcElem : entry.getValue()) {
+            for (ElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     System.out.println("Source element has no symbol: " + srcElem);

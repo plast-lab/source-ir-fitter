@@ -6,7 +6,7 @@ import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRVariable;
 
 /** A source variable. */
-public class JVariable extends NamedElementWithPosition<IRVariable, JvmVariable> {
+public class JVariable extends ElementWithPosition<IRVariable, JvmVariable> {
     /** The element name. */
     public final String name;
     /** The element type. Can be null when the type is omitted (Groovy, Kotlin). */

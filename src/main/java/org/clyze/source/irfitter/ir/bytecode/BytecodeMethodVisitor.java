@@ -57,7 +57,8 @@ public class BytecodeMethodVisitor extends MethodVisitor {
             boolean isDescriptor = (type.startsWith("[") || type.startsWith("L")) && type.endsWith(";");
             String typeId = isDescriptor ? TypeUtils.raiseTypeId(type) : TypeUtils.replaceSlashesWithDots(type);
             recordAllocation(typeId, true);
-        }
+        } else if (opcode == Opcodes.CHECKCAST)
+            irMethod.addCast(TypeUtils.replaceSlashesWithDots(type), getLastLine(), debug);
         super.visitTypeInsn(opcode, type);
     }
 

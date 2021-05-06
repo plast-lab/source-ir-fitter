@@ -25,6 +25,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     private final Map<Expression, JAllocation> heapSites = new HashMap<>();
     /** The mapping from AST nodes to call sites. */
     private final Map<Node, JMethodInvocation> callSites = new HashMap<>();
+    /** The mapping from AST nodes to call sites. */
+    private final Map<Expression, JCast> castSites = new HashMap<>();
     /** The source code file. */
     private final SourceFile sourceFile;
 
@@ -445,9 +447,17 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(CastExpr castExpr, JBlock block) {
         JType jt = scope.getEnclosingType();
-        if (jt != null)
-            addTypeUsesFromType(jt.typeUses, castExpr.getType());
-        else
+        if (jt != null) {
+            Type type = castExpr.getType();
+            addTypeUsesFromType(jt.typeUses, type);
+            JMethod enclosingMethod = scope.getEnclosingMethod();
+            if (enclosingMethod != null) {
+                JCast cast = new JCast(sourceFile, JavaUtils.createPositionFromNode(type), type.asString());
+                enclosingMethod.addCast(cast);
+                castSites.put(castExpr, cast);
+            } else
+                System.err.println("WARNING: found cast outside method: " + castExpr);
+        } else
             System.err.println("WARNING: found cast outside type: " + castExpr);
         super.visit(castExpr, block);
     }
@@ -481,7 +491,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         else if (value.isMethodCallExpr())
             registerTarget(callSites, target, value);
         else if (value.isCastExpr())
-            registerPossibleTarget(target, value.asCastExpr().getExpression());
+            registerTarget(castSites, target, value);
     }
 
     private void registerTarget(Map<? extends Node, ? extends Targetable> map,

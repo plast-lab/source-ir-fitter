@@ -32,6 +32,8 @@ implements AbstractMethod {
     public final List<JBlock> blocks = new ArrayList<>();
     /** The method references found in the source code. */
     public List<JMethodRef> methodRefs = null;
+    /** The casts found in the source code. */
+    public List<JCast> casts = null;
     /** The element uses found in the source code. */
     public List<ElementUse> elementUses = new ArrayList<>();
     private Collection<String> cachedIds = null;
@@ -226,11 +228,13 @@ implements AbstractMethod {
     }
 
     /**
-     * Get the method references appearing in the body of this method.
-     * @return    a list of method references
+     * Add a cast expression.
+     * @param cast    the cast to add
      */
-    public List<JMethodRef> getMethodRefs() {
-        return this.methodRefs;
+    public void addCast(JCast cast) {
+        if (casts == null)
+            casts = new ArrayList<>();
+        casts.add(cast);
     }
 
     /**

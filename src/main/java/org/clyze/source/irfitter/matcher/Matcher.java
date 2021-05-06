@@ -146,10 +146,42 @@ public class Matcher {
                 matchFieldAccesses(idMapper.fieldAccessMap, srcMethod);
                 matchMethodReferences(idMapper.methodRefMap, srcMethod);
                 matchVariables(idMapper.variableMap, srcMethod);
+                matchCasts(srcMethod);
             }
         }
 
         generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
+    }
+
+    private void matchCasts(JMethod srcMethod) {
+        if (debug)
+            System.out.println("Matching casts in " + srcMethod);
+        IRMethod irMethod = srcMethod.matchElement;
+        List<JCast> srcCasts = srcMethod.casts;
+        List<IRCast> irCasts = irMethod.casts;
+        if (srcCasts == null || irCasts == null) {
+            if (debug)
+                System.out.println("No casts found in method body.");
+            return;
+        }
+        int srcSize = srcCasts.size();
+        int irSize = irCasts.size();
+        if (srcSize == irSize) {
+            if (debug)
+                System.out.println("Cast groups have size " + srcSize);
+            for (int i = 0; i < srcSize; i++) {
+                IRCast irCast = irCasts.get(i);
+                matchElements("cast", irCast, srcCasts.get(i), irCast.getId());
+            }
+        } else if (debug)
+            System.out.println("WARNING: Casts not matched: srcSize=" + srcSize + " but irSize=" + irSize);
+    }
+
+    private static <T> void printGroups(Map<String, List<T>> group) {
+        for (Map.Entry<String, List<T>> entry : group.entrySet()) {
+            System.out.println("== Key: " + entry.getKey() + " ==");
+            entry.getValue().forEach(v -> System.out.println("  " + v));
+        }
     }
 
     /**
@@ -641,25 +673,26 @@ public class Matcher {
      * @param <IR_ELEM_T>     the type of the IR code element
      * @param <SRC_ELEM_T>    the type of the source code element
      */
-    public <IR_ELEM_T extends IRElement, SRC_ELEM_T extends NamedElementWithPosition<IR_ELEM_T, ?>>
+    public <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
     void recordMatch(Map<String, Collection<SRC_ELEM_T>> mapping, String kind, IR_ELEM_T irElem,
                      SRC_ELEM_T srcElem) {
         String id = irElem.getId();
+        mapping.computeIfAbsent(id, (k -> new ArrayList<>())).add(srcElem);
+        matchElements(kind, irElem, srcElem, id);
+    }
+
+    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
+    void matchElements(String kind, IR_ELEM_T irElem, SRC_ELEM_T srcElem, String id) {
         if (debug) {
             String pos = srcElem.pos == null ? "unknown" : srcElem.pos.toString();
             System.out.println("Match [" + kind + "] " + id + " -> " + sourceFile + ":" + pos);
         }
-        Collection<SRC_ELEM_T> sourceElements = mapping.get(id);
-        if (sourceElements == null)
-            sourceElements = new ArrayList<>();
-        sourceElements.add(srcElem);
         if (srcElem.matchId == null) {
             srcElem.matchId = id;
             srcElem.matchElement = irElem;
             irElem.matched = true;
         } else
             System.err.println("WARNING: multiple matches: " + id + " vs. " + srcElem.matchId);
-        mapping.put(id, sourceElements);
         srcElem.initSymbolFromIRElement(irElem);
     }
 

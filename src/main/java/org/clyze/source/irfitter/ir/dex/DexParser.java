@@ -141,6 +141,14 @@ public class DexParser extends IRProcessor {
                         irMethod.addTypeReference(typeId);
                         break;
                     }
+                    case CHECK_CAST: {
+                        String typeId = raisedJvmTypeOf((ReferenceInstruction)instr);
+                        irMethod.addTypeReference(typeId);
+                        // TODO: read source line
+                        Integer sourceLine = null;
+                        irMethod.addCast(typeId, sourceLine, debug);
+                        break;
+                    }
                     case INVOKE_DIRECT:
                     case INVOKE_VIRTUAL:
                     case INVOKE_STATIC:

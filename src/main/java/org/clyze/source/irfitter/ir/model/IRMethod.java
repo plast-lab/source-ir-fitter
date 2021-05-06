@@ -20,6 +20,8 @@ public class IRMethod extends IRElement implements AbstractMethod {
     private Set<String> sigTypeReferences = null;
     public List<IRMethodRef> methodRefs = null;
     private Map<String, Integer> methodRefCounters = null;
+    public List<IRCast> casts = null;
+    private Map<String, Integer> castCounters = null;
     public final String name;
     public final String returnType;
     public final List<String> paramTypes;
@@ -135,6 +137,27 @@ public class IRMethod extends IRElement implements AbstractMethod {
                     if (debug)
                         System.out.println("IR method reference: " + ref);
                     return ref;
+                });
+    }
+
+    /**
+     * Register a cast in the method body (such as {@code (A) expr}).
+     * @param type        the cast type
+     * @param sourceLine  the source line information (if available)
+     * @param debug       debugging mode
+     */
+    public void addCast(String type, Integer sourceLine, boolean debug) {
+        if (casts == null)
+            casts = new ArrayList<>();
+        if (castCounters == null)
+            castCounters = new HashMap<>();
+        String methodId = getId();
+        addNumberedElement(castCounters, casts, methodId, "<cast(" + type + ")>",
+                (counter, elemId) -> {
+                    IRCast cast = new IRCast(elemId, methodId, type, sourceLine);
+                    if (debug)
+                        System.out.println("IR cast: " + cast);
+                    return cast;
                 });
     }
 

@@ -152,7 +152,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
         if (castCounters == null)
             castCounters = new HashMap<>();
         String methodId = getId();
-        addNumberedElement(castCounters, casts, methodId, "<cast(" + type + ")>",
+        addNumberedElement(castCounters, casts, methodId, "assign-cast",
                 (counter, elemId) -> {
                     IRCast cast = new IRCast(elemId, methodId, type, sourceLine);
                     if (debug)

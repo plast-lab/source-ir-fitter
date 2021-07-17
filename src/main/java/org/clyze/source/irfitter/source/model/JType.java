@@ -123,7 +123,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
             symbol = new JvmClass(pos, srcFile.getRelativePath(), true, getSimpleName(),
                     srcFile.packageName, doopId, isInterface, isEnum, isStatic,
                     isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
-            symbol.setSuperTypes(superTypes);
+            symbol.setSuperTypes(irType.superTypes);
             symbol.setAnnotations(annotationTypes);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

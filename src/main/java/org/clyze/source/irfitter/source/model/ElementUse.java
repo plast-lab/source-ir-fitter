@@ -5,7 +5,7 @@ import org.clyze.persistent.model.Usage;
 import org.clyze.persistent.model.UsageKind;
 
 /** A point of use of a code element (such as a variable read). */
-public class ElementUse {
+public abstract class ElementUse {
     public final Position position;
     public final SourceFile sourceFile;
     protected final UsageKind kind;

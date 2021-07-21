@@ -480,12 +480,25 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             NameExpr nameExpr = (NameExpr) target;
             JVariable localVar = getLocalVariable(nameExpr, block);
             if (sourceFile.debug)
-                System.out.println("Visiting variable assignment: " + assignExpr + ", localVar=" + localVar);
-            if (localVar != null) {
+                System.out.println("Visiting assignment: " + assignExpr + " (localVar=" + localVar + ")");
+            if (localVar == null) {
+                JType jt = scope.getEnclosingType();
+                if (jt == null)
+                    System.err.println("ERROR: no enclosing type for assignment: " + assignExpr);
+                else {
+                    SimpleName name = nameExpr.getName();
+                    String strName = name.asString();
+                    // Only register accesses to fields in the enclosing type.
+                    if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
+                        visitFieldAccess(assignExpr, name, false);
+                    else
+                        System.err.println("WARNING: ignoring assignment for name from nested scope: " + assignExpr);
+                }
+            } else {
                 JMethod enclosingMethod = scope.getEnclosingMethod();
-                if (enclosingMethod != null) {
+                if (enclosingMethod != null)
                     enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
-                } else
+                else
                     System.err.println("WARNING: found variable assignment outside method: " + assignExpr);
             }
         } else
@@ -525,7 +538,18 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     private void visitFieldAccess(FieldAccessExpr fieldAccess, boolean read) {
-        SimpleName name = fieldAccess.getName();
+        visitFieldAccess(fieldAccess, fieldAccess.getName(), read);
+        JType jt = scope.getEnclosingType();
+        if (jt == null)
+            System.out.println("ERROR: field access outside type: " + fieldAccess + ": " + sourceFile);
+        else
+            fieldAccess.getTypeArguments().ifPresent(nl -> {
+                for (Type typeArg : nl)
+                    addTypeUsesFromType(jt.typeUses, typeArg);
+            });
+    }
+
+    private void visitFieldAccess(Expression fieldAccess, SimpleName name, boolean read) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
         if (sourceFile.debug)
@@ -535,14 +559,6 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.out.println("TODO: field access outside method: " + fieldAccess + ": " + sourceFile);
         else
             parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, read, fieldName));
-        JType jt = scope.getEnclosingType();
-        if (jt == null)
-            System.out.println("ERROR: field access outside type: " + fieldAccess + ": " + sourceFile);
-        else
-            fieldAccess.getTypeArguments().ifPresent(nl -> {
-                for (Type typeArg : nl)
-                    addTypeUsesFromType(jt.typeUses, typeArg);
-            });
     }
 
     @Override

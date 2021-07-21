@@ -45,7 +45,6 @@ public class JBlock {
     }
 
     private JVariable lookupNoCache(String name) {
-        System.out.println("variables=" + variables);
         if (variables != null)
             for (JVariable variable : variables)
                 if (variable.name.equals(name))

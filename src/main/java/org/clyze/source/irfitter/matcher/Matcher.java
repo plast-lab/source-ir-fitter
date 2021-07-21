@@ -309,10 +309,10 @@ public class Matcher {
     private void matchFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, JMethod srcMethod) {
         IRMethod irMethod = srcMethod.matchElement;
         // Group accesses by field name.
-        Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName));
+        Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName + '/' + a.read));
         if (srcAccessesByName.size() == 0)
             return;
-        Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName));
+        Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName + '/' + a.read));
         if (irAccessesByName.size() == 0)
             return;
         if (debug) {

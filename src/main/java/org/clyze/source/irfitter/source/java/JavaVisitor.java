@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
+import org.clyze.persistent.model.UsageKind;
 import org.clyze.source.irfitter.source.model.*;
 
 /** The AST visitor that reads Java sources. */
@@ -40,8 +41,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         sourceFile.imports.add(new Import(null, "java.lang", true, false));
         super.visit(cu, block);
 
-        if (sourceFile.debug)
+        if (sourceFile.debug) {
+            System.out.println("Compilation unit: " + sourceFile);
             System.out.println(new YamlPrinter(true).output(cu));
+        }
     }
 
     @Override
@@ -466,11 +469,25 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(AssignExpr assignExpr, JBlock block) {
         Expression target = assignExpr.getTarget();
         if (target.isFieldAccessExpr()) {
+            if (sourceFile.debug)
+                System.out.println("Visiting field assignment: " + assignExpr);
             FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
             // Any field accesses in the "scope" should be reads.
             fieldAcc.getScope().accept(this, block);
             // Record the final field as a "write".
             visitFieldAccess(fieldAcc, false);
+        } else if (target.isNameExpr()) {
+            NameExpr nameExpr = (NameExpr) target;
+            JVariable localVar = getLocalVariable(nameExpr, block);
+            if (sourceFile.debug)
+                System.out.println("Visiting variable assignment: " + assignExpr + ", localVar=" + localVar);
+            if (localVar != null) {
+                JMethod enclosingMethod = scope.getEnclosingMethod();
+                if (enclosingMethod != null) {
+                    enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
+                } else
+                    System.err.println("WARNING: found variable assignment outside method: " + assignExpr);
+            }
         } else
             target.accept(this, block);
         Expression value = assignExpr.getValue();
@@ -532,6 +549,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(FieldAccessExpr fieldAccess, JBlock block) {
         // This method is assumed to only find reads and be overridden when visiting field writes.
         visitFieldAccess(fieldAccess, true);
+    }
+
+    static JVariable getLocalVariable(NameExpr nameExpr, JBlock block) {
+        if (nameExpr != null) {
+            String name = nameExpr.getNameAsString();
+            if (block != null)
+                return block.lookup(name);
+        }
+        return null;
     }
 
     @Override

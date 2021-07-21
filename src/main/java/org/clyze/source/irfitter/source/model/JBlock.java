@@ -1,7 +1,10 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 import org.clyze.persistent.model.Position;
 
 /**
@@ -14,6 +17,8 @@ public class JBlock {
     /** The parent block (or null). */
     public final JBlock parent;
     private List<JVariable> variables = null;
+    /** Cached results of previous variable lookups. */
+    private Map<String, JVariable> cachedLookups;
 
     public JBlock(String name, JBlock parent) {
         this.id = "block-" + name;
@@ -39,16 +44,29 @@ public class JBlock {
         return this.variables;
     }
 
-    public JVariable lookup(String name) {
-        if (name == null)
-            return null;
+    private JVariable lookupNoCache(String name) {
+        System.out.println("variables=" + variables);
         if (variables != null)
             for (JVariable variable : variables)
                 if (variable.name.equals(name))
                     return variable;
-        else if (parent != null)
+        if (parent != null)
             return parent.lookup(name);
         return null;
+    }
+
+    public JVariable lookup(String name) {
+        if (name == null)
+            return null;
+        if (cachedLookups == null)
+            cachedLookups = new HashMap<>();
+        JVariable returnValue = cachedLookups.get(name);
+        if (returnValue == null) {
+            returnValue = lookupNoCache(name);
+            if (returnValue != null)
+                cachedLookups.put(name, returnValue);
+        }
+        return returnValue;
     }
 
     @Override

@@ -303,6 +303,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile, block, null);
             callSites.put(constrInvo, invo);
         }
+        constrInvo.getExpression().ifPresent(expr -> proccessNameAccess(expr, constrInvo, block, true));
         super.visit(constrInvo, block);
     }
 
@@ -409,9 +410,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         else {
             JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
             callSites.put(call, invo);
+            call.getScope().ifPresent(scopeExpr -> proccessNameAccess(scopeExpr, call, block, true));
             for (Expression argument : call.getArguments())
-                if (argument.isNameExpr())
-                    proccessNameAccess(argument.asNameExpr(), call, block, true);
+                proccessNameAccess(argument, call, block, true);
         }
         super.visit(call, block);
     }
@@ -465,34 +466,47 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 System.err.println("WARNING: found cast outside method: " + castExpr);
         } else
             System.err.println("WARNING: found cast outside type: " + castExpr);
+        proccessNameAccess(castExpr.getExpression(), castExpr, block, true);
         super.visit(castExpr, block);
     }
 
-    private void proccessNameAccess(NameExpr nameExpr, Expression parentExpr, JBlock block,
+    private void proccessNameAccess(Expression expr, Node parentNode, JBlock block,
                                     boolean read) {
+        if (expr == null || !expr.isNameExpr())
+            return;
+        NameExpr nameExpr = expr.asNameExpr();
         JVariable localVar = getLocalVariable(nameExpr, block);
         if (sourceFile.debug)
-            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentExpr=" + parentExpr + ", localVar=" + localVar);
+            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar);
         if (localVar == null) {
             JType jt = scope.getEnclosingType();
             if (jt == null)
-                System.err.println("ERROR: no enclosing type for expression: " + parentExpr);
+                System.err.println("ERROR: no enclosing type for expression: " + parentNode);
             else {
                 SimpleName name = nameExpr.getName();
                 String strName = name.asString();
                 // Only register accesses to fields in the enclosing type.
                 if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
-                    visitFieldAccess(parentExpr, name, read);
+                    visitFieldAccess(parentNode, name, read);
                 else
-                    System.err.println("WARNING: ignoring expresssion involving name from nested scope: " + parentExpr);
+                    System.err.println("WARNING: ignoring expresssion involving name from nested scope: " + parentNode);
             }
         } else {
             JMethod enclosingMethod = scope.getEnclosingMethod();
             if (enclosingMethod != null)
                 enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
             else
-                System.err.println("WARNING: found variable use outside method: " + parentExpr);
+                System.err.println("WARNING: found variable use outside method: " + parentNode);
         }
+    }
+
+    @Override
+    public void visit(final SynchronizedStmt syncStmt, final JBlock block) {
+        if (sourceFile.debug)
+            System.out.println("Visiting synchronized statement: " + syncStmt);
+        Expression expr = syncStmt.getExpression();
+        proccessNameAccess(expr, expr, block, true);
+        super.visit(syncStmt, block);
     }
 
     @Override
@@ -557,7 +571,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             });
     }
 
-    private void visitFieldAccess(Expression fieldAccess, SimpleName name, boolean read) {
+    private void visitFieldAccess(Node fieldAccess, SimpleName name, boolean read) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
         if (sourceFile.debug)

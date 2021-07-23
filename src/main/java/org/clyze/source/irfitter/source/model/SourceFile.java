@@ -113,7 +113,7 @@ public class SourceFile {
                     if (debug)
                         System.out.println("Unmatched field: " + jf.toString());
                 }
-            for (JMethod jm : jt.methods)
+            for (JMethod jm : jt.methods) {
                 // Some methods are optimistically created for sources and
                 // may not really exist in IR, so ignore their match failures
                 if (jm.matchId == null && !jm.isSpecialInitializer()) {
@@ -123,6 +123,15 @@ public class SourceFile {
 //                        jm.getIds().forEach(System.out::println);
                     }
                 }
+                for (JFieldAccess fieldAccess : jm.fieldAccesses) {
+                    if (fieldAccess.matchId == null) {
+                        unmatched++;
+                        if (debug)
+                            System.out.println("Unmatched field access: " + fieldAccess.toString());
+                    }
+                }
+
+            }
         }
         return unmatched;
     }

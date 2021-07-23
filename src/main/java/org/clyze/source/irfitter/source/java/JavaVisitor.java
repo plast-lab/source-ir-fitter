@@ -409,6 +409,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         else {
             JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
             callSites.put(call, invo);
+            for (Expression argument : call.getArguments())
+                if (argument.isNameExpr())
+                    proccessNameAccess(argument.asNameExpr(), call, block, true);
         }
         super.visit(call, block);
     }
@@ -465,12 +468,37 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         super.visit(castExpr, block);
     }
 
+    private void proccessNameAccess(NameExpr nameExpr, Expression parentExpr, JBlock block,
+                                    boolean read) {
+        JVariable localVar = getLocalVariable(nameExpr, block);
+        if (sourceFile.debug)
+            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentExpr=" + parentExpr + ", localVar=" + localVar);
+        if (localVar == null) {
+            JType jt = scope.getEnclosingType();
+            if (jt == null)
+                System.err.println("ERROR: no enclosing type for expression: " + parentExpr);
+            else {
+                SimpleName name = nameExpr.getName();
+                String strName = name.asString();
+                // Only register accesses to fields in the enclosing type.
+                if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
+                    visitFieldAccess(parentExpr, name, read);
+                else
+                    System.err.println("WARNING: ignoring expresssion involving name from nested scope: " + parentExpr);
+            }
+        } else {
+            JMethod enclosingMethod = scope.getEnclosingMethod();
+            if (enclosingMethod != null)
+                enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
+            else
+                System.err.println("WARNING: found variable use outside method: " + parentExpr);
+        }
+    }
+
     @Override
     public void visit(AssignExpr assignExpr, JBlock block) {
         Expression target = assignExpr.getTarget();
         if (target.isFieldAccessExpr()) {
-            if (sourceFile.debug)
-                System.out.println("Visiting field assignment: " + assignExpr);
             FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
             // Any field accesses in the "scope" should be reads.
             fieldAcc.getScope().accept(this, block);
@@ -478,29 +506,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             visitFieldAccess(fieldAcc, false);
         } else if (target.isNameExpr()) {
             NameExpr nameExpr = (NameExpr) target;
-            JVariable localVar = getLocalVariable(nameExpr, block);
             if (sourceFile.debug)
-                System.out.println("Visiting assignment: " + assignExpr + " (localVar=" + localVar + ")");
-            if (localVar == null) {
-                JType jt = scope.getEnclosingType();
-                if (jt == null)
-                    System.err.println("ERROR: no enclosing type for assignment: " + assignExpr);
-                else {
-                    SimpleName name = nameExpr.getName();
-                    String strName = name.asString();
-                    // Only register accesses to fields in the enclosing type.
-                    if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
-                        visitFieldAccess(assignExpr, name, false);
-                    else
-                        System.err.println("WARNING: ignoring assignment for name from nested scope: " + assignExpr);
-                }
-            } else {
-                JMethod enclosingMethod = scope.getEnclosingMethod();
-                if (enclosingMethod != null)
-                    enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
-                else
-                    System.err.println("WARNING: found variable assignment outside method: " + assignExpr);
-            }
+                System.out.println("Visiting assignment: " + assignExpr);
+            proccessNameAccess(nameExpr, assignExpr, block, false);
         } else
             target.accept(this, block);
         Expression value = assignExpr.getValue();
@@ -565,6 +573,12 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(FieldAccessExpr fieldAccess, JBlock block) {
         // This method is assumed to only find reads and be overridden when visiting field writes.
         visitFieldAccess(fieldAccess, true);
+    }
+
+    @Override
+    public void visit(NameExpr nameExpr, JBlock block) {
+        System.out.println("nameExpr=" + nameExpr + ", local=" + getLocalVariable(nameExpr, block));
+        super.visit(nameExpr, block);
     }
 
     static JVariable getLocalVariable(NameExpr nameExpr, JBlock block) {

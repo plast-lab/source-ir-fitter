@@ -30,9 +30,12 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     private final Map<Expression, JCast> castSites = new HashMap<>();
     /** The source code file. */
     private final SourceFile sourceFile;
+    /** Debugging mode. */
+    private final boolean debug;
 
-    public JavaVisitor(SourceFile sourceFile) {
+    public JavaVisitor(SourceFile sourceFile, boolean debug) {
         this.sourceFile = sourceFile;
+        this.debug = debug;
     }
 
     @Override
@@ -41,7 +44,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         sourceFile.imports.add(new Import(null, "java.lang", true, false));
         super.visit(cu, block);
 
-        if (sourceFile.debug) {
+        if (debug) {
             System.out.println("Compilation unit: " + sourceFile);
             System.out.println(new YamlPrinter(true).output(cu));
         }
@@ -83,7 +86,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     JType recordType(T decl, List<String> superTypes,
                      boolean isEnum, boolean isInterface) {
         JType jt = jTypeFromTypeDecl(decl, isEnum, isInterface, superTypes, scope);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Adding type: " + jt);
         sourceFile.jTypes.add(jt);
         return jt;
@@ -121,7 +124,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 continue;
             }
             JVariable v = new JVariable(sourceFile, pos, name, type.asString(), true, mp);
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Adding variable [" + v + "] to block [" + block + "]");
             block.addVariable(v);
             Optional<Expression> initializer = variable.getInitializer();
@@ -154,7 +157,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             SimpleName name = classOrIntf.getName();
             TypeUse tu = new TypeUse(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
             target.add(tu);
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Added type use: " + tu);
             classOrIntf.getTypeArguments().ifPresent(nl -> {
                 for (Type typeArg : nl)
@@ -231,7 +234,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
         for (ReferenceType thrownException : md.getThrownExceptions())
             addTypeUsesFromType(jt.typeUses, thrownException);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Adding method: " + jm);
         jt.methods.add(jm);
 
@@ -251,7 +254,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             JField srcField = new JField(sourceFile, typeOf(vd), vd.getNameAsString(),
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
             jt.typeUses.addAll(mp.getAnnotationUses());
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Adding field: " + srcField);
             jt.fields.add(srcField);
             Optional<Expression> optInitializer = vd.getInitializer();
@@ -261,7 +264,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 if (isStaticField && fd.isFinal() && (initExpr.isStringLiteralExpr())) {
                     StringLiteralExpr s = (StringLiteralExpr) initExpr;
                     String sValue = s.getValue();
-                    if (sourceFile.debug)
+                    if (debug)
                         System.out.println("Java static final field points to string constant: " + sValue);
                     Position pos = JavaUtils.createPositionFromNode(s);
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
@@ -321,7 +324,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (isAnonymousClassDecl) {
             List<String> superTypes = Collections.singletonList(simpleType);
             JType anonymousType = enclosingType.createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Adding type [anonymous]: " + anonymousType);
             sourceFile.jTypes.add(anonymousType);
             JavaVisitor jv = this;
@@ -419,7 +422,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(BlockStmt n, JBlock block) {
-        if (sourceFile.debug)
+        if (debug)
             for (Statement statement : n.getStatements())
                 System.out.println("STATEMENT: " + statement.getClass().getSimpleName());
         super.visit(n, JavaUtils.newBlock(n, block, scope.getEnclosingMethod()));
@@ -429,7 +432,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(ClassExpr classExpr, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(classExpr);
         TypeUse tu = new TypeUse(classExpr.getTypeAsString(), pos, sourceFile);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Registering type use: " + tu);
         scope.getEnclosingType().typeUses.add(tu);
     }
@@ -476,7 +479,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             return;
         NameExpr nameExpr = expr.asNameExpr();
         JVariable localVar = getLocalVariable(nameExpr, block);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar);
         if (localVar == null) {
             JType jt = scope.getEnclosingType();
@@ -502,7 +505,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(final SynchronizedStmt syncStmt, final JBlock block) {
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Visiting synchronized statement: " + syncStmt);
         Expression expr = syncStmt.getExpression();
         proccessNameAccess(expr, expr, block, true);
@@ -520,7 +523,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             visitFieldAccess(fieldAcc, false);
         } else if (target.isNameExpr()) {
             NameExpr nameExpr = (NameExpr) target;
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Visiting assignment: " + assignExpr);
             proccessNameAccess(nameExpr, assignExpr, block, false);
         } else
@@ -555,7 +558,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (element == null)
             return;
         element.setTarget(v);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("TARGET_ASSIGNMENT: " + v + " := " + element);
     }
 
@@ -574,7 +577,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     private void visitFieldAccess(Node fieldAccess, SimpleName name, boolean read) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Field access [" + (read ? "read" : "write") + "]: " + fieldName + "@" + sourceFile + ":" + pos);
         JMethod parentMethod = scope.getEnclosingMethod();
         if (parentMethod == null)
@@ -591,7 +594,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(NameExpr nameExpr, JBlock block) {
-        System.out.println("nameExpr=" + nameExpr + ", local=" + getLocalVariable(nameExpr, block));
+        if (debug)
+            System.out.println("nameExpr=" + nameExpr + ", local=" + getLocalVariable(nameExpr, block));
         super.visit(nameExpr, block);
     }
 

@@ -22,7 +22,7 @@ public class JavaProcessor implements SourceProcessor {
             Optional<CompilationUnit> optCu = jp.parse(srcFile).getResult();
             if (optCu.isPresent()) {
                 SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser);
-                optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf), null));
+                optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf, debug), null));
                 return sf;
             } else
                 System.out.println("No parsing result for " + srcFile);

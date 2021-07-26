@@ -21,9 +21,11 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     private final Scope scope = new Scope();
     /** The source file visited. We assume one visitor instance per source file. */
     private final SourceFile sourceFile;
+    private final boolean debug;
 
-    GroovyTreeVisitor(SourceFile sourceFile) {
+    GroovyTreeVisitor(SourceFile sourceFile, boolean debug) {
         this.sourceFile = sourceFile;
+        this.debug = debug;
         // Add default imports.
         String[] defaultPackages = new String[] { "groovy.lang", "groovy.util" , "java.lang" , "java.util" , "java.net" , "java.io" };
         for (String defaultPackage : defaultPackages)
@@ -172,7 +174,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     private void addTypeUseFromName(Collection<TypeUse> target, String name, Token start, Token stop) {
         TypeUse tu = new TypeUse(name, GroovyUtils.createPositionFromTokens(start, stop), sourceFile);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Adding type use: " + tu);
         target.add(tu);
     }
@@ -186,7 +188,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 if (blockStatements != null) {
                     for (BlockStatementContext blockStmt : blockStatements.blockStatement()) {
                         LocalVariableDeclarationContext localVar = blockStmt.localVariableDeclaration();
-                        if (localVar != null && sourceFile.debug) {
+                        if (localVar != null && debug) {
                             for (JVariable jVar : processVariableDeclaration(localVar.variableDeclaration()))
                                 System.out.println("TODO: local variable " + jVar.name);
                         }
@@ -447,7 +449,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                         if (literal instanceof StringLiteralAltContext) {
                             StringLiteralContext stringLiteral = ((StringLiteralAltContext) literal).stringLiteral();
                             String s = Utils.stripQuotes(stringLiteral.StringLiteral().getText());
-                            if (sourceFile.debug)
+                            if (debug)
                                 System.out.println("Found string literal in initializer: " + s);
                             Position pos = GroovyUtils.createPositionFromTokens(stringLiteral.start, stringLiteral.stop);
                             return new JStringConstant<>(sourceFile, pos, decl, s);
@@ -560,8 +562,8 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         return typeCtx == null ? null : Utils.simplifyType(typeCtx.getText());
     }
 
-     private void logDebug(Supplier<String> s) {
-        if (sourceFile.debug)
+    private void logDebug(Supplier<String> s) {
+        if (debug)
             System.out.println(s.get());
     }
 }

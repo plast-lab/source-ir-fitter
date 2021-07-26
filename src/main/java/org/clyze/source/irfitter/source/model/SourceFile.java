@@ -111,7 +111,7 @@ public class SourceFile {
                 if (jf.matchId == null) {
                     unmatched++;
                     if (debug)
-                        System.out.println("Unmatched field: " + jf.toString());
+                        System.out.println("Unmatched field: " + jf);
                 }
             for (JMethod jm : jt.methods) {
                 // Some methods are optimistically created for sources and
@@ -119,7 +119,7 @@ public class SourceFile {
                 if (jm.matchId == null && !jm.isSpecialInitializer()) {
                     unmatched++;
                     if (debug) {
-                        System.out.println("Unmatched method: " + jm.toString());
+                        System.out.println("Unmatched method: " + jm);
 //                        jm.getIds().forEach(System.out::println);
                     }
                 }
@@ -127,7 +127,7 @@ public class SourceFile {
                     if (fieldAccess.matchId == null) {
                         unmatched++;
                         if (debug)
-                            System.out.println("Unmatched field access: " + fieldAccess.toString());
+                            System.out.println("Unmatched field access: " + fieldAccess);
                     }
                 }
 

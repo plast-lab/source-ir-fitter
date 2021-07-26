@@ -166,7 +166,6 @@ public class Driver {
             doopMatcher.resolveDoopVariables();
             if (translateResults)
                 doopMatcher.translateResults();
-
         }
 
         System.out.println(unmatched + " elements not matched.");

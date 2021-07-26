@@ -27,11 +27,13 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     };
 
     private final SourceFile sourceFile;
+    private final boolean debug;
     /** The scoping object. */
     private final Scope scope = new Scope();
 
-    public KotlinVisitor(SourceFile sourceFile) {
+    public KotlinVisitor(SourceFile sourceFile, boolean debug) {
         this.sourceFile = sourceFile;
+        this.debug = debug;
         for (String i : DEFAULT_IMPORTS)
             sourceFile.imports.add(new Import(null, i, true, false));
     }
@@ -41,7 +43,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                                       ModifiersContext mc, DelegationSpecifiersContext delegSpecs,
                                       PrimaryConstructorContext primaryConstr,
                                       ClassBodyContext cBody) {
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Type declaration: " + name);
         JType parent = scope.getEnclosingType();
         Position pos = KotlinUtils.createPositionFromToken(positionToken);
@@ -69,7 +71,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         jt.typeUses.addAll(delegTypeUses);
         sourceFile.jTypes.add(jt);
 
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Created type: " + jt);
 
         scope.enterTypeScope(jt, (jt0 -> {
@@ -129,7 +131,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     Set<String> annotations = (new KotlinModifierPack(sourceFile, classParam.modifiers())).getAnnotations();
                     Position pos = KotlinUtils.createPositionFromTokens(fId.start, fId.stop);
                     JField srcField = new JField(sourceFile, getType(fType), fName, annotations, pos, jt);
-                    if (sourceFile.debug)
+                    if (debug)
                         System.out.println("Adding field: " + srcField);
                     jt.fields.add(srcField);
                     addTypeUssInType(jt.typeUses, fType);
@@ -152,7 +154,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         } catch (Exception ignored) {
             name = "Companion";
         }
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Registering companion type: " + name);
         visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
                 companionObj.delegationSpecifiers(), null, companionObj.classBody());
@@ -206,7 +208,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
 
     @Override
     public Void visitPropertyDeclaration(PropertyDeclarationContext propMemDecl) {
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Visiting property declaration: " + propMemDecl.getText());
         JType jt = scope.getEnclosingType();
         ModifiersContext modifiers = propMemDecl.modifiers();
@@ -239,11 +241,11 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String fName = id.getText();
         Type_Context fType = fDecl.type_();
         String fTypeName = getType(fType);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Visiting field declaration: " + fTypeName + " " + fName);
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers);
         JField srcField = new JField(sourceFile, fTypeName, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Found source field: " + srcField + " : " + mp);
         if (jt == null)
             System.out.println("ERROR: top-level field found: " + srcField);
@@ -257,7 +259,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 vExpr.accept(stringScanner);
                 Collection<JStringConstant<JField>> stringConstants = stringScanner.strs;
                 if (stringConstants != null) {
-                    if (sourceFile.debug)
+                    if (debug)
                         System.out.println("Field " + srcField + " is initialized by string constants: " + stringConstants);
                     sourceFile.stringConstants.addAll(stringConstants);
                 }
@@ -271,7 +273,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         Position outerPos = KotlinUtils.createPositionFromTokens(funMemDecl.start, funMemDecl.stop);
         SimpleIdentifierContext fNameCtx = funMemDecl.simpleIdentifier();
         String fName = fNameCtx.getText();
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Visiting function declaration: " + fName + "@" + outerPos);
         Type_Context fmdType = funMemDecl.type_();
         String retType = getType(fmdType);
@@ -342,7 +344,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     private void processInvocation(ExpressionContext expr) {
         if (expr == null)
             return;
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Processing invocation: " + expr.getText());
         processExprPostfixU(expr, ((PostfixUnaryExpressionContext postfixU) -> {
             List<PostfixUnarySuffixContext> postUSufs = postfixU.postfixUnarySuffix();
@@ -359,7 +361,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                 if (valArgList == null)
                     continue;
                 for (ValueArgumentContext valArg : valArgList) {
-                    if (sourceFile.debug)
+                    if (debug)
                         System.out.println("Processing argument: " + valArg.getText());
                     processExprPostfixU(valArg.expression(),
                             ((PostfixUnaryExpressionContext argPostfixU) -> {
@@ -505,7 +507,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     public Void visitPostfixUnaryExpression(PostfixUnaryExpressionContext ctx) {
         String type = getClassType(ctx);
         if (type != null) {
-            if (sourceFile.debug)
+            if (debug)
                 System.out.println("Encountered type reference: " + type);
             JType jt = scope.getEnclosingType();
             if (jt == null)
@@ -553,7 +555,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         }
         Position pos = KotlinUtils.createPositionFromTokens(ihc.start, ihc.stop);
         Import srcImport = new Import(pos, importName, isAsterisk, isStatic);
-        if (sourceFile.debug)
+        if (debug)
             System.out.println("Found source import: " + srcImport);
         sourceFile.imports.add(srcImport);
         return null;

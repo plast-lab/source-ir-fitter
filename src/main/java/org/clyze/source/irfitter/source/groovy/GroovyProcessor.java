@@ -23,7 +23,7 @@ public class GroovyProcessor implements SourceProcessor {
             CommonTokenStream tokens = new CommonTokenStream(gll);
             tokens.fill();
             GroovyLangParser glp = new GroovyLangParser(tokens);
-            glp.compilationUnit().accept(new GroovyTreeVisitor(sf));
+            glp.compilationUnit().accept(new GroovyTreeVisitor(sf, debug));
         } catch (IOException ex) {
             ex.printStackTrace();
         }

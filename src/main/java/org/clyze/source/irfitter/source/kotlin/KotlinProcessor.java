@@ -24,7 +24,7 @@ public class KotlinProcessor implements SourceProcessor {
             Lexer lexer = new KotlinLexer(CharStreams.fromStream(inputStream));
             TokenStream tokenStream = new CommonTokenStream(lexer);
             KotlinParser parser = new KotlinParser(tokenStream);
-            parser.kotlinFile().accept(new KotlinVisitor(sf));
+            parser.kotlinFile().accept(new KotlinVisitor(sf, debug));
         } catch (IOException ex) {
             ex.printStackTrace();
         }

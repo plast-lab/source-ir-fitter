@@ -182,6 +182,43 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.err.println("WARNING: unknown type use for element: " + type.getClass().getSimpleName());
     }
 
+    @Override
+    public void visit(final InstanceOfExpr instanceOfExpr, final JBlock block) {
+        proccessNameAccess(instanceOfExpr.getExpression(), instanceOfExpr, block, true);
+        super.visit(instanceOfExpr, block);
+    }
+
+    @Override
+    public void visit(final ReturnStmt retStmt, final JBlock block) {
+        retStmt.getExpression().ifPresent(expr -> proccessNameAccess(expr, retStmt, block, true));
+        super.visit(retStmt, block);
+    }
+
+    @Override
+    public void visit(final ThrowStmt throwStmt, final JBlock block) {
+        proccessNameAccess(throwStmt.getExpression(), throwStmt, block, true);
+        super.visit(throwStmt, block);
+    }
+
+    @Override
+    public void visit(final UnaryExpr uExpr, final JBlock block) {
+        proccessNameAccess(uExpr.getExpression(), uExpr, block, true);
+        super.visit(uExpr, block);
+    }
+
+    @Override
+    public void visit(final BinaryExpr bExpr, final JBlock block) {
+        proccessNameAccess(bExpr.getLeft(), bExpr, block, true);
+        proccessNameAccess(bExpr.getRight(), bExpr, block, true);
+        super.visit(bExpr, block);
+    }
+
+    @Override
+    public void visit(final YieldStmt yStmt, final JBlock block) {
+        proccessNameAccess(yStmt.getExpression(), yStmt, block, true);
+        super.visit(yStmt, block);
+    }
+
 //    @Override
 //    public void visit(FieldAccessExpr fldAccess, JBlock block) {
 //        System.out.println("Field access: " + fldAccess.getName() +
@@ -480,7 +517,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         NameExpr nameExpr = expr.asNameExpr();
         JVariable localVar = getLocalVariable(nameExpr, block);
         if (debug)
-            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar);
+            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar + ", read=" + read);
         if (localVar == null) {
             JType jt = scope.getEnclosingType();
             if (jt == null)
@@ -497,7 +534,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         } else {
             JMethod enclosingMethod = scope.getEnclosingMethod();
             if (enclosingMethod != null)
-                enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr), UsageKind.DATA_WRITE, localVar);
+                enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr),
+                        read ? UsageKind.DATA_READ : UsageKind.DATA_WRITE, localVar);
             else
                 System.err.println("WARNING: found variable use outside method: " + parentNode);
         }

@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.Set;
-
 import org.clyze.source.irfitter.SourceProcessor;
 import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;

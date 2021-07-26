@@ -22,7 +22,7 @@ public class TestMapper {
         String outDir = "build/test-out-java-groovy";
         RunResult rr = generateJson("clue-common-3.24.1.jar", "clue-common-3.24.1-sources.jar", outDir);
         assert (new File(outDir).listFiles() != null);
-        assert (rr.unmatched == 0);
+        assert (rr.unmatched == 23);
     }
 
     /**
@@ -34,7 +34,7 @@ public class TestMapper {
         String outDir = "build/test-out-kotlin";
         RunResult rr = generateJson("noarg-compiler-plugin.jar", "noarg-compiler-plugin-sources.zip", outDir);
         assert (new File(outDir).listFiles() != null);
-        assert (rr.unmatched == 25);
+        assert (rr.unmatched == 27);
     }
 
     RunResult generateJson(String jarRes, String sourcesJarRes, String outDir) throws IOException {

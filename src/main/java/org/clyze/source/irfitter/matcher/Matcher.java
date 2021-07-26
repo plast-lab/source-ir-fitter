@@ -344,7 +344,7 @@ public class Matcher {
                     }
                 }
             } else if (debug)
-                System.out.println("Field accesses ignored: (IR=" + irSize+ "/SRC=" + srcSize + ") in " + srcMethod);
+                System.out.println("Field accesses to '" + fieldName + "' ignored: (IR=" + irSize+ "/SRC=" + srcSize + ") in " + srcMethod);
         }
     }
 

@@ -337,13 +337,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(ExplicitConstructorInvocationStmt constrInvo, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(constrInvo);
         JMethod parentMethod = scope.getEnclosingMethod();
+        NodeList<Expression> arguments = constrInvo.getArguments();
         if (parentMethod == null)
             System.out.println("TODO: explicit constructors in initializers");
         else {
-            JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", constrInvo.getArguments().size(), pos, sourceFile, block, null);
+            JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", arguments.size(), pos, sourceFile, block, null);
             callSites.put(constrInvo, invo);
         }
         constrInvo.getExpression().ifPresent(expr -> proccessNameAccess(expr, constrInvo, block, true));
+        processNameReadsInArgs(arguments, constrInvo, block);
         super.visit(constrInvo, block);
     }
 
@@ -370,17 +372,19 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     bodyDeclaration.accept(jv, block);
             });
         }
+        NodeList<Expression> arguments = objCExpr.getArguments();
         if (parentMethod == null)
             System.out.println("ERROR: allocations/invocations in object creation in initializers");
         else {
             String base = getName(objCExpr.getScope());
-            JMethodInvocation invo = parentMethod.addInvocation(this.scope, "<init>", objCExpr.getArguments().size(), pos, sourceFile, block, base);
+            JMethodInvocation invo = parentMethod.addInvocation(this.scope, "<init>", arguments.size(), pos, sourceFile, block, base);
             callSites.put(objCExpr, invo);
             // If anonymous, add placeholder allocation, to be matched later.
             JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
             heapSites.put(objCExpr, alloc);
         }
-        objCExpr.getArguments().forEach(p -> p.accept(this, block));
+        processNameReadsInArgs(arguments, objCExpr, block);
+        arguments.forEach(p -> p.accept(this, block));
     }
 
     private static String getName(@SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<Expression> sc) {
@@ -451,8 +455,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
             callSites.put(call, invo);
             call.getScope().ifPresent(scopeExpr -> proccessNameAccess(scopeExpr, call, block, true));
-            for (Expression argument : call.getArguments())
-                proccessNameAccess(argument, call, block, true);
+            processNameReadsInArgs(call.getArguments(), call, block);
         }
         super.visit(call, block);
     }
@@ -539,6 +542,13 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             else
                 System.err.println("WARNING: found variable use outside method: " + parentNode);
         }
+    }
+
+    private void processNameReadsInArgs(NodeList<Expression> args, Node parentExpr, JBlock block) {
+        if (args == null)
+            return;
+        for (Expression argument : args)
+            proccessNameAccess(argument, parentExpr, block, true);
     }
 
     @Override

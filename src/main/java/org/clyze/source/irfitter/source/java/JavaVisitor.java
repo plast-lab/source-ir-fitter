@@ -668,6 +668,16 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         super.visit(thisExpr, block);
     }
 
+    @Override
+    public void visit(final LambdaExpr lambdaExpr, final JBlock block) {
+        JType jt = scope.getEnclosingType();
+        if (jt != null) {
+            JType anonJT = jt.createLambdaType(JavaUtils.createPositionFromNode(lambdaExpr), scope.getEnclosingElement());
+            scope.enterTypeScope(anonJT, (jt0 -> super.visit(lambdaExpr, block)));
+        } else
+            System.err.println("ERROR: cannot handle lambda outside type: " + lambdaExpr);
+    }
+
     private static String typeOf(NodeWithType<? extends Node, ? extends com.github.javaparser.ast.type.Type> node) {
         return Utils.simplifyType(node.getType().asString());
     }
@@ -682,7 +692,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         JType jt = new JType(sourceFile, name.toString(), superTypes, mp.getAnnotations(),
                 JavaUtils.createPositionFromNode(name), scope.getEnclosingElement(),
                 parent, isInner, mp.isPublic(), mp.isPrivate(), mp.isProtected(),
-                mp.isAbstract(), mp.isFinal(), false);
+                mp.isAbstract(), mp.isFinal(), false, false);
         jt.typeUses.addAll(mp.getAnnotationUses());
         return jt;
     }

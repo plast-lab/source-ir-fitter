@@ -49,6 +49,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         Position pos = KotlinUtils.createPositionFromToken(positionToken);
         KotlinModifierPack mp = new KotlinModifierPack(sourceFile, mc);
         boolean isAnonymous = false;
+        boolean isLambda = false;
 
         Set<TypeUse> delegTypeUses = new HashSet<>();
         List<String> superTypes = new ArrayList<>();
@@ -66,7 +67,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, mp.isInner(), mp.isPublic(),
                 mp.isPrivate(), mp.isProtected(), mp.isAbstract(), mp.isFinal(),
-                isAnonymous);
+                isAnonymous, isLambda);
         jt.typeUses.addAll(mp.getAnnotationUses());
         jt.typeUses.addAll(delegTypeUses);
         sourceFile.jTypes.add(jt);

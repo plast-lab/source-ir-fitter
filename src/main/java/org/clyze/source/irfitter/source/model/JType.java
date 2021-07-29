@@ -21,6 +21,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     private final boolean isAbstract;
     private final boolean isFinal;
     public final boolean isAnonymous;
+    public final boolean isLambdaType;
     private final boolean isInner;
     public final JInit classInitializer;
     public final JInit initBlock;
@@ -34,7 +35,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
                  ElementWithPosition<?, ?> declaringElement, JType parentType,
                  boolean isInner, boolean isPublic, boolean isPrivate,
                  boolean isProtected, boolean isAbstract, boolean isFinal,
-                 boolean isAnonymous) {
+                 boolean isAnonymous, boolean isLambdaType) {
         super(srcFile, pos);
         this.name = name;
         this.superTypes = superTypes;
@@ -48,12 +49,23 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
         this.isAbstract = isAbstract;
         this.isFinal = isFinal;
         this.isAnonymous = isAnonymous;
+        this.isLambdaType = isLambdaType;
         // Add <clinit>() method.
         this.classInitializer = JInit.createClinit(srcFile, this);
         this.methods.add(classInitializer);
         // Add instance initializer block.
         this.initBlock = JInit.createInitBlock(srcFile, this);
         this.methods.add(initBlock);
+    }
+
+    /**
+     * Create a pseudo-type for a lambda expression.
+     * @param pos               the source position of the lambda expression
+     * @param declaringElement  the code element declaring this lambda
+     * @return                  a new type that only characterizes this lambda expression
+     */
+    public JType createLambdaType(Position pos, ElementWithPosition<?, ?> declaringElement) {
+        return new JType(srcFile, null, new ArrayList<>(), new HashSet<>(), pos, declaringElement, this, false, false, false, false, false, false, true, true);
     }
 
     /**

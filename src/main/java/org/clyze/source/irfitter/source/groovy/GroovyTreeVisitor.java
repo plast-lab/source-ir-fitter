@@ -513,7 +513,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
-                mp.isAbstract(), mp.isFinal(), false);
+                mp.isAbstract(), mp.isFinal(), false, false);
         jt.typeUses.addAll(mp.getAnnotationUses());
         jt.typeUses.addAll(superTypeUses);
         sourceFile.jTypes.add(jt);

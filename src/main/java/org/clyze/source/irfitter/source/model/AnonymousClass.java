@@ -14,7 +14,7 @@ public class AnonymousClass extends JType {
                           Position pos, boolean isInner, int n) {
         // Anonymous classes cannot have annotations, so we pass an empty set.
         super(srcFile, null, superTypes, new HashSet<>(), pos, declaringElement, parentType, isInner, false,
-                false, false, false, false, true);
+                false, false, false, false, true, false);
         this.n = Integer.toString(n);
     }
 

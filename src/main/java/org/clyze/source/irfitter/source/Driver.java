@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
-
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.source.irfitter.ir.model.IRType;
@@ -19,7 +18,10 @@ import org.clyze.persistent.metadata.FileInfo;
 import org.clyze.persistent.metadata.Printer;
 import org.clyze.persistent.metadata.jvm.JvmFileReporter;
 import org.clyze.persistent.metadata.jvm.JvmMetadata;
-import org.clyze.persistent.model.*;
+import org.clyze.persistent.model.SymbolAlias;
+import org.clyze.persistent.model.SymbolWithId;
+import org.clyze.persistent.model.Usage;
+import org.clyze.persistent.model.UsageKind;
 import org.clyze.persistent.model.jvm.*;
 import org.zeroturnaround.zip.ZipUtil;
 

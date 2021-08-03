@@ -29,8 +29,7 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
     public void initSymbolFromIRElement(IRFieldAccess irElement) {
         if (symbol == null) {
             matchElement = irElement;
-            String useId = this.toString();
-            symbol = new Usage(pos, srcFile.getRelativePath(), true, useId,
+            symbol = new Usage(pos, srcFile.getRelativePath(), true, irElement.getId(),
                     irElement.fieldId, read ? UsageKind.DATA_READ : UsageKind.DATA_WRITE);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

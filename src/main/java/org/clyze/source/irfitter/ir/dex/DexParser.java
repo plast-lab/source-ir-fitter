@@ -23,6 +23,8 @@ import org.jf.dexlib2.iface.Annotation;
 import org.jf.dexlib2.iface.AnnotationElement;
 import org.jf.dexlib2.iface.instruction.Instruction;
 import org.jf.dexlib2.iface.instruction.ReferenceInstruction;
+import org.jf.dexlib2.iface.reference.FieldReference;
+import org.jf.dexlib2.iface.reference.Reference;
 import org.jf.dexlib2.iface.reference.TypeReference;
 import org.jf.dexlib2.iface.value.EncodedValue;
 
@@ -76,7 +78,7 @@ public class DexParser extends IRProcessor {
                         }
                         String mName = dexMethod.getName();
                         String retType = raiseLowLevelType(dexMethod.getReturnType());
-                        String methodId = classPrefix + retType + " " + mName + "(" + sj.toString() + ")>";
+                        String methodId = classPrefix + retType + " " + mName + "(" + sj + ")>";
                         List<IRVariable> parameters = new ArrayList<>();
                         for (int i = 0; i < paramTypes.size(); i++)
                             parameters.add(IRVariable.newParam(methodId, i));
@@ -173,6 +175,40 @@ public class DexParser extends IRProcessor {
                         irMethod.addInvocation(methodName, arity, invokedMethodId, targetType, targetRetType, sigStr.toString(), sourceLine, debug);
                         break;
                     }
+                    case SPUT:
+                    case SPUT_WIDE:
+                    case SPUT_OBJECT:
+                    case SPUT_BOOLEAN:
+                    case SPUT_BYTE:
+                    case SPUT_CHAR:
+                    case SPUT_SHORT:
+                    case IPUT:
+                    case IPUT_WIDE:
+                    case IPUT_OBJECT:
+                    case IPUT_BOOLEAN:
+                    case IPUT_BYTE:
+                    case IPUT_CHAR:
+                    case IPUT_SHORT: {
+                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, false);
+                        break;
+                    }
+                    case IGET:
+                    case IGET_WIDE:
+                    case IGET_OBJECT:
+                    case IGET_BOOLEAN:
+                    case IGET_BYTE:
+                    case IGET_CHAR:
+                    case IGET_SHORT:
+                    case SGET:
+                    case SGET_WIDE:
+                    case SGET_OBJECT:
+                    case SGET_BOOLEAN:
+                    case SGET_BYTE:
+                    case SGET_CHAR:
+                    case SGET_SHORT: {
+                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, true);
+                        break;
+                    }
                 }
             }
             for (DexBackedTryBlock tryBlock : implementation.getTryBlocks())
@@ -182,6 +218,20 @@ public class DexParser extends IRProcessor {
                         irMethod.addTypeReference(raiseLowLevelType(exceptionType));
                 }
         }
+    }
+
+    private void writeFieldAccess(Reference ref, IRMethod irMethod, boolean read) {
+        if (ref instanceof FieldReference) {
+            FieldReference fieldRef = (FieldReference) ref;
+            String fieldName = fieldRef.getName();
+            String fieldType = raiseLowLevelType(fieldRef.getType());
+            String fieldId = "<" + TypeUtils.raiseTypeId(fieldRef.getDefiningClass()) +
+                    ": " + fieldType + " " + fieldName + ">";
+            if (debug)
+                System.out.println("Adding access to field: " + fieldId);
+            irMethod.addFieldAccess(fieldId, fieldName, fieldType, read, debug);
+        } else
+            System.err.println("Unknown reference, field expected: " + ref);
     }
 
     static String raisedJvmTypeOf(ReferenceInstruction instr) {

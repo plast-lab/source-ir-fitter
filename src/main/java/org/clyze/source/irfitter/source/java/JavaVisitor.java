@@ -11,6 +11,7 @@ import com.github.javaparser.ast.type.*;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import com.github.javaparser.printer.YamlPrinter;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
@@ -94,7 +95,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(ConstructorDeclaration cd, JBlock block) {
-        visit(cd, "void", null, (() -> super.visit(cd, block)));
+        visit(cd, "void", null, block, ((block0) -> super.visit(cd, block0)));
     }
 
     @Override
@@ -102,7 +103,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         String retType = md.getTypeAsString();
         Collection<TypeUse> retTypeUses = new HashSet<>();
         addTypeUsesFromType(retTypeUses, md.getType());
-        visit(md, retType, retTypeUses, (() -> super.visit(md, block)));
+        visit(md, retType, retTypeUses, block, ((block0) -> super.visit(md, block0)));
     }
 
     @Override
@@ -246,11 +247,13 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     private <T extends CallableDeclaration<?>>
     void visit(CallableDeclaration<T> md, String retType, Collection<TypeUse> retTypeUses,
-               Runnable methodProcessor) {
+               JBlock block, Consumer<JBlock> methodProcessor) {
         SimpleName name = md.getName();
         List<JVariable> parameters = new ArrayList<>();
         Collection<TypeUse> paramTypeUses = new HashSet<>();
         boolean isVarArgs = false;
+        Position methodPos = JavaUtils.createPositionFromNode(name);
+        JBlock argsBlock = new JBlock(methodPos, block);
         for (Parameter param : md.getParameters()) {
             if (param.isVarArgs())
                 isVarArgs = true;
@@ -258,13 +261,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             addTypeUsesFromType(paramTypeUses, pType);
             Position paramPos = JavaUtils.createPositionFromNode(param);
             JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
-            parameters.add(new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), false, mp));
+            JVariable paramVar = new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), false, mp);
+            parameters.add(paramVar);
+            argsBlock.addVariable(paramVar);
         }
         JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt,
-                JavaUtils.createPositionFromNode(name), isVarArgs);
+                methodPos, isVarArgs);
         if (!mp.isStatic())
             jm.setReceiver();
         jt.typeUses.addAll(mp.getAnnotationUses());
@@ -276,7 +281,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         jt.methods.add(jm);
 
         // Set current method and visit method body.
-        scope.enterMethodScope(jm, (jm0 -> methodProcessor.run()));
+        scope.enterMethodScope(jm, (jm0 -> methodProcessor.accept(argsBlock)));
     }
 
     @Override
@@ -532,7 +537,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
                     visitFieldAccess(parentNode, name, read);
                 else
-                    System.err.println("WARNING: ignoring expresssion involving name from nested scope: " + parentNode);
+                    System.err.println("WARNING: ignoring expresssion involving name '" + name + "' from nested scope: " + parentNode + ", position: " + JavaUtils.createPositionFromNode(name));
             }
         } else {
             JMethod enclosingMethod = scope.getEnclosingMethod();
@@ -648,11 +653,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     static JVariable getLocalVariable(NameExpr nameExpr, JBlock block) {
-        if (nameExpr != null) {
-            String name = nameExpr.getNameAsString();
-            if (block != null)
-                return block.lookup(name);
-        }
+        if (nameExpr != null && block != null)
+            return block.lookup(nameExpr.getNameAsString());
         return null;
     }
 

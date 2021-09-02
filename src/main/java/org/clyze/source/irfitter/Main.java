@@ -12,7 +12,7 @@ import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.Driver;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.clyze.source.irfitter.ir.IRProcessor;
-import org.clyze.utils.VersionInfo;
+import org.clyze.utils.JHelper;
 
 /** The main application class. */
 public class Main {
@@ -99,7 +99,7 @@ public class Main {
         String help2 = "--" + helpOpt.getLongOpt();
         for (String arg : args)
             if (arg.equals(version1) || arg.equals(version2)) {
-                System.out.println(VersionInfo.getVersionInfo(Main.class));
+                System.out.println(JHelper.getVersionInfo(Main.class));
                 return null;
             } else if (arg.equals(help1) || arg.equals(help2)) {
                 printUsage(options);

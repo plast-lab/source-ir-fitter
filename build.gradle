@@ -20,16 +20,12 @@ repositories {
 
 mainClassName = 'org.clyze.source.irfitter.Main'
 
-gradle.rootProject.ext.clueCommonVersion='3.23.7'
-gradle.rootProject.ext.commonsCliVersion='1.2'
-gradle.rootProject.ext.groovyVersion="3.0.7"
-
 def asmVersion = '9.0'
 dependencies {
-    implementation "commons-cli:commons-cli:${commonsCliVersion}"
-    implementation "org.clyze:clue-common:${clueCommonVersion}"
+    implementation "commons-cli:commons-cli:1.2"
+    implementation "org.clyze:clue-common:3.25.0"
     implementation "org.clyze:metadata-model:2.2.2"
-    implementation "org.clyze:code-processor:4.24.1"
+    implementation "org.clyze:code-processor:4.24.4"
     // SARIF library
     implementation 'org.clyze:mini-sarif:0.1.2'
     // Bytecode parser, BSD
@@ -38,7 +34,7 @@ dependencies {
     // Java parser, Apache 2.0
     implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.20.0'
     // Groovy parser, Apache 2.0
-    api "org.codehaus.groovy:groovy:${groovyVersion}"
+    api "org.codehaus.groovy:groovy:3.0.8"
     // Kotlin parser, Apache 2.0
     api "org.antlr.grammars:kotlin-formal:1.0-SNAPSHOT"
     // Dex parser, BSD

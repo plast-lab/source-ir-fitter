@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.source.groovy;
 
+import groovyjarjarantlr4.v4.runtime.ParserRuleContext;
 import groovyjarjarantlr4.v4.runtime.RuleContext;
 import groovyjarjarantlr4.v4.runtime.Token;
 import groovyjarjarantlr4.v4.runtime.tree.*;
@@ -105,51 +106,59 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
     @Override
     public Void visitMethodDeclaration(MethodDeclarationContext ctx) {
-        String name = ctx.methodName().identifier().getText();
-        // Return types may be missing.
-        ReturnTypeContext retCtx = ctx.returnType();
-        String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
-        Collection<TypeUse> retTypeUses = new HashSet<>();
-        if (retCtx != null)
-            addTypeUsesInType(retTypeUses, retCtx.type());
-        logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
-        List<JVariable> parameters = new ArrayList<>();
-        Collection<TypeUse> paramTypeUses = new HashSet<>();
-        FormalParametersContext paramsCtx = ctx.formalParameters();
-        if (paramsCtx == null)
-            System.err.println("WARNING: no formal parameters for " + name);
+        MethodNameContext methodNameContext = ctx.methodName();
+        ParserRuleContext nameContext = methodNameContext.identifier();
+        if (nameContext == null)
+            nameContext = methodNameContext.stringLiteral();
+        if (nameContext == null)
+            System.err.println("ERROR: could not process method name: " + GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop));
         else {
-            FormalParameterListContext paramsListCtx = paramsCtx.formalParameterList();
-            if (paramsListCtx != null) {
-                for (FormalParameterContext frmCtx : paramsListCtx.formalParameter()) {
-                    String paramName = frmCtx.variableDeclaratorId().identifier().getText();
-                    TypeContext frmType = frmCtx.type();
-                    String paramType = getType(frmType);
-                    addTypeUsesInType(paramTypeUses, frmType);
-                    Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
-                    GroovyModifierPack mp = new GroovyModifierPack(frmCtx.variableModifiersOpt());
-                    JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, false, mp);
-                    logDebug(() -> "param: " + param);
-                    parameters.add(param);
+            String name = nameContext.getText();
+            // Return types may be missing.
+            ReturnTypeContext retCtx = ctx.returnType();
+            String retType = retCtx == null ? null : Utils.simplifyType(retCtx.getText());
+            Collection<TypeUse> retTypeUses = new HashSet<>();
+            if (retCtx != null)
+                addTypeUsesInType(retTypeUses, retCtx.type());
+            logDebug(() -> "Groovy method: " + name + ", return type: " + retType);
+            List<JVariable> parameters = new ArrayList<>();
+            Collection<TypeUse> paramTypeUses = new HashSet<>();
+            FormalParametersContext paramsCtx = ctx.formalParameters();
+            if (paramsCtx == null)
+                System.err.println("WARNING: no formal parameters for " + name);
+            else {
+                FormalParameterListContext paramsListCtx = paramsCtx.formalParameterList();
+                if (paramsListCtx != null) {
+                    for (FormalParameterContext frmCtx : paramsListCtx.formalParameter()) {
+                        String paramName = frmCtx.variableDeclaratorId().identifier().getText();
+                        TypeContext frmType = frmCtx.type();
+                        String paramType = getType(frmType);
+                        addTypeUsesInType(paramTypeUses, frmType);
+                        Position paramPos = GroovyUtils.createPositionFromTokens(frmCtx.start, frmCtx.stop);
+                        GroovyModifierPack mp = new GroovyModifierPack(frmCtx.variableModifiersOpt());
+                        JVariable param = new JVariable(sourceFile, paramPos, paramName, paramType, false, mp);
+                        logDebug(() -> "param: " + param);
+                        parameters.add(param);
+                    }
                 }
             }
-        }
-        Position pos = GroovyUtils.createPositionFromToken(ctx.methodName().start);
-        Position outerPos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
-        JType jt = scope.getEnclosingType();
-        GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
-        // TODO: handle varargs in Groovy
-        boolean isVarArgs = false;
-        JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos, isVarArgs);
-        if (!mp.isStatic())
-            jm.setReceiver();
-        registerMethodSigTypeUses(ctx, jt, retTypeUses, paramTypeUses);
+            Position pos = GroovyUtils.createPositionFromToken(methodNameContext.start);
+            Position outerPos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
+            JType jt = scope.getEnclosingType();
+            GroovyModifierPack mp = new GroovyModifierPack(sourceFile, ctx.modifiersOpt());
+            // TODO: handle varargs in Groovy
+            boolean isVarArgs = false;
+            JMethod jm = new JMethod(sourceFile, name, retType, parameters, mp.getAnnotations(), outerPos, jt, pos, isVarArgs);
+            if (!mp.isStatic())
+                jm.setReceiver();
+            registerMethodSigTypeUses(ctx, jt, retTypeUses, paramTypeUses);
 
-        if (jt == null)
-            System.out.println("WARNING: top-level Groovy methods are not yet supported.");
-        else {
-            jt.methods.add(jm);
-            scope.enterMethodScope(jm, (jm0 -> visitMethodBody(ctx.methodBody())));
+            if (jt == null)
+                System.out.println("WARNING: top-level Groovy methods are not yet supported.");
+            else {
+                jt.methods.add(jm);
+                scope.enterMethodScope(jm, (jm0 -> visitMethodBody(ctx.methodBody())));
+            }
         }
 
         return null;

@@ -34,7 +34,7 @@ dependencies {
     // Java parser, Apache 2.0
     implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.20.0'
     // Groovy parser, Apache 2.0
-    api "org.codehaus.groovy:groovy:3.0.8"
+    api "org.codehaus.groovy:groovy:3.0.9"
     // Kotlin parser, Apache 2.0
     api "org.antlr.grammars:kotlin-formal:1.0-SNAPSHOT"
     // Dex parser, BSD

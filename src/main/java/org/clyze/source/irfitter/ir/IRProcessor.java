@@ -1,14 +1,14 @@
 package org.clyze.source.irfitter.ir;
 
-import org.clyze.source.irfitter.ir.bytecode.BytecodeParser;
-import org.clyze.source.irfitter.ir.dex.DexParser;
-import org.clyze.source.irfitter.ir.model.IRType;
-
 import java.io.*;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import org.clyze.source.irfitter.ir.bytecode.BytecodeParser;
+import org.clyze.source.irfitter.ir.dex.DexParser;
+import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.source.Driver;
 
 public abstract class IRProcessor {
     protected final boolean debug;
@@ -40,12 +40,24 @@ public abstract class IRProcessor {
             } else if (name.endsWith(".apk")) {
                 processZipArchive(irFile, ".dex", debug,
                         is -> new DexParser(debug, enterMethods, varArgMethods).processDex(irTypes, is));
-            }
-        } else if (irFile.isDirectory()) {
-            for (File f : Objects.requireNonNull(irFile.listFiles()))
-                irTypes.addAll(processIR(varArgMethods, f, debug, enterMethods));
-        }
+            } else if (name.endsWith(".war")) {
+                try {
+                    File tmpDir = Driver.extractZipToTempDir("war-ir", irFile);
+                    processIRDir(irTypes, varArgMethods, tmpDir, debug, enterMethods);
+                } catch (IOException ex) {
+                    System.err.println("ERROR: failed to extract " + name);
+                }
+            } else
+                System.err.println("ERROR: unknown IR file type: " + name);
+        } else if (irFile.isDirectory())
+            processIRDir(irTypes, varArgMethods, irFile, debug, enterMethods);
         return irTypes;
+    }
+
+    private static void processIRDir(List<IRType> irTypes, Set<String> varArgMethods,
+                                     File irDir, boolean debug, boolean enterMethods) {
+        for (File f : Objects.requireNonNull(irDir.listFiles()))
+            irTypes.addAll(processIR(varArgMethods, f, debug, enterMethods));
     }
 
     private static void processZipArchive(File irFile, String ext, boolean debug,

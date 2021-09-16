@@ -35,7 +35,7 @@ public class Main {
         srcOpt.setArgs(Option.UNLIMITED_VALUES);
         options.addOption(srcOpt);
 
-        Option irOpt = new Option("i", "ir", true, "IR file, directory, or .class/.jar/.apk/.dex file.");
+        Option irOpt = new Option("i", "ir", true, "IR file, directory, or .class/.jar/.war/.apk/.dex file.");
         irOpt.setRequired(true);
         irOpt.setArgName("PATH");
         irOpt.setArgs(Option.UNLIMITED_VALUES);

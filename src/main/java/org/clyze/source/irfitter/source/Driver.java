@@ -71,9 +71,7 @@ public class Driver {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
-                File tmpDir = Files.createTempDirectory("extracted-sources").toFile();
-                tmpDir.deleteOnExit();
-                ZipUtil.unpack(srcFile, tmpDir);
+                File tmpDir = extractZipToTempDir("extracted-sources", srcFile);
                 return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy, aliaser);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -81,6 +79,21 @@ public class Driver {
             }
         } else
             return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy, aliaser);
+    }
+
+    /**
+     * Helper method, extracts a ZIP archive to a temporary directory (that will
+     * be deleted when the program terminates).
+     * @param dirTag       the identifier to use when creating the directory
+     * @param archive      the archive to decompress
+     * @return             the temporary directory containing the archive contents
+     * @throws IOException when failing to create the directory
+     */
+    public static File extractZipToTempDir(String dirTag, File archive) throws IOException {
+        File tmpDir = Files.createTempDirectory(dirTag).toFile();
+        tmpDir.deleteOnExit();
+        ZipUtil.unpack(archive, tmpDir);
+        return tmpDir;
     }
 
     private Collection<SourceFile> readSources(File topDir, File srcFile,

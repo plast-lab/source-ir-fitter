@@ -41,12 +41,12 @@ public class SourceFile {
     public final Matcher matcher;
 
     public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes,
-                      boolean lossy, Aliaser aliaser) {
+                      boolean lossy, boolean matchIR, Aliaser aliaser) {
         this.topDir = topDir;
         this.file = file;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
-        this.matcher = new Matcher(this, debug, lossy, aliaser);
+        this.matcher = new Matcher(this, debug, lossy, matchIR, aliaser);
     }
 
     /**

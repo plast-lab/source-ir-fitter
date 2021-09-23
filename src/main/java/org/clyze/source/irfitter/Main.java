@@ -83,6 +83,9 @@ public class Main {
         Option synthOpt = new Option(null, "synthesize-types", false, "Synthesize types from partial source/IR information.");
         options.addOption(synthOpt);
 
+        Option matchIROpt = new Option(null, "match-ir", false, "Only generate metadata for source elements matching IR elements.");
+        options.addOption(matchIROpt);
+
         Option versionOpt = new Option("v", "version", false, "Print version.");
         options.addOption(versionOpt);
 
@@ -128,6 +131,7 @@ public class Main {
             boolean synthesizeTypes = cli.hasOption(synthOpt.getLongOpt());
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             boolean resolveInvocations = cli.hasOption(resolveInvocationsOpt.getLongOpt());
+            boolean matchIR = cli.hasOption(matchIROpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] platforms = cli.getOptionValues(platformOpt.getLongOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
@@ -157,11 +161,11 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy, aliaser));
+                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser));
             }
 
             // Match information between IR and sources.
-            return driver.match(irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, aliaser, relVars);
+            return driver.match(irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, matchIR, aliaser, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

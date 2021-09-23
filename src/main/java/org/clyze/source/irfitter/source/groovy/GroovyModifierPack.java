@@ -10,7 +10,8 @@ class GroovyModifierPack extends SourceModifierPack {
     private boolean isDef = false;
     private boolean isStrictFp = false;
 
-    public GroovyModifierPack(SourceFile sourceFile, ClassOrInterfaceModifiersOptContext classOrInterfaceModifiersOptContext) {
+    public GroovyModifierPack(SourceFile sourceFile, ClassOrInterfaceModifiersOptContext classOrInterfaceModifiersOptContext,
+                              ClassDeclarationContext classDecl) {
         if (classOrInterfaceModifiersOptContext == null)
             return;
         ClassOrInterfaceModifiersContext mods = classOrInterfaceModifiersOptContext.classOrInterfaceModifiers();
@@ -18,6 +19,8 @@ class GroovyModifierPack extends SourceModifierPack {
             return;
         for (ClassOrInterfaceModifierContext c : mods.classOrInterfaceModifier())
             updateFrom(sourceFile, c);
+        this.isInterface = classDecl.INTERFACE() != null;
+        this.isEnum = classDecl.ENUM() != null;
     }
 
     public GroovyModifierPack(SourceFile sourceFile, ModifiersOptContext modifiersOpt) {
@@ -104,7 +107,7 @@ class GroovyModifierPack extends SourceModifierPack {
 
     @Override
     public boolean isInterface() {
-        throw new UnsupportedOperationException("Groovy sources: isInterface() is not supported");
+        return this.isInterface;
     }
 
     @Override
@@ -119,7 +122,7 @@ class GroovyModifierPack extends SourceModifierPack {
 
     @Override
     public boolean isEnum() {
-        throw new UnsupportedOperationException("Groovy sources: isEnum() is not supported");
+        return this.isEnum;
     }
 
     public boolean isDef() {

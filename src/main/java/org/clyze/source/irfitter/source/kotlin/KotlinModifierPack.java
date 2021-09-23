@@ -14,15 +14,17 @@ public class KotlinModifierPack extends SourceModifierPack {
     private boolean isSuspend = false;
 
     public KotlinModifierPack(SourceFile sourceFile, ModifiersContext modsCtxt) {
-        this(sourceFile, null, modsCtxt);
+        this(sourceFile, null, modsCtxt, false, false);
     }
 
     public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl) {
-        this(sourceFile, anl, null);
+        this(sourceFile, anl, null, false, false);
     }
 
     public KotlinModifierPack(SourceFile sourceFile, List<AnnotationContext> anl,
-                              ModifiersContext modsCtxt) {
+                              ModifiersContext modsCtxt, boolean isInterface, boolean isEnum) {
+        this.isInterface = isInterface;
+        this.isEnum = isEnum;
         updateFrom(sourceFile, anl);
         if (modsCtxt != null) {
             List<ModifierContext> mcl = modsCtxt.modifier();
@@ -113,7 +115,7 @@ public class KotlinModifierPack extends SourceModifierPack {
 
     @Override
     public boolean isInterface() {
-        throw new UnsupportedOperationException("Kotlin sources: isInterface() is not supported");
+        return this.isInterface;
     }
 
     @Override

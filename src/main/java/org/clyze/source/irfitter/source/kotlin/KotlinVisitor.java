@@ -42,12 +42,12 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
     private void visitTypeDeclaration(String name, Token positionToken,
                                       ModifiersContext mc, DelegationSpecifiersContext delegSpecs,
                                       PrimaryConstructorContext primaryConstr,
-                                      ClassBodyContext cBody) {
+                                      ClassBodyContext cBody, boolean isInterface, boolean isEnum) {
         if (debug)
             System.out.println("Type declaration: " + name);
         JType parent = scope.getEnclosingType();
         Position pos = KotlinUtils.createPositionFromToken(positionToken);
-        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, mc);
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, null, mc, isInterface, isEnum);
         boolean isAnonymous = false;
         boolean isLambda = false;
 
@@ -67,7 +67,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, mp.isInner(), mp.isPublic(),
                 mp.isPrivate(), mp.isProtected(), mp.isAbstract(), mp.isFinal(),
-                isAnonymous, isLambda);
+                isAnonymous, isLambda, mp.isInterface(), mp.isEnum());
         jt.typeUses.addAll(mp.getAnnotationUses());
         jt.typeUses.addAll(delegTypeUses);
         sourceFile.jTypes.add(jt);
@@ -92,7 +92,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String name = idNode.getText();
         Token positionToken = idNode.getSymbol();
         visitTypeDeclaration(name, positionToken, objDecl.modifiers(),
-                objDecl.delegationSpecifiers(), null, objDecl.classBody());
+                objDecl.delegationSpecifiers(), null, objDecl.classBody(), false, false);
         return null;
     }
 
@@ -101,8 +101,11 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         TerminalNode idNode = cdc.simpleIdentifier().Identifier();
         String name = idNode.getText();
         Token positionToken = idNode.getSymbol();
+        boolean isInterface = cdc.INTERFACE() != null;
+        boolean isEnum = cdc.enumClassBody() != null;
         visitTypeDeclaration(name, positionToken, cdc.modifiers(),
-                cdc.delegationSpecifiers(), cdc.primaryConstructor(), cdc.classBody());
+                cdc.delegationSpecifiers(), cdc.primaryConstructor(), cdc.classBody(),
+                isInterface, isEnum);
         return null;
     }
 
@@ -158,7 +161,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         if (debug)
             System.out.println("Registering companion type: " + name);
         visitTypeDeclaration(name, positionToken, companionObj.modifiers(),
-                companionObj.delegationSpecifiers(), null, companionObj.classBody());
+                companionObj.delegationSpecifiers(), null, companionObj.classBody(), false, false);
         return null;
     }
 
@@ -244,7 +247,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
         String fTypeName = getType(fType);
         if (debug)
             System.out.println("Visiting field declaration: " + fTypeName + " " + fName);
-        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers);
+        KotlinModifierPack mp = new KotlinModifierPack(sourceFile, fDecl.annotation(), modifiers, false, false);
         JField srcField = new JField(sourceFile, fTypeName, fName, mp.getAnnotations(), KotlinUtils.createPositionFromToken(id.start), jt);
         if (debug)
             System.out.println("Found source field: " + srcField + " : " + mp);

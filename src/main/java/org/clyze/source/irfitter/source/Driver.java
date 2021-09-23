@@ -62,23 +62,24 @@ public class Driver {
      * @param debug               debug mode
      * @param synthesizeTypes     if true, attempt to synthesize erased types
      * @param lossy               if true, enable lossy heuristics
+     * @param matchIR             if true, keep only results that match both source and IR elements
      * @param aliaser             the symbol aliasing helper
      * @return                    the processed source file objects
      */
     public Collection<SourceFile> readSources(File srcFile, boolean debug,
                                               boolean synthesizeTypes, boolean lossy,
-                                              Aliaser aliaser) {
+                                              boolean matchIR, Aliaser aliaser) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = extractZipToTempDir("extracted-sources", srcFile);
-                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy, aliaser);
+                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy, matchIR, aliaser);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy, aliaser);
+            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser);
     }
 
     /**
@@ -98,7 +99,7 @@ public class Driver {
 
     private Collection<SourceFile> readSources(File topDir, File srcFile,
                                                boolean debug, boolean synthesizeTypes,
-                                               boolean lossy, Aliaser aliaser) {
+                                               boolean lossy, boolean matchIR, Aliaser aliaser) {
         Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -106,18 +107,18 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy, aliaser));
+                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy, matchIR, aliaser));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, aliaser, varargIrMethods));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
             }
         }
         return sources;
@@ -136,14 +137,15 @@ public class Driver {
      * @param resolveInvocations if true, resolve invocation targets
      * @param resolveVars        if true, resolve variables from Doop facts
      * @param translateResults   if true, map Doop results to sources
+     * @param matchIR            if true, keep only results that match both source and IR elements
      * @param aliaser            the symbol aliasing helper
      * @param relVars            the column-variable relation spec
      * @return                   the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
-                           boolean json, boolean sarif,
-                           boolean resolveInvocations, boolean resolveVars,
-                           boolean translateResults, Aliaser aliaser, String[] relVars) {
+                           boolean json, boolean sarif,  boolean resolveInvocations,
+                           boolean resolveVars, boolean translateResults,
+                           boolean matchIR, Aliaser aliaser, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
         for (SourceFile sf : sources) {
@@ -189,7 +191,7 @@ public class Driver {
         if (sarif)
             (new DoopSARIFGenerator(db, out, "1.0", false, flatMapping, debug)).process();
         if (json)
-            generateJSON(flatMapping, sources);
+            generateJSON(flatMapping, sources, matchIR);
 
         if (debug)
             idMapper.printStats(sources);
@@ -341,7 +343,7 @@ public class Driver {
     }
 
     private void generateJSON(Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping,
-                              Collection<SourceFile> sources) {
+                              Collection<SourceFile> sources, boolean matchIR) {
         for (Map.Entry<String, Collection<? extends ElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String doopId = entry.getKey();
             if (debug)
@@ -349,8 +351,14 @@ public class Driver {
             for (ElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
-                    System.out.println("Source element has no symbol: " + srcElem);
-                    continue;
+                    if (!matchIR && (srcElem instanceof JType)) {
+                        System.out.println("Generating partial metadata for element: " + srcElem);
+                        JType jt = (JType) srcElem;
+                        symbol = jt.getJvmClassWith(jt.getFullyQualifiedName(), jt.isInterface, jt.isEnum, jt.isInner, jt.isAnonymous, jt.isAbstract, jt.isFinal, jt.isPublic, jt.isProtected);
+                    } else {
+                        System.out.println("Source element has no symbol: " + srcElem);
+                        continue;
+                    }
                 }
                 registerSymbol(srcElem.srcFile.getJvmMetadata(), symbol);
             }

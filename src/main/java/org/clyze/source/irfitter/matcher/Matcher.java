@@ -20,6 +20,9 @@ public class Matcher {
     private final boolean debug;
     /** The source file where matching will happen. */
     private final SourceFile sourceFile;
+    /** If true, keep only results that match both source and IR elements. */
+    private final boolean matchIR;
+
     /** The symbol-id aliasing handler. */
     private final Aliaser aliaser;
 
@@ -27,12 +30,15 @@ public class Matcher {
      * @param sourceFile   the source file where matching will happen
      * @param debug        debugging mode
      * @param lossy        if true, use unsafe heuristics
+     * @param matchIR      if true, keep only results that match both source and IR elements
      * @param aliaser      the symbol aliasing helper
      */
-    public Matcher(SourceFile sourceFile, boolean debug, boolean lossy, Aliaser aliaser) {
+    public Matcher(SourceFile sourceFile, boolean debug, boolean lossy,
+                   boolean matchIR, Aliaser aliaser) {
         this.sourceFile = sourceFile;
         this.lossy = lossy;
         this.debug = debug;
+        this.matchIR = matchIR;
         this.aliaser = aliaser;
     }
 
@@ -46,16 +52,20 @@ public class Matcher {
         for (JType jt : sourceFile.jTypes) {
             if (debug)
                 System.out.println("Matching source type: " + jt);
-            String id = jt.getFullyQualifiedName(sourceFile.packageName);
+            String id = jt.getFullyQualifiedName();
             //System.out.println("Mapping " + jt.name + " -> " + id);
+            boolean typeMatched = false;
             for (IRType irType : irTypes)
                 if (!irType.matched && irType.getId().equals(id)) {
                     recordMatch(idMapper.typeMap, "type", irType, jt);
+                    typeMatched = true;
                     matchFields(idMapper.fieldMap, irType.fields, jt.fields);
                     matchMethods(idMapper, irType.methods, jt.methods, irType.outerTypes);
                     generateUnknownTypeMetadata(idMapper, irType, jt);
                     break;
                 }
+            if (!typeMatched && !matchIR)
+                idMapper.typeMap.put(id, Collections.singletonList(jt));
         }
         // When all types have been resolved, mark declaring symbol ids.
         for (JType jt : sourceFile.jTypes)

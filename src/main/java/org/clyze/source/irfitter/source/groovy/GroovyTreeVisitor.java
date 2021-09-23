@@ -72,8 +72,9 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
 
         TypeDeclarationContext typeDecl = ssc.typeDeclaration();
         if (typeDecl != null) {
-            GroovyModifierPack mp = new GroovyModifierPack(sourceFile, typeDecl.classOrInterfaceModifiersOpt());
-            processClassDeclaration(mp, typeDecl.classDeclaration());
+            ClassDeclarationContext classDecl = typeDecl.classDeclaration();
+            GroovyModifierPack mp = new GroovyModifierPack(sourceFile, typeDecl.classOrInterfaceModifiersOpt(), classDecl);
+            processClassDeclaration(mp, classDecl);
             return null;
         }
 
@@ -522,7 +523,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JType jt = new JType(sourceFile, name, superTypes, mp.getAnnotations(),
                 pos, scope.getEnclosingElement(), parent, isInner,
                 mp.isGroovyPublic(), mp.isPrivate(), mp.isProtected(),
-                mp.isAbstract(), mp.isFinal(), false, false);
+                mp.isAbstract(), mp.isFinal(), false, false, mp.isInterface(), mp.isEnum());
         jt.typeUses.addAll(mp.getAnnotationUses());
         jt.typeUses.addAll(superTypeUses);
         sourceFile.jTypes.add(jt);

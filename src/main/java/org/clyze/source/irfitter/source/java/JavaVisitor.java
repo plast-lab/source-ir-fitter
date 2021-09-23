@@ -694,7 +694,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         JType jt = new JType(sourceFile, name.toString(), superTypes, mp.getAnnotations(),
                 JavaUtils.createPositionFromNode(name), scope.getEnclosingElement(),
                 parent, isInner, mp.isPublic(), mp.isPrivate(), mp.isProtected(),
-                mp.isAbstract(), mp.isFinal(), false, false);
+                mp.isAbstract(), mp.isFinal(), false, false, mp.isInterface(), mp.isEnum());
         jt.typeUses.addAll(mp.getAnnotationUses());
         return jt;
     }

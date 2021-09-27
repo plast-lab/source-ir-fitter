@@ -73,6 +73,33 @@ public class Matcher {
             jt.updateDeclaringSymbolId();
     }
 
+    private void matchLambdas(IdMapper idMapper, JMethod srcMethod) {
+        List<JLambda> lambdas = srcMethod.lambdas;
+        if (lambdas == null)
+            return;
+        IRMethod irMethod = srcMethod.matchElement;
+        if (irMethod == null)
+            return;
+        int srcLambdasSize = lambdas.size();
+        List<IRLambda> irLambdas = irMethod.lambdas;
+        int irLambdasSize = irLambdas.size();
+        if (srcLambdasSize > irLambdasSize)
+            System.err.println("WARNING: SRC/IR lambda arities differ for method " + srcMethod + ": " + srcLambdasSize + " vs. " + irLambdasSize);
+        else if (srcLambdasSize < irLambdasSize)
+            System.err.println("WARNING: SRC/IR lambda arities differ for method " + srcMethod + ": " + srcLambdasSize + " vs. " + irLambdasSize + ", handling it as an environment-capturing lambda...");
+        int captureShift = irLambdasSize - srcLambdasSize;
+        for (int i = 0; i < srcLambdasSize; i++) {
+            JLambda jLambda = lambdas.get(i);
+            // We assume that capture parameters are first, then original lambda parameters.
+            IRLambda irLambda = irLambdas.get(i + captureShift);
+            IRMethod implMethod = irLambda.implMethod;
+            if (implMethod != null) {
+                recordMatch(idMapper.methodMap, "lambda", implMethod, jLambda);
+                matchInsideMethod(idMapper, jLambda, true);
+            }
+        }
+    }
+
     /**
      * Generate metadata for type members that could not be matched with the
      * sources. Positions are assumed to come from the source type argument.
@@ -151,17 +178,25 @@ public class Matcher {
             System.out.println("* Matching method invocations by name/arity...");
         for (JMethod srcMethod : srcMethods) {
             matchInvocations(idMapper.invocationMap, srcMethod);
-            if (srcMethod.matchId != null) {
-                matchParameters(idMapper.variableMap, srcMethod);
-                matchAllocations(idMapper.allocationMap, srcMethod);
-                matchFieldAccesses(idMapper.fieldAccessMap, srcMethod);
-                matchMethodReferences(idMapper.methodRefMap, srcMethod);
-                matchVariables(idMapper.variableMap, srcMethod);
-                matchCasts(srcMethod);
-            }
+            if (srcMethod.matchId != null)
+                matchInsideMethod(idMapper, srcMethod, false);
         }
 
+        if (debug)
+            System.out.println("* Matching lambdas...");
+        for (JMethod srcMethod : srcMethods)
+            matchLambdas(idMapper, srcMethod);
+
         generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
+    }
+
+    private void matchInsideMethod(IdMapper idMapper, JMethod srcMethod, boolean isLambda) {
+        matchParameters(idMapper.variableMap, srcMethod, isLambda);
+        matchAllocations(idMapper.allocationMap, srcMethod);
+        matchFieldAccesses(idMapper.fieldAccessMap, srcMethod);
+        matchMethodReferences(idMapper.methodRefMap, srcMethod);
+        matchVariables(idMapper.variableMap, srcMethod);
+        matchCasts(srcMethod);
     }
 
     private void matchCasts(JMethod srcMethod) {
@@ -221,7 +256,8 @@ public class Matcher {
         variableMap.computeIfAbsent(variable.symbol.getSymbolId(), (k -> new ArrayList<>())).add(variable);
     }
 
-    private void matchParameters(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
+    private void matchParameters(Map<String, Collection<JVariable>> variableMap,
+                                 JMethod srcMethod, boolean isLambda) {
         IRMethod irMethod = srcMethod.matchElement;
         JVariable srcReceiver = srcMethod.receiver;
         IRVariable irReceiver = irMethod.receiver;
@@ -233,16 +269,21 @@ public class Matcher {
         List<IRVariable> irParameters = irMethod.parameters;
         int irParamSize = irParameters.size();
         int srcParamSize = srcParameters.size();
-        if (irParamSize == srcParamSize) {
-            for (int i = 0; i < irParamSize; i++) {
+        if (irParamSize != srcParamSize) {
+            String msg = "different number of parameters, source: " + srcParamSize +
+                    " vs. IR: " + irParamSize + " for method: " + srcMethod.matchId;
+            if (irParamSize < srcParamSize || !isLambda) {
+                System.out.println("ERROR: " + msg);
+                return;
+            } else
+                System.out.println("WARNING: " + msg + ". Assuming this is a capturing lambda.");
+            int captureShift = irParamSize - srcParamSize;
+            for (int i = 0; i < srcParamSize; i++) {
                 JVariable srcVar = srcParameters.get(i);
                 registerSourceVariable(variableMap, srcMethod, srcVar);
-                aliaser.addIrAlias("PARAMETER", srcVar, irParameters.get(i).getId());
+                aliaser.addIrAlias("PARAMETER", srcVar, irParameters.get(captureShift + i).getId());
             }
-        } else
-            System.out.println("WARNING: different number of parameters, source: " +
-                    srcParamSize + " vs. IR: " + irParamSize + " for method: " +
-                    srcMethod.matchId);
+        }
     }
 
     private void matchMethodReferences(Map<String, Collection<JMethodRef>> mapper,

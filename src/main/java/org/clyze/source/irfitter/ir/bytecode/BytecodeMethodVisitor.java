@@ -5,10 +5,12 @@ import java.util.Map;
 import java.util.StringJoiner;
 
 import org.clyze.source.irfitter.base.AccessType;
+import org.clyze.source.irfitter.ir.model.IRFieldAccess;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.*;
+import org.objectweb.asm.util.Printer;
 
 /**
  * The visitor for bytecode methods.
@@ -145,12 +147,38 @@ public class BytecodeMethodVisitor extends MethodVisitor {
 
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
-        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC)
             addFieldAccess(owner, name, descriptor, AccessType.READ);
-        } else if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
+        else if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC)
             addFieldAccess(owner, name, descriptor, AccessType.WRITE);
-        }
         super.visitFieldInsn(opcode, owner, name, descriptor);
+    }
+
+    @Override
+    public void visitInsn(int opcode) {
+        // TODO: aastore
+        if (opcode == Opcodes.BASTORE || opcode == Opcodes.CASTORE ||
+            opcode == Opcodes.DASTORE || opcode == Opcodes.FASTORE ||
+            opcode == Opcodes.LASTORE || opcode == Opcodes.IASTORE ||
+            opcode == Opcodes.SASTORE) {
+            // This means that a previous get-field is not an actual read but
+            // must be changed to a write, to catch this pattern, e.g.:
+            //   getfield #9
+            //   iload_1
+            //   iload_2
+            //   iastore
+            List<IRFieldAccess> fieldAccesses = irMethod.fieldAccesses;
+            int size = fieldAccesses.size();
+            if (size > 0) {
+                // Remove and re-add, to force re-enumeration of write accesses.
+                IRFieldAccess lastAcc = fieldAccesses.remove(size - 1);
+                if (debug)
+                    System.out.println("Changing field access [read->write]: " + lastAcc);
+                irMethod.addFieldAccess(lastAcc.fieldId, lastAcc.fieldName, lastAcc.fieldType, AccessType.WRITE, debug);
+            } else
+                System.err.println("ERROR: could not find previous field access for opcode " + Printer.OPCODES[opcode]);
+        }
+        super.visitInsn(opcode);
     }
 
     private void addFieldAccess(String owner, String name, String descriptor,

@@ -565,11 +565,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         super.visit(syncStmt, block);
     }
 
-    @Override
-    public void visit(AssignExpr assignExpr, JBlock block) {
-        if (debug)
-            System.out.println("Visiting assignment: " + assignExpr);
-        Expression target = assignExpr.getTarget();
+    private void visitAssignmentTarget(Expression target, Node parentNode, JBlock block) {
         if (target.isFieldAccessExpr()) {
             FieldAccessExpr fieldAcc = (FieldAccessExpr) target;
             // Any field accesses in the "scope" should be reads.
@@ -578,10 +574,29 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             visitFieldAccess(fieldAcc, AccessType.WRITE);
         } else if (target.isNameExpr()) {
             NameExpr nameExpr = (NameExpr) target;
-            proccessNameAccess(nameExpr, assignExpr, block, AccessType.WRITE);
+            proccessNameAccess(nameExpr, parentNode, block, AccessType.WRITE);
+        } else if (target.isArrayAccessExpr()) {
+            ArrayAccessExpr arrayAcc = (ArrayAccessExpr) target;
+            Expression name = arrayAcc.getName();
+            System.out.println("ARRAY_ACCESS: name = " + name + ", class = " + name.getClass().getSimpleName());
+            visitAssignmentTarget(name, parentNode, block);
+            // Any index accesses in the "scope" should be reads. This ignores
+            // mutating expressions such as "i++".
+            Expression indexExpr = arrayAcc.getIndex();
+            proccessNameAccess(indexExpr, parentNode, block, AccessType.READ);
+            indexExpr.accept(this, block);
         } else
             target.accept(this, block);
+    }
+
+    @Override
+    public void visit(AssignExpr assignExpr, JBlock block) {
+        if (debug)
+            System.out.println("Visiting assignment: " + assignExpr);
+        Expression target = assignExpr.getTarget();
+        visitAssignmentTarget(target, assignExpr, block);
         Expression value = assignExpr.getValue();
+        proccessNameAccess(value, assignExpr, block, AccessType.READ);
         value.accept(this, block);
 
         if ((block != null) && (target.isNameExpr()))

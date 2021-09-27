@@ -20,7 +20,7 @@ repositories {
 
 mainClassName = 'org.clyze.source.irfitter.Main'
 
-def asmVersion = '9.0'
+def asmVersion = '9.2'
 dependencies {
     implementation "commons-cli:commons-cli:1.2"
     implementation "org.clyze:clue-common:3.25.0"
@@ -31,6 +31,7 @@ dependencies {
     // Bytecode parser, BSD
     implementation group: 'org.ow2.asm', name: 'asm', version: asmVersion
     implementation group: 'org.ow2.asm', name: 'asm-tree', version: asmVersion
+    implementation group: 'org.ow2.asm', name: 'asm-util', version: asmVersion
     // Java parser, Apache 2.0
     implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.23.0'
     // Groovy parser, Apache 2.0

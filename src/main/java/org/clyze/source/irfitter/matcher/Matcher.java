@@ -7,6 +7,7 @@ import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.base.AbstractAllocation;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.source.irfitter.source.model.*;
 
@@ -319,10 +320,10 @@ public class Matcher {
     private void matchFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, JMethod srcMethod) {
         IRMethod irMethod = srcMethod.matchElement;
         // Group accesses by field name.
-        Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName + '/' + a.read));
+        Map<String, List<JFieldAccess>> srcAccessesByName = groupElementsBy(srcMethod.fieldAccesses, (a -> a.fieldName + '/' + a.accessType));
         if (srcAccessesByName.size() == 0)
             return;
-        Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName + '/' + a.read));
+        Map<String, List<IRFieldAccess>> irAccessesByName = groupElementsBy(irMethod.fieldAccesses, (a -> a.fieldName + '/' + a.accessType));
         if (irAccessesByName.size() == 0)
             return;
         if (debug) {
@@ -344,8 +345,8 @@ public class Matcher {
                 for (int i = 0; i < srcSize; i++) {
                     IRFieldAccess irAccess = irAccesses.get(i);
                     JFieldAccess srcAccess = srcAccesses.get(i);
-                    boolean irRead = irAccess.read;
-                    boolean srcRead = srcAccess.read;
+                    AccessType irRead = irAccess.accessType;
+                    AccessType srcRead = srcAccess.accessType;
                     if (irRead == srcRead)
                         recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
                     else {

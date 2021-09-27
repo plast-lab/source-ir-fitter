@@ -2,13 +2,13 @@ package org.clyze.source.irfitter.source.model;
 
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.Usage;
-import org.clyze.persistent.model.UsageKind;
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.ir.model.IRFieldAccess;
 
 /** A field read/write in the source code. */
 public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
-    /** If true, this is a field read; otherwise this is a field write. */
-    public final boolean read;
+    /** The type of the field access (read/write). */
+    public final AccessType accessType;
     /** The field name. */
     public final String fieldName;
 
@@ -16,12 +16,12 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
      * Create a field access representation.
      * @param srcFile     the source file
      * @param pos         the source code position
-     * @param read        if true, the field is read, otherwise it is written
+     * @param accessType  the type of the field access
      * @param fieldName   the field name
      */
-    public JFieldAccess(SourceFile srcFile, Position pos, boolean read, String fieldName) {
+    public JFieldAccess(SourceFile srcFile, Position pos, AccessType accessType, String fieldName) {
         super(srcFile, pos);
-        this.read = read;
+        this.accessType = accessType;
         this.fieldName = fieldName;
     }
 
@@ -30,13 +30,13 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
         if (symbol == null) {
             matchElement = irElement;
             symbol = new Usage(pos, srcFile.getRelativePath(), true, irElement.getId(),
-                    irElement.fieldId, read ? UsageKind.DATA_READ : UsageKind.DATA_WRITE);
+                    irElement.fieldId, accessType.kind);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }
 
     @Override
     public String toString() {
-        return "FIELD-" + (read ? "READ" : "WRITE") + ": " + fieldName + getLocation();
+        return "FIELD-" + accessType.name() + ": " + fieldName + getLocation();
     }
 }

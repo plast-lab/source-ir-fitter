@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
 import org.clyze.utils.TypeUtils;
@@ -145,16 +146,17 @@ public class BytecodeMethodVisitor extends MethodVisitor {
     @Override
     public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
         if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
-            addFieldAccess(owner, name, descriptor, true);
+            addFieldAccess(owner, name, descriptor, AccessType.READ);
         } else if (opcode == Opcodes.PUTFIELD || opcode == Opcodes.PUTSTATIC) {
-            addFieldAccess(owner, name, descriptor, false);
+            addFieldAccess(owner, name, descriptor, AccessType.WRITE);
         }
         super.visitFieldInsn(opcode, owner, name, descriptor);
     }
 
-    private void addFieldAccess(String owner, String name, String descriptor, boolean read) {
+    private void addFieldAccess(String owner, String name, String descriptor,
+                                AccessType accessType) {
         String fieldType = TypeUtils.raiseTypeId(descriptor);
         String fieldId = "<" + TypeUtils.replaceSlashesWithDots(owner) + ": " + fieldType + " " + name + ">";
-        irMethod.addFieldAccess(fieldId, name, fieldType, read, debug);
+        irMethod.addFieldAccess(fieldId, name, fieldType, accessType, debug);
     }
 }

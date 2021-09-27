@@ -4,6 +4,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import org.clyze.source.irfitter.base.AbstractMethod;
 import org.clyze.source.irfitter.base.AbstractMethodInvocation;
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.utils.TypeUtils;
 
 /**
@@ -74,13 +75,13 @@ public class IRMethod extends IRElement implements AbstractMethod {
                 }));
     }
 
-    public IRFieldAccess addFieldAccess(String fieldId, String fieldName, String fieldType, boolean read, boolean debug) {
-        String key = (read ? "read-field-" : "write-field-") + fieldName;
+    public IRFieldAccess addFieldAccess(String fieldId, String fieldName, String fieldType, AccessType accessType, boolean debug) {
+        String key = accessType.fieldAccessId + fieldName;
         return addNumberedElement(fieldAccessCounters, fieldAccesses, getId(), key,
                 ((counter, elemId) -> {
-                    IRFieldAccess irFieldAccess = new IRFieldAccess(elemId, fieldId, fieldName, fieldType, read);
+                    IRFieldAccess irFieldAccess = new IRFieldAccess(elemId, fieldId, fieldName, fieldType, accessType);
                     if (debug)
-                        System.out.println("IR field " + (read ? "read" : "write") + ": " + irFieldAccess.getId());
+                        System.out.println("IR field " + accessType.name() + ": " + irFieldAccess.getId());
                     return irFieldAccess;
                 }));
     }

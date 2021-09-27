@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.util.*;
 
 import org.apache.commons.io.IOUtils;
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.ir.IRProcessor;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
@@ -189,7 +190,7 @@ public class DexParser extends IRProcessor {
                     case IPUT_BYTE:
                     case IPUT_CHAR:
                     case IPUT_SHORT: {
-                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, false);
+                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, AccessType.WRITE);
                         break;
                     }
                     case IGET:
@@ -206,7 +207,7 @@ public class DexParser extends IRProcessor {
                     case SGET_BYTE:
                     case SGET_CHAR:
                     case SGET_SHORT: {
-                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, true);
+                        writeFieldAccess(((ReferenceInstruction)instr).getReference(), irMethod, AccessType.READ);
                         break;
                     }
                 }
@@ -220,7 +221,7 @@ public class DexParser extends IRProcessor {
         }
     }
 
-    private void writeFieldAccess(Reference ref, IRMethod irMethod, boolean read) {
+    private void writeFieldAccess(Reference ref, IRMethod irMethod, AccessType accessType) {
         if (ref instanceof FieldReference) {
             FieldReference fieldRef = (FieldReference) ref;
             String fieldName = fieldRef.getName();
@@ -229,7 +230,7 @@ public class DexParser extends IRProcessor {
                     ": " + fieldType + " " + fieldName + ">";
             if (debug)
                 System.out.println("Adding access to field: " + fieldId);
-            irMethod.addFieldAccess(fieldId, fieldName, fieldType, read, debug);
+            irMethod.addFieldAccess(fieldId, fieldName, fieldType, accessType, debug);
         } else
             System.err.println("Unknown reference, field expected: " + ref);
     }

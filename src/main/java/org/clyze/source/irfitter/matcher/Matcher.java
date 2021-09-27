@@ -328,8 +328,8 @@ public class Matcher {
             return;
         if (debug) {
             System.out.println("Field accesses by name (IR/SRC): " + irAccessesByName.size() + "/" + srcAccessesByName.size() + " in " + srcMethod);
-            srcAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
-            irAccessesByName.forEach((k, v) -> System.out.println(k + " -> " + v));
+            irAccessesByName.forEach((k, v) -> System.out.println("* IR: " + k + " -> " + v));
+            srcAccessesByName.forEach((k, v) -> System.out.println("* SRC: " + k + " -> " + v));
         }
         for (Map.Entry<String, List<JFieldAccess>> srcEntry : srcAccessesByName.entrySet()) {
             String fieldName = srcEntry.getKey();

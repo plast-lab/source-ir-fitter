@@ -92,6 +92,7 @@ public class BytecodeMethodVisitor extends MethodVisitor {
                     String methodName = handle.getName();
                     String methodId = '<' + TypeUtils.replaceSlashesWithDots(handle.getOwner()) + ": " + sig.get(0) + ' ' + methodName + '(' + params + ")>";
                     irMethod.addMethodRef(methodId, methodName, getLastLine(), debug);
+                    irMethod.addLambda(methodId, debug);
                 }
 
         } else if (debug)

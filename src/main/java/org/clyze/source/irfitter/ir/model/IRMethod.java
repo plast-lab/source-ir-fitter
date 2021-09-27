@@ -14,9 +14,11 @@ public class IRMethod extends IRElement implements AbstractMethod {
     public final List<IRMethodInvocation> invocations = new ArrayList<>();
     public final List<IRAllocation> allocations = new ArrayList<>();
     public final List<IRFieldAccess> fieldAccesses = new ArrayList<>();
+    public List<IRLambda> lambdas = null;
     private final Map<String, Integer> invocationCounters = new HashMap<>();
     private final Map<String, Integer> allocationCounters = new HashMap<>();
     private final Map<String, Integer> fieldAccessCounters = new HashMap<>();
+    private Map<String, Integer> lambdaCounters = null;
     private Set<String> typeReferences = null;
     private Set<String> sigTypeReferences = null;
     public List<IRMethodRef> methodRefs = null;
@@ -72,6 +74,20 @@ public class IRMethod extends IRElement implements AbstractMethod {
                     if (debug)
                         System.out.println("IR allocation: " + irAlloc);
                     return irAlloc;
+                }));
+    }
+
+    public void addLambda(String implementation, boolean debug) {
+        if (lambdaCounters == null)
+            lambdaCounters = new HashMap<>();
+        if (lambdas == null)
+            lambdas = new ArrayList<>();
+        addNumberedElement(lambdaCounters, lambdas, getId(), "$$lambda$$",
+                ((counter, elemId) -> {
+                    IRLambda irLambda = new IRLambda(elemId, implementation);
+                    if (debug)
+                        System.out.println("IR lambda: " + irLambda);
+                    return irLambda;
                 }));
     }
 

@@ -147,6 +147,7 @@ public class Main {
                     IRProcessor.processIR(irState, vaIrMethods, new File(p), debug, false);
             if (debug)
                 System.out.println("IR vararg methods: " + vaIrMethods);
+            irState.resolveLambdas(debug);
 
             File db = dbVal == null ? null : new File(dbVal);
             File outPath = out ? new File(cli.getOptionValue(outOpt.getOpt())) : null;

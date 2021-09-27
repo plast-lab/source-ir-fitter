@@ -696,7 +696,6 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             if (jm != null) {
                 List<TypeUse> typeUses = new ArrayList<>();
                 List<JVariable> parameters = new ArrayList<>();
-                JBlock lambdaBlock = new JBlock(outerPos, block);
                 for (Parameter parameter : lambdaExpr.getParameters()) {
                     Position paramPos = JavaUtils.createPositionFromNode(parameter);
                     Type parameterType = parameter.getType();
@@ -709,10 +708,13 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     }
                     JVariable param = new JVariable(sourceFile, paramPos, parameter.getName().asString(), pType, false, new JavaModifierPack(sourceFile, parameter));
                     parameters.add(param);
-                    lambdaBlock.addVariable(param);
                 }
                 jt.addSigTypeRefs(null, typeUses);
                 JLambda lam = new JLambda(sourceFile, "lambda@" + pos, parameters, outerPos, jt, pos);
+                JBlock lambdaBlock = JavaUtils.newBlock(lambdaExpr, block, lam);
+                for (JVariable parameter : parameters)
+                    lambdaBlock.addVariable(parameter);
+
                 if (debug)
                     System.out.println("Found source lambda: " + lam);
                 // Add lambda both to method for custom matching and to type for generic traversal.

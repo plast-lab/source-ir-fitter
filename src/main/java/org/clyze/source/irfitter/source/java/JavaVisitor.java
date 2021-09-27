@@ -273,7 +273,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (!mp.isStatic())
             jm.setReceiver();
         jt.typeUses.addAll(mp.getAnnotationUses());
-        Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
+        jt.addSigTypeRefs(retTypeUses, paramTypeUses);
         for (ReferenceType thrownException : md.getThrownExceptions())
             addTypeUsesFromType(jt.typeUses, thrownException);
         if (debug)

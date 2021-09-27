@@ -5,6 +5,7 @@ import org.clyze.persistent.model.jvm.JvmClass;
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRType;
 import org.clyze.persistent.model.Position;
+import org.clyze.utils.TypeUtils;
 
 /**
  * A reference type (such as a class, enum, or interface) in the source code.
@@ -182,6 +183,21 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
                                       ElementWithPosition<?, ?> declaringElement,
                                       Position pos, boolean isInner) {
         return new AnonymousClass(srcFile, superTypes, this, declaringElement, pos, isInner, anonymousClassCounter++);
+    }
+
+    /**
+     * Record type references found in method signatures.
+     * @param retTypeUses   the type uses found in the return type (may be null)
+     * @param paramTypeUses the type uses found in the parameter types
+     */
+    public void addSigTypeRefs(Collection<TypeUse> retTypeUses,
+                               Collection<TypeUse> paramTypeUses) {
+        if (paramTypeUses != null)
+            typeUses.addAll(paramTypeUses);
+        if (retTypeUses != null)
+            for (TypeUse retTypeUse : retTypeUses)
+                if (!TypeUtils.isPrimitiveType(retTypeUse.type))
+                    typeUses.add(retTypeUse);
     }
 
     /**

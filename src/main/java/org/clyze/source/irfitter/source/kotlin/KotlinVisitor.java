@@ -310,7 +310,7 @@ public class KotlinVisitor extends KotlinParserBaseVisitor<Void> {
                     KotlinUtils.createPositionFromToken(fNameCtx.start), isVarArgs);
             jt.methods.add(jm);
             jm.setReceiver();
-            Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
+            jt.addSigTypeRefs(retTypeUses, paramTypeUses);
             FunctionBodyContext funBody = funMemDecl.functionBody();
             if (funBody != null)
                 scope.enterMethodScope(jm, (jm0 -> funBody.accept(this)));

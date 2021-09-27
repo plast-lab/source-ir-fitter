@@ -169,7 +169,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                                            Collection<TypeUse> retTypeUses,
                                            Collection<TypeUse> paramTypeUses) {
         // Signature return/parameter types.
-        Utils.addSigTypeRefs(jt, retTypeUses, paramTypeUses);
+        jt.addSigTypeRefs(retTypeUses, paramTypeUses);
         // Thrown exception types.
         QualifiedClassNameListContext thrownQTypes = ctx.qualifiedClassNameList();
         if (thrownQTypes != null)

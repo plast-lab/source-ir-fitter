@@ -18,7 +18,8 @@ implements AbstractMethod {
     public final List<JVariable> parameters;
     public JVariable receiver = null;
     public final int arity;
-    private final JType parent;
+    protected final JType parent;
+    /** The span between the first and last character of the lambda. */
     public Position outerPos;
     /** The method invocations found in the method body. */
     public final List<JMethodInvocation> invocations = new ArrayList<>();
@@ -34,6 +35,8 @@ implements AbstractMethod {
     public List<JMethodRef> methodRefs = null;
     /** The casts found in the source code. */
     public List<JCast> casts = null;
+    /** The lambdas found in the method. */
+    public List<JLambda> lambdas = null;
     /** The element uses found in the source code. */
     public List<ElementUse> elementUses = new ArrayList<>();
     private Collection<String> cachedIds = null;
@@ -129,26 +132,44 @@ implements AbstractMethod {
                 paramNames.add(param.name);
                 paramTypes.add(param.type);
             }
-            String[] pNames = paramNames.toArray(new String[0]);
-            String[] pTypes = srcFile.synthesizeTypes ? Utils.getSynthesizedTypes(paramTypes, irMethod.paramTypes, srcFile.debug) : paramTypes.toArray(new String[0]);
-            if (pNames.length != pTypes.length)
-                System.out.println("WARNING: arity mismatch, source names: " + Arrays.toString(pNames) +
-                        " vs. IR types: " + Arrays.toString(pTypes));
-            String returnType = irMethod.returnType;
-            IRModifierPack mp = irMethod.mp;
             // When a class has a <clinit>() initializer but no static initializer
             // block in the sources, set the position to the type declaration.
             if (JInit.CLINIT.equals(name) && (pos == null))
                 pos = parent.pos;
-            JvmMethod meth = new JvmMethod(pos, srcFile.getRelativePath(), true, name,
-                    parent.matchId, returnType, irMethod.getId(), pNames,
-                    pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
-                    mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),
-                    mp.isPublic(), mp.isProtected(), mp.isPrivate(), outerPos);
+            JvmMethod meth = fromIRMethod(irMethod, srcFile, name, paramNames, paramTypes, pos, outerPos, parent);
             meth.setAnnotations(annotations);
             symbol = meth;
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
+    }
+
+    /**
+     * Helper method to create method objects from an IRMethod template.
+     * @param irMethod    the IRMethod object
+     * @param srcFile     the source file
+     * @param name        the source name of the method
+     * @param paramNames  the parameter names
+     * @param paramTypes  the parameter types
+     * @param pos         the method position
+     * @param outerPos    the method "outer" position
+     * @param parent      the parent type
+     * @return            a method metadata object
+     */
+    public static JvmMethod fromIRMethod(IRMethod irMethod, SourceFile srcFile,
+                                         String name, List<String> paramNames,
+                                         List<String> paramTypes,
+                                         Position pos, Position outerPos, JType parent) {
+        IRModifierPack mp = irMethod.mp;
+        String[] pNames = paramNames.toArray(new String[0]);
+        String[] pTypes = srcFile.synthesizeTypes ? Utils.getSynthesizedTypes(paramTypes, irMethod.paramTypes, srcFile.debug) : paramTypes.toArray(new String[0]);
+        if (pNames.length != pTypes.length)
+            System.out.println("WARNING: arity mismatch, source names: " + Arrays.toString(pNames) +
+                    " vs. IR types: " + Arrays.toString(pTypes));
+        return new JvmMethod(pos, srcFile.getRelativePath(), true, name,
+                parent.matchId, irMethod.returnType, irMethod.getId(), pNames,
+                pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
+                mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),
+                mp.isPublic(), mp.isProtected(), mp.isPrivate(), outerPos);
     }
 
     /**
@@ -235,6 +256,16 @@ implements AbstractMethod {
         if (casts == null)
             casts = new ArrayList<>();
         casts.add(cast);
+    }
+
+    /**
+     * Add a lambda expression.
+     * @param lam     the lambda to add
+     */
+    public void addLambda(JLambda lam) {
+        if (lambdas == null)
+            lambdas = new ArrayList<>();
+        lambdas.add(lam);
     }
 
     /**

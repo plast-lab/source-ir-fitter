@@ -689,8 +689,39 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(final LambdaExpr lambdaExpr, final JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null) {
-            JType anonJT = jt.createLambdaType(JavaUtils.createPositionFromNode(lambdaExpr), scope.getEnclosingElement());
-            scope.enterTypeScope(anonJT, (jt0 -> super.visit(lambdaExpr, block)));
+            Position outerPos = JavaUtils.createPositionFromNode(lambdaExpr);
+            Optional<Expression> bodyOpt = lambdaExpr.getExpressionBody();
+            Position pos = bodyOpt.map(JavaUtils::createPositionFromNode).orElse(outerPos);
+            JMethod jm = scope.getEnclosingMethod();
+            if (jm != null) {
+                List<TypeUse> typeUses = new ArrayList<>();
+                List<JVariable> parameters = new ArrayList<>();
+                JBlock lambdaBlock = new JBlock(outerPos, block);
+                for (Parameter parameter : lambdaExpr.getParameters()) {
+                    Position paramPos = JavaUtils.createPositionFromNode(parameter);
+                    Type parameterType = parameter.getType();
+                    String pType;
+                    if (parameterType == null)
+                        pType = "java.lang.Object";
+                    else {
+                        pType = parameter.getTypeAsString();
+                        typeUses.add(new TypeUse(pType, JavaUtils.createPositionFromNode(parameterType), sourceFile));
+                    }
+                    JVariable param = new JVariable(sourceFile, paramPos, parameter.getName().asString(), pType, false, new JavaModifierPack(sourceFile, parameter));
+                    parameters.add(param);
+                    lambdaBlock.addVariable(param);
+                }
+                jt.addSigTypeRefs(null, typeUses);
+                JLambda lam = new JLambda(sourceFile, "lambda@" + pos, parameters, outerPos, jt, pos);
+                if (debug)
+                    System.out.println("Found source lambda: " + lam);
+                // Add lambda both to method for custom matching and to type for generic traversal.
+                jm.addLambda(lam);
+                jt.methods.add(lam);
+                scope.enterMethodScope(lam, (lam0 -> lambdaExpr.getBody().accept(this, lambdaBlock)));
+            } else {
+                System.err.println("ERROR: found lambda outside method definition.");
+            }
         } else
             System.err.println("ERROR: cannot handle lambda outside type: " + lambdaExpr);
     }

@@ -65,16 +65,6 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     }
 
     /**
-     * Create a pseudo-type for a lambda expression.
-     * @param pos               the source position of the lambda expression
-     * @param declaringElement  the code element declaring this lambda
-     * @return                  a new type that only characterizes this lambda expression
-     */
-    public JType createLambdaType(Position pos, ElementWithPosition<?, ?> declaringElement) {
-        return new JType(srcFile, null, new ArrayList<>(), new HashSet<>(), pos, declaringElement, this, false, false, false, false, false, false, true, true, false, false);
-    }
-
-    /**
      * Return the part of the fully-qualified name without any prefix.
      * @return the bare unqualified type name
      */

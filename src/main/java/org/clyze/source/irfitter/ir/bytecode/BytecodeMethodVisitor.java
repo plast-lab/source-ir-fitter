@@ -175,8 +175,8 @@ public class BytecodeMethodVisitor extends MethodVisitor {
                 if (debug)
                     System.out.println("Changing field access [read->write]: " + lastAcc);
                 irMethod.addFieldAccess(lastAcc.fieldId, lastAcc.fieldName, lastAcc.fieldType, AccessType.WRITE, debug);
-            } else
-                System.err.println("ERROR: could not find previous field access for opcode " + Printer.OPCODES[opcode]);
+            } else if (debug)
+                System.err.println("WARNING: could not find previous field access for opcode " + Printer.OPCODES[opcode]);
         }
         super.visitInsn(opcode);
     }

@@ -9,6 +9,7 @@ import java.util.*;
 import org.apache.commons.io.IOUtils;
 import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.ir.IRProcessor;
+import org.clyze.source.irfitter.ir.IRState;
 import org.clyze.source.irfitter.ir.model.IRField;
 import org.clyze.source.irfitter.ir.model.IRMethod;
 import org.clyze.source.irfitter.ir.model.IRVariable;
@@ -37,7 +38,7 @@ public class DexParser extends IRProcessor {
         super(debug, enterMethods, varArgMethods);
     }
 
-    public void processDex(List<IRType> irTypes, InputStream is) {
+    public void processDex(IRState irState, InputStream is) {
         try {
             final File tmpDex = File.createTempFile("temp", ".dex");
             tmpDex.deleteOnExit();
@@ -59,7 +60,7 @@ public class DexParser extends IRProcessor {
                     IRType irType = new IRType(typeId, superTypes, irTypeMods);
                     if (debug)
                         System.out.println("IR type: " + irType);
-                    irTypes.add(irType);
+                    irState.irTypes.add(irType);
                     String classPrefix = "<" + typeId + ": ";
                     for (DexBackedField dexField : dexClass.getFields()) {
                         String fieldName = dexField.getName();

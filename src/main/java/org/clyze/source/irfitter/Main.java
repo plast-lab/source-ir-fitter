@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.cli.*;
-import org.clyze.source.irfitter.ir.model.IRType;
+import org.clyze.source.irfitter.ir.IRState;
 import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.Driver;
 import org.clyze.source.irfitter.source.model.SourceFile;
@@ -139,12 +139,12 @@ public class Main {
 
             // Process IR (such as Java bytecode).
             Set<String> vaIrMethods = new ConcurrentSkipListSet<>();
-            List<IRType> irTypes = new ArrayList<>();
+            IRState irState = new IRState();
             for (String i : irs)
-                irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(i), debug, true));
+                IRProcessor.processIR(irState, vaIrMethods, new File(i), debug, true);
             if (platforms != null)
                 for (String p : platforms)
-                    irTypes.addAll(IRProcessor.processIR(vaIrMethods, new File(p), debug, false));
+                    IRProcessor.processIR(irState, vaIrMethods, new File(p), debug, false);
             if (debug)
                 System.out.println("IR vararg methods: " + vaIrMethods);
 
@@ -165,7 +165,7 @@ public class Main {
             }
 
             // Match information between IR and sources.
-            return driver.match(irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, matchIR, aliaser, relVars);
+            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, matchIR, aliaser, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

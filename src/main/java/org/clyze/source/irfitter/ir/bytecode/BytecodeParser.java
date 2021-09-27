@@ -5,6 +5,7 @@ import java.io.InputStream;
 import java.util.*;
 
 import org.clyze.source.irfitter.ir.IRProcessor;
+import org.clyze.source.irfitter.ir.IRState;
 import org.clyze.source.irfitter.ir.model.*;
 import org.clyze.utils.TypeUtils;
 import org.objectweb.asm.ClassReader;
@@ -90,9 +91,9 @@ public class BytecodeParser extends IRProcessor {
             method.addSigTypeReference(replaceSlashesWithDots(excType));
     }
 
-    public void processClass(List<IRType> irTypes, InputStream is) {
+    public void processClass(IRState irState, InputStream is) {
         try {
-            irTypes.add(processBytecode(new ClassReader(is)));
+            irState.irTypes.add(processBytecode(new ClassReader(is)));
         } catch (IOException ex) {
             ex.printStackTrace();
         }

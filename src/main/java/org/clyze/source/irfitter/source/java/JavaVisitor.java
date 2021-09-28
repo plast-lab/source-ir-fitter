@@ -59,6 +59,14 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         List<String> superTypes = superTypeUses.stream().map(tu -> tu.type).collect(Collectors.toList());
         JType jt = recordType(td, superTypes, false, td.isInterface());
         jt.typeUses.addAll(superTypeUses);
+        ElementWithPosition<?, ?> parentElem = scope.getEnclosingElement();
+        JType parentType = scope.getEnclosingType();
+        if (parentElem instanceof JMethod) {
+            if (parentType == null)
+                System.err.println("ERROR: no parent type for type " + jt);
+            else
+                jt.methodTypeCounter = parentType.getNextMethodTypeNumber(jt.getSimpleName());
+        }
         scope.enterTypeScope(jt, (jt0 -> super.visit(td, block)));
     }
 

@@ -32,6 +32,13 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     public final List<JMethod> methods = new ArrayList<>();
     public final List<TypeUse> typeUses = new ArrayList<>();
     private int anonymousClassCounter = 1;
+    /**
+     * If non-null, this records non-anonoymous nested classes declared inside
+     * methods (which should follow a different fully-qualified name scheme).
+     */
+    public Map<String, Integer> methodTypeCounters = null;
+    /** The optional prefix of this type (if declared inside a method). */
+    public Integer methodTypeCounter = null;
 
     public JType(SourceFile srcFile, String name, List<String> superTypes,
                  Set<String> annotationTypes, Position pos,
@@ -87,6 +94,8 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     public String getFullyQualifiedName(String packageName) {
         Stack<String> stack = new Stack<>();
         stack.push(getUnqualifiedName());
+        if (methodTypeCounter != null)
+            stack.push(methodTypeCounter.toString());
         JType pn = parentType;
         while (pn != null) {
             stack.push("$");
@@ -180,7 +189,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
      * @param retTypeUses   the type uses found in the return type (may be null)
      * @param paramTypeUses the type uses found in the parameter types
      */
-    public void addSigTypeRefs(Collection<TypeUse> retTypeUses,
+    public void addSigTypeRefs(Iterable<TypeUse> retTypeUses,
                                Collection<TypeUse> paramTypeUses) {
         if (paramTypeUses != null)
             typeUses.addAll(paramTypeUses);
@@ -191,11 +200,25 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     }
 
     /**
+     * Compute the next counter prefix to use when naming types declared inside
+     * methods.
+     * @param type    the type name
+     * @return        the number to use
+     */
+    public Integer getNextMethodTypeNumber(String type) {
+        if (methodTypeCounters == null)
+            methodTypeCounters = new HashMap<>();
+        Integer counter = methodTypeCounters.get(type);
+        Integer value = (counter == null) ? 1 : counter + 1;
+        methodTypeCounters.put(type, counter);
+        return value;
+    }
+    /**
      * Update the id of the declaring element (assumed to be already resolved).
      */
     public void updateDeclaringSymbolId() {
         if (symbol == null) {
-            System.out.println("ERROR: cannot update declaring symbol id in empty symbol for " + toString());
+            System.out.println("ERROR: cannot update declaring symbol id in empty symbol for " + this);
             return;
         }
         String declaringSymbolId = (declaringElement != null && declaringElement.matchId != null) ? declaringElement.matchId : "";

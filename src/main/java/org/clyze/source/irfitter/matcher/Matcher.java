@@ -51,10 +51,9 @@ public class Matcher {
      */
     public void matchTypes(IdMapper idMapper, Collection<IRType> irTypes) {
         for (JType jt : sourceFile.jTypes) {
-            if (debug)
-                System.out.println("Matching source type: " + jt);
             String id = jt.getFullyQualifiedName();
-            //System.out.println("Mapping " + jt.name + " -> " + id);
+            if (debug)
+                System.out.println("Matching source type: " + jt + ", fully qualified name: " + id);
             boolean typeMatched = false;
             for (IRType irType : irTypes)
                 if (!irType.matched && irType.getId().equals(id)) {

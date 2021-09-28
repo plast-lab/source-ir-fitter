@@ -81,6 +81,8 @@ public class Matcher {
             return;
         int srcLambdasSize = lambdas.size();
         List<IRLambda> irLambdas = irMethod.lambdas;
+        if (irLambdas == null)
+            return;
         int irLambdasSize = irLambdas.size();
         if (srcLambdasSize > irLambdasSize)
             System.err.println("WARNING: SRC/IR lambda arities differ for method " + srcMethod + ": " + srcLambdasSize + " vs. " + irLambdasSize);

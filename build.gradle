@@ -24,7 +24,7 @@ def asmVersion = '9.2'
 dependencies {
     implementation "commons-cli:commons-cli:1.2"
     implementation "org.clyze:clue-common:3.25.0"
-    implementation "org.clyze:metadata-model:2.2.2"
+    implementation "org.clyze:metadata-model:2.2.3"
     implementation "org.clyze:code-processor:4.24.4"
     // SARIF library
     implementation 'org.clyze:mini-sarif:0.1.2'

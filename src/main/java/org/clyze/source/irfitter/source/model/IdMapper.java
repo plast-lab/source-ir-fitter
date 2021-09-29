@@ -38,7 +38,7 @@ public class IdMapper {
         long allTypes = 0, matchedTypes = 0, allMethods = 0, matchedMethods = 0;
         long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;
         long allAllocs = 0, matchedAllocs = 0, allMethodRefs = 0, matchedMethodRefs = 0;
-        long allFieldAccesses = 0, matchedFieldAccesses = 0;
+        long allFieldAccesses = 0, matchedFieldAccesses = 0, allUses = 0, matchedUses = 0;
         for (SourceFile sf : sources) {
             Set<JType> srcTypes = sf.jTypes;
             allTypes += srcTypes.size();
@@ -64,6 +64,8 @@ public class IdMapper {
                         allMethodRefs += methodRefs.size();
                         matchedMethodRefs += countMatched(methodRefs);
                     }
+                    allUses += srcMethod.elementUses.size();
+                    matchedUses += countMatched(srcMethod.elementUses);
                 }
                 List<JField> srcFields = srcType.fields;
                 allFields += srcFields.size();
@@ -78,14 +80,15 @@ public class IdMapper {
         System.out.printf("Matched (source) allocations    : %6.2f%%%n", (100.0 * matchedAllocs) / allAllocs);
         System.out.printf("Matched (source) method-refs    : %6.2f%%%n", (100.0 * matchedMethodRefs) / allMethodRefs);
         System.out.printf("Matched (source) field accesses : %6.2f%%%n", (100.0 * matchedFieldAccesses) / allFieldAccesses);
+        System.out.printf("Matched (source) element uses   : %6.2f%%%n", (100.0 * matchedUses) / allUses);
     }
 
-    private static <T extends ElementWithPosition<?, ?>> long countMatched(Collection<T> elems) {
+    private static <T extends Matchable> long countMatched(Collection<T> elems) {
         return elems.stream().filter(e -> {
-            boolean ret = e.matchId != null;
-            if (!ret)
+            boolean check = e.hasBeenMatched();
+            if (!check)
                 System.out.println("UNMATCHED: " + e);
-            return ret;
+            return check;
         }).count();
     }
 }

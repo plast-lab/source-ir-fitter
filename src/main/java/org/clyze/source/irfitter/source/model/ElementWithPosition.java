@@ -4,7 +4,8 @@ import org.clyze.source.irfitter.ir.model.IRElement;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.SymbolWithId;
 
-public abstract class ElementWithPosition<T extends IRElement, S extends SymbolWithId> {
+public abstract class ElementWithPosition<T extends IRElement, S extends SymbolWithId>
+implements Matchable {
     public Position pos;
     public final SourceFile srcFile;
     public String matchId = null;
@@ -28,5 +29,10 @@ public abstract class ElementWithPosition<T extends IRElement, S extends SymbolW
      */
     protected String getLocation() {
         return "@" + srcFile.getRelativePath() + ":" + pos;
+    }
+
+    @Override
+    public boolean hasBeenMatched() {
+        return this.matchId != null;
     }
 }

@@ -41,9 +41,13 @@ public interface FuzzyTypes {
                 String st = id.simpleType;
                 if (st != null && type.startsWith(st)) {
                     int stLength = st.length();
-                    if (type.length() > stLength && type.charAt(stLength) == '.') {
-                        String fqn0 = fqn + "." + type.substring(stLength + 1);
-                        return Collections.singletonList(Utils.dotsToDollars(fqn0));
+                    if (type.length() > stLength) {
+                        char delim = type.charAt(stLength);
+                        // Handle both nested type syntax variants: C.D, C$D.
+                        if (delim == '.' || delim == '$') {
+                            String fqn0 = fqn + "." + type.substring(stLength + 1);
+                            return Collections.singletonList(Utils.dotsToDollars(fqn0));
+                        }
                     }
                 }
             }

@@ -164,7 +164,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (type.isClassOrInterfaceType()) {
             ClassOrInterfaceType classOrIntf = ((ClassOrInterfaceType) type);
             SimpleName name = classOrIntf.getName();
-            TypeUse tu = new TypeUse(name.asString(), JavaUtils.createPositionFromNode(name), sourceFile);
+            // Replace dots by dollars to aid IR type matching.
+            TypeUse tu = new TypeUse(Utils.dotsToDollars(classOrIntf.asString()), JavaUtils.createPositionFromNode(name), sourceFile);
             target.add(tu);
             if (debug)
                 System.out.println("Added type use: " + tu);

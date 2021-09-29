@@ -1,6 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.List;
+import org.clyze.persistent.model.Position;
 
 /** Utilities. */
 public class Utils {
@@ -133,5 +134,15 @@ public class Utils {
             return s.substring(1, s.length() - 1);
         else
             return s;
+    }
+
+    /**
+     * Helper method for consistent location format.
+     * @param relativePath    the relative path of the source file
+     * @param pos             the source position
+     * @return                the location description
+     */
+    public static String getLocation(String relativePath, Position pos) {
+        return "@" + relativePath + ":" + pos;
     }
 }

@@ -28,7 +28,7 @@ implements Matchable {
      * @return a string representation of the location of this element
      */
     protected String getLocation() {
-        return "@" + srcFile.getRelativePath() + ":" + pos;
+        return Utils.getLocation(srcFile.getRelativePath(), pos);
     }
 
     @Override

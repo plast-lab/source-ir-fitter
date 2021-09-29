@@ -67,9 +67,40 @@ public class Matcher {
             if (!typeMatched && !matchIR)
                 idMapper.typeMap.put(id, Collections.singletonList(jt));
         }
-        // When all types have been resolved, mark declaring symbol ids.
-        for (JType jt : sourceFile.jTypes)
+
+        // Tasks that run when all types have been resolved.
+        for (JType jt : sourceFile.jTypes) {
+            // Task: mark declaring symbol ids.
             jt.updateDeclaringSymbolId();
+            // Task: resolve outer class "this" access.
+            if (jt.hasBeenMatched()) {
+                IRType irType = jt.matchElement;
+                for (JMethod jm : jt.methods) {
+                    Collection<OuterThis> outerThisAccesses = jm.outerThisAccesses;
+                    if (outerThisAccesses != null && jm.hasBeenMatched())
+                        for (OuterThis otAccess : outerThisAccesses)
+                            matchOuterThisAccesses(idMapper, jm, irType, otAccess);
+                }
+            }
+        }
+    }
+
+    private void matchOuterThisAccesses(IdMapper idMapper, JMethod jm, IRType irType, OuterThis otAccess) {
+        IRType outerIrClass = otAccess.outerClass.matchElement;
+        if (outerIrClass == null)
+            return;
+        String outerIrClassId = outerIrClass.getId();
+        for (IRField irField : irType.fields)
+            if (irField.name.startsWith("this$") && irField.type.equals(outerIrClassId)) {
+                String fieldId = irField.getId();
+                JFieldAccess srcThisAcc = otAccess.getFieldAccess(fieldId);
+                if (debug)
+                    System.out.println("Resolved outer 'this' access via field: " + srcThisAcc);
+                IRFieldAccess irThisAcc = jm.matchElement.addFieldAccess(fieldId, irField.name, irField.type, AccessType.READ, debug);
+                recordMatch(idMapper.fieldAccessMap, "outer-this$-access", irThisAcc, srcThisAcc);
+                // Add field access here for statistics.
+                jm.fieldAccesses.add(srcThisAcc);
+            }
     }
 
     private void matchLambdas(IdMapper idMapper, JMethod srcMethod) {

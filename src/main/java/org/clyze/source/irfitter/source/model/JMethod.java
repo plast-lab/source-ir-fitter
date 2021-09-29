@@ -42,6 +42,8 @@ implements AbstractMethod {
     private Collection<String> cachedIds = null;
     /** True if this method accepts varargs. */
     private final boolean isVarArgs;
+    /** Accesses to outer class instances. */
+    public Collection<OuterThis> outerThisAccesses = null;
 
     public JMethod(SourceFile srcFile, String name, String retType,
                    List<JVariable> parameters, Set<String> annotations,
@@ -305,5 +307,18 @@ implements AbstractMethod {
             System.err.println("ERROR: found var 'this' in method without a receiver: " + this);
         else
             addVarAccess(position, UsageKind.DATA_READ, receiver);
+    }
+
+    /**
+     * Add an access to an outer-class instance.
+     * @param outerThis     the outer-this access object
+     * @param debug         if true, print debug messages
+     */
+    public void addOuterThisAccess(OuterThis outerThis, boolean debug) {
+        if (outerThisAccesses == null)
+            outerThisAccesses = new ArrayList<>();
+        if (debug)
+            System.out.println("Adding outer class reference: " + outerThis);
+        outerThisAccesses.add(outerThis);
     }
 }

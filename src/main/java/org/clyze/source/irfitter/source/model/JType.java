@@ -213,6 +213,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
         methodTypeCounters.put(type, counter);
         return value;
     }
+
     /**
      * Update the id of the declaring element (assumed to be already resolved).
      */

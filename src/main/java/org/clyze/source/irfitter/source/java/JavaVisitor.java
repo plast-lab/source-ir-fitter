@@ -682,14 +682,32 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         return null;
     }
 
+    private JType findOuterClassWithName(JType parent, String className) {
+        if (parent == null || parent.getSimpleName().equals(className))
+            return parent;
+        else
+            return findOuterClassWithName(parent.parentType, className);
+    }
+
     @Override
     public void visit(ThisExpr thisExpr, JBlock block) {
         JMethod enclosingMethod = scope.getEnclosingMethod();
         if (enclosingMethod == null)
             System.err.println("ERROR: found variable 'this' outside method: " + thisExpr);
-        else if (thisExpr.getTypeName().isPresent())
-            System.err.println("ERROR: qualified 'this' is not supported yet: " + thisExpr);
-        else
+        else if (thisExpr.getTypeName().isPresent()) {
+            // To support "C.this", we traverse the outer classes and find "C",
+            // then we record this access. This is later resolved, during matching.
+            JType thisType = scope.getEnclosingType();
+            if (thisType == null)
+                System.err.println("ERROR: no enclosing type information available for qualified 'this': " + thisExpr);
+            else {
+                JType outerClass = findOuterClassWithName(thisType.parentType, thisExpr.getTypeName().get().asString());
+                if (outerClass == null)
+                    System.err.println("ERROR: qualified 'this' is not supported yet, outer class not found: " + thisExpr);
+                else
+                    enclosingMethod.addOuterThisAccess(new OuterThis(sourceFile, JavaUtils.createPositionFromNode(thisExpr), outerClass), debug);
+            }
+        } else
             enclosingMethod.addThisAccess(JavaUtils.createPositionFromNode(thisExpr));
         super.visit(thisExpr, block);
     }

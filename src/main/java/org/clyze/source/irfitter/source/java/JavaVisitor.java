@@ -715,6 +715,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     @Override
+    public void visit(final SwitchEntry switchEntry, final JBlock block) {
+        switchEntry.getLabels().forEach(lab -> {
+            System.out.println("LABEL: " + lab.getClass().getSimpleName());
+            proccessNameAccess(lab, switchEntry, block, AccessType.READ);
+        });
+        super.visit(switchEntry, block);
+    }
+
+    @Override
     public void visit(final LambdaExpr lambdaExpr, final JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null) {

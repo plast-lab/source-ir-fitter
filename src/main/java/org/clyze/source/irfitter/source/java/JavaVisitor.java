@@ -372,9 +372,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         addTypeUsesFromType(typeUses, objCExpr.getType());
         JType enclosingType = scope.getEnclosingType();
         enclosingType.typeUses.addAll(typeUses);
-        String simpleType = Utils.getSimpleType(typeOf(objCExpr));
+        String allocationType = typeOf(objCExpr);
         if (isAnonymousClassDecl) {
-            List<String> superTypes = Collections.singletonList(simpleType);
+            List<String> superTypes = Collections.singletonList(allocationType);
             JType anonymousType = enclosingType.createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
             if (debug)
                 System.out.println("Adding type [anonymous]: " + anonymousType);
@@ -393,7 +393,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             JMethodInvocation invo = parentMethod.addInvocation(this.scope, "<init>", arguments.size(), pos, sourceFile, block, base);
             callSites.put(objCExpr, invo);
             // If anonymous, add placeholder allocation, to be matched later.
-            JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : simpleType);
+            JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : allocationType);
             heapSites.put(objCExpr, alloc);
         }
         processNameReadsInArgs(arguments, objCExpr, block);

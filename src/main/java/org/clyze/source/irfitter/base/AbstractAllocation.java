@@ -3,8 +3,8 @@ package org.clyze.source.irfitter.base;
 /** The information shared by all allocations that helps in their matching. */
 public interface AbstractAllocation {
     /**
-     * The simple (no package prefix) type of the allocated object.
-     * @return  the simple type
+     * The bare (no package prefix) IR type of the allocated object.
+     * @return  an IR type suffix
      */
-    String getSimpleType();
+    String getBareIrType();
 }

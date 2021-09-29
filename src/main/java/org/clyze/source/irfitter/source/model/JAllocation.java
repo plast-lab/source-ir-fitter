@@ -8,7 +8,7 @@ import org.clyze.source.irfitter.ir.model.IRAllocation;
 /** An object allocation site in the source code. */
 public class JAllocation extends ElementWithPosition<IRAllocation, JvmHeapAllocation>
 implements AbstractAllocation, Targetable {
-    public final String simpleType;
+    public final String allocType;
     /** The target of the allocation (such as "x" in {@code x = new T()}). */
     private JVariable target = null;
 
@@ -16,11 +16,11 @@ implements AbstractAllocation, Targetable {
      * Create an object allocation.
      * @param srcFile      the source file
      * @param pos          the position of the object creation
-     * @param simpleType   the simple type of the allocation (no package prefix)
+     * @param allocType   the simple type of the allocation (no package prefix)
      */
-    public JAllocation(SourceFile srcFile, Position pos, String simpleType) {
+    public JAllocation(SourceFile srcFile, Position pos, String allocType) {
         super(srcFile, pos);
-        this.simpleType = simpleType;
+        this.allocType = allocType;
     }
 
     @Override
@@ -35,13 +35,13 @@ implements AbstractAllocation, Targetable {
     }
 
     @Override
-    public String getSimpleType() {
-        return simpleType;
+    public String getBareIrType() {
+        return Utils.dotsToDollars(allocType);
     }
 
     @Override
     public String toString() {
-        return "new " + simpleType + "() " + getLocation() + " [target=" + target + "]";
+        return "new " + allocType + "() " + getLocation() + " [target=" + target + "]";
     }
 
     @Override

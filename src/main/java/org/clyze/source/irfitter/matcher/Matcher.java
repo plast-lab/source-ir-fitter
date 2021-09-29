@@ -410,10 +410,10 @@ public class Matcher {
     private void matchAllocations(Map<String, Collection<JAllocation>> allocationMap,
                                   JMethod srcMethod) {
         // Group source allocations by type.
-        Map<String, List<JAllocation>> srcAllocationsByType = groupElementsBy(srcMethod.allocations, AbstractAllocation::getSimpleType);
+        Map<String, List<JAllocation>> srcAllocationsByType = groupElementsBy(srcMethod.allocations, AbstractAllocation::getBareIrType);
         // Group IR allocations by type.
         IRMethod irMethod = srcMethod.matchElement;
-        Map<String, List<IRAllocation>> irAllocationsByType = groupElementsBy(irMethod.allocations, AbstractAllocation::getSimpleType);
+        Map<String, List<IRAllocation>> irAllocationsByType = groupElementsBy(irMethod.allocations, AbstractAllocation::getBareIrType);
         // Match same-size groups.
         for (Map.Entry<String, List<JAllocation>> srcEntry : srcAllocationsByType.entrySet()) {
             for (Map.Entry<String, List<IRAllocation>> irEntry : irAllocationsByType.entrySet()) {
@@ -458,7 +458,7 @@ public class Matcher {
                     Integer line = irAlloc.getSourceLine();
                     if (line != null) {
                         Position pos = new Position(line, line, 0, 0);
-                        JAllocation approxSrcAlloc = srcMethod.addAllocation(sourceFile, pos, irAlloc.getSimpleType());
+                        JAllocation approxSrcAlloc = srcMethod.addAllocation(sourceFile, pos, irAlloc.getBareIrType());
                         if (debug)
                             System.out.println("Adding approximate allocation: " + approxSrcAlloc);
                         recordMatch(allocationMap, "allocation", irAlloc, approxSrcAlloc);

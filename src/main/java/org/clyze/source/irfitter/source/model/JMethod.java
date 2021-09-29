@@ -222,12 +222,12 @@ implements AbstractMethod {
      * Record an object allocation inside this method.
      * @param sourceFile     the source file
      * @param pos            the position of the invocation in the sources
-     * @param simpleType     the simple type of the allocation (no package prefix)
+     * @param allocType      the type of the allocation (no package prefix)
      * @return               the recorded allocation
      */
     public JAllocation addAllocation(SourceFile sourceFile, Position pos,
-                                     String simpleType) {
-        JAllocation alloc = new JAllocation(sourceFile, pos, simpleType);
+                                     String allocType) {
+        JAllocation alloc = new JAllocation(sourceFile, pos, allocType);
         if (parent == null)
             System.out.println("TODO: allocations in initializers");
         else {

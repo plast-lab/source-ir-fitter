@@ -29,7 +29,7 @@ public class IRAllocation extends IRElement implements AbstractAllocation {
     }
 
     @Override
-    public String getSimpleType() {
+    public String getBareIrType() {
         if (allocatedTypeDoopId_Simple == null) {
             allocatedTypeDoopId_Simple = Utils.getSimpleType(allocatedTypeDoopId);
         }

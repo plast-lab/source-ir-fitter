@@ -23,7 +23,7 @@ public abstract class ElementUse {
      */
     public Usage getUse() {
         if (referenceId == null)
-            System.out.println("ERROR: Use not matched: " + toString());
+            System.out.println("ERROR: Use not matched: " + this);
         String useId = this.toString();
         return new Usage(position, sourceFile.getRelativePath(), true, useId, referenceId, kind);
     }

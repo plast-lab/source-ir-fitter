@@ -51,7 +51,7 @@ public class BytecodeParser extends IRProcessor {
                 paramTypes.add(paramType);
             }
             String mName = mNode.name;
-            String methodId = classPrefix + sig[0] + " " + mName + "(" + sj.toString() + ")>";
+            String methodId = classPrefix + sig[0] + " " + mName + "(" + sj + ")>";
             List<IRVariable> parameters = new ArrayList<>();
             for (int i = 1; i < sig.length; i++)
                 parameters.add(IRVariable.newParam(methodId, i-1));

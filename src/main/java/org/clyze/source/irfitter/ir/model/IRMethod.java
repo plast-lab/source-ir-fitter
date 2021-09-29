@@ -91,9 +91,9 @@ public class IRMethod extends IRElement implements AbstractMethod {
                 }));
     }
 
-    public IRFieldAccess addFieldAccess(String fieldId, String fieldName, String fieldType, AccessType accessType, boolean debug) {
+    public void addFieldAccess(String fieldId, String fieldName, String fieldType, AccessType accessType, boolean debug) {
         String key = accessType.fieldAccessId + fieldName;
-        return addNumberedElement(fieldAccessCounters, fieldAccesses, getId(), key,
+        addNumberedElement(fieldAccessCounters, fieldAccesses, getId(), key,
                 ((counter, elemId) -> {
                     IRFieldAccess irFieldAccess = new IRFieldAccess(elemId, fieldId, fieldName, fieldType, accessType);
                     if (debug)

@@ -33,6 +33,7 @@ public class IdMapper {
         return mapping;
     }
 
+    @SuppressWarnings("MagicNumber")
     public void printStats(Collection<SourceFile> sources) {
         long allTypes = 0, matchedTypes = 0, allMethods = 0, matchedMethods = 0;
         long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;

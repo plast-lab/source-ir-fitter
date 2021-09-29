@@ -1,6 +1,5 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.Collection;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.Usage;
 import org.clyze.persistent.model.UsageKind;

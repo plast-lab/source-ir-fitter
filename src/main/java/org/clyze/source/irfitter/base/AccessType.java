@@ -7,8 +7,8 @@ public enum AccessType {
     READ(UsageKind.DATA_READ, "read-field-"),
     WRITE(UsageKind.DATA_WRITE, "write-field-");
 
-    public UsageKind kind;
-    public String fieldAccessId;
+    public final UsageKind kind;
+    public final String fieldAccessId;
 
     AccessType(UsageKind kind, String fieldAccessId) {
         this.kind = kind;

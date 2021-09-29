@@ -38,7 +38,7 @@ implements AbstractMethod {
     /** The lambdas found in the method. */
     public List<JLambda> lambdas = null;
     /** The element uses found in the source code. */
-    public List<ElementUse> elementUses = new ArrayList<>();
+    public final List<ElementUse> elementUses = new ArrayList<>();
     private Collection<String> cachedIds = null;
     /** True if this method accepts varargs. */
     private final boolean isVarArgs;

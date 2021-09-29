@@ -13,7 +13,7 @@ import org.clyze.source.irfitter.ir.model.IRType;
  * State maintained by the IR parsing phase.
  */
 public class IRState {
-    public List<IRType> irTypes = new ArrayList<>();
+    public final List<IRType> irTypes = new ArrayList<>();
 
     public void resolveLambdas(boolean debug) {
         if (debug)

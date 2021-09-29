@@ -39,7 +39,7 @@ public class Import {
             sj.add("*");
         if (isStatic)
             sj.add("static");
-        return "import " + name + (sj.length() > 0 ? "[" + sj.toString() + "]" : "");
+        return "import " + name + (sj.length() > 0 ? "[" + sj + "]" : "");
     }
 
     public String getUniqueId(SourceFile sourceFile) {

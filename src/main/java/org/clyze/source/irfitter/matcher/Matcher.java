@@ -726,7 +726,7 @@ public class Matcher {
      * @param <IR_ELEM_T>     the type of the IR code element
      * @param <SRC_ELEM_T>    the type of the source code element
      */
-    public <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
+    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
     void recordMatch(Map<String, Collection<SRC_ELEM_T>> mapping, String kind, IR_ELEM_T irElem,
                      SRC_ELEM_T srcElem) {
         String id = irElem.getId();

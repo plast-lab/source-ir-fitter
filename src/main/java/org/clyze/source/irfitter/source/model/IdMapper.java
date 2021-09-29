@@ -52,22 +52,22 @@ public class IdMapper {
                         matchedMethods++;
                     List<JMethodInvocation> srcInvos = srcMethod.invocations;
                     allInvos += srcInvos.size();
-                    matchedInvos += countUnmatched(srcInvos);
+                    matchedInvos += countMatched(srcInvos);
                     List<JAllocation> srcAllocs = srcMethod.allocations;
                     allAllocs += srcAllocs.size();
-                    matchedAllocs += countUnmatched(srcAllocs);
+                    matchedAllocs += countMatched(srcAllocs);
                     List<JFieldAccess> fieldAccesses = srcMethod.fieldAccesses;
                     allFieldAccesses += fieldAccesses.size();
-                    matchedFieldAccesses += countUnmatched(fieldAccesses);
+                    matchedFieldAccesses += countMatched(fieldAccesses);
                     List<JMethodRef> methodRefs = srcMethod.methodRefs;
                     if (methodRefs != null) {
                         allMethodRefs += methodRefs.size();
-                        matchedMethodRefs += countUnmatched(methodRefs);
+                        matchedMethodRefs += countMatched(methodRefs);
                     }
                 }
                 List<JField> srcFields = srcType.fields;
                 allFields += srcFields.size();
-                matchedFields += countUnmatched(srcFields);
+                matchedFields += countMatched(srcFields);
             }
         }
         System.out.println("== Statistics ==");
@@ -80,7 +80,12 @@ public class IdMapper {
         System.out.printf("Matched (source) field accesses : %6.2f%%%n", (100.0 * matchedFieldAccesses) / allFieldAccesses);
     }
 
-    private static <T extends ElementWithPosition<?, ?>> long countUnmatched(Collection<T> elems) {
-        return elems.stream().filter(e -> e.matchId != null).count();
+    private static <T extends ElementWithPosition<?, ?>> long countMatched(Collection<T> elems) {
+        return elems.stream().filter(e -> {
+            boolean ret = e.matchId != null;
+            if (!ret)
+                System.out.println("UNMATCHED: " + e);
+            return ret;
+        }).count();
     }
 }

@@ -49,7 +49,7 @@ public class Matcher {
      * @param idMapper   the source-to-IR mapper object
      * @param irTypes    the IR type representations
      */
-    public void matchTypes(IdMapper idMapper, Collection<IRType> irTypes) {
+    public void matchTypes(IdMapper idMapper, Iterable<IRType> irTypes) {
         for (JType jt : sourceFile.jTypes) {
             String id = jt.getFullyQualifiedName();
             if (debug)
@@ -138,7 +138,7 @@ public class Matcher {
      * @param outerTypes  the outer types (for inner classes)
      */
     private void matchMethods(IdMapper idMapper, List<IRMethod> irMethods,
-                              List<JMethod> srcMethods, List<String> outerTypes) {
+                              List<JMethod> srcMethods, Collection<String> outerTypes) {
         if (debug)
             System.out.println("Matching " + irMethods.size() + " IR methods against " + srcMethods.size() + " methods...");
 
@@ -326,8 +326,8 @@ public class Matcher {
      * @param outerTypes    the outer classes found in the IR
      */
     private void matchInnerConstructors(Map<String, Collection<JMethod>> methodMap,
-                                        List<JMethod> srcMethods, List<IRMethod> irMethods,
-                                        List<String> outerTypes) {
+                                        Iterable<JMethod> srcMethods, Collection<IRMethod> irMethods,
+                                        Collection<String> outerTypes) {
         List<IRMethod> irInits = irMethods.stream().filter(m -> m.name.equals("<init>")).collect(Collectors.toList());
         List<String> outerSimpleTypes = outerTypes.stream().map(Utils::getSimpleIrType).collect(Collectors.toList());
         int outerTypesCount = outerTypes.size();
@@ -339,7 +339,7 @@ public class Matcher {
                 // Abort if |outer-types + source-types| != |ir-types|.
                 if (irInit.paramTypes.size() != outerTypesCount + srcInit.parameters.size())
                     continue;
-                List<String> srcParamTypes = new ArrayList<>(outerSimpleTypes);
+                Collection<String> srcParamTypes = new ArrayList<>(outerSimpleTypes);
                 for (JVariable parameter : srcInit.parameters)
                     srcParamTypes.add(Utils.getSimpleSourceType(parameter.type));
                 if (debug)
@@ -444,7 +444,7 @@ public class Matcher {
     }
 
     private void generateUnknownMethodAllocations(Map<String, Collection<JAllocation>> allocationMap,
-                                                  List<JMethod> srcMethods) {
+                                                  Iterable<JMethod> srcMethods) {
         // Last step: for the unmatched IR allocations that still have
         // source line information, generate metadata. This can help with
         // mapping compiler-generated allocations (such as StringBuilder objects
@@ -478,7 +478,7 @@ public class Matcher {
      * @return               the resulting map of groups
      */
     private <T>
-    Map<String, List<T>> groupElementsBy(Collection<T> elems, Function<T, String> keyExtractor) {
+    Map<String, List<T>> groupElementsBy(Iterable<T> elems, Function<T, String> keyExtractor) {
         Map<String, List<T>> map = new HashMap<>();
         if (elems != null)
             for (T elem : elems)
@@ -495,7 +495,7 @@ public class Matcher {
      * @param irAllocs       the IR allocations
      */
     private void matchSameLineFirstAllocations(Map<String, Collection<JAllocation>> allocationMap,
-                                               List<JAllocation> srcAllocs, List<IRAllocation> irAllocs) {
+                                               Iterable<JAllocation> srcAllocs, Iterable<IRAllocation> irAllocs) {
         Map<Long, List<JAllocation>> srcAllocsPerLine = new HashMap<>();
         for (JAllocation srcAlloc : srcAllocs)
             srcAllocsPerLine.computeIfAbsent(srcAlloc.pos.getStartLine(), (k -> new ArrayList<>())).add(srcAlloc);
@@ -646,8 +646,8 @@ public class Matcher {
     }
 
     private void matchMethodsWithSameNameArity(Map<String, Collection<JMethod>> methodMap,
-                                               Set<JMethod> srcMatches,
-                                               Set<IRMethod> irMatches) {
+                                               Iterable<JMethod> srcMatches,
+                                               Iterable<IRMethod> irMatches) {
         // Match methods with same name and arity (in the presence of overloading).
         for (JMethod srcMethod : srcMatches) {
             IRMethod irMethodMatch = null;
@@ -697,8 +697,8 @@ public class Matcher {
     }
 
     private void matchMethodSignaturesFuzzily(Map<String, Collection<JMethod>> methodMap,
-                                              List<JMethod> srcMethods,
-                                              List<IRMethod> irMethods) {
+                                              Iterable<JMethod> srcMethods,
+                                              Iterable<IRMethod> irMethods) {
         if (debug)
             System.out.println("* Performing fuzzy type matching in method signatures...");
         for (JMethod srcMethod : srcMethods) {
@@ -749,8 +749,8 @@ public class Matcher {
         srcElem.initSymbolFromIRElement(irElem);
     }
 
-    private <T> Map<String, Set<T>> getOverloadingTable(Collection<T> methods,
-                                         Function<T, String> namer) {
+    private <T> Map<String, Set<T>> getOverloadingTable(Iterable<T> methods,
+                                                        Function<T, String> namer) {
         Map<String, Set<T>> srcOverloading = new HashMap<>();
         for (T method : methods) {
             String mName = namer.apply(method);

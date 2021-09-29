@@ -1,6 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
+import org.clyze.persistent.model.SymbolWithId;
 import org.clyze.persistent.model.jvm.JvmClass;
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.ir.model.IRType;
@@ -212,6 +213,14 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
         Integer value = (counter == null) ? 1 : counter + 1;
         methodTypeCounters.put(type, counter);
         return value;
+    }
+
+    @Override
+    public SymbolWithId generatePartialMetadata() {
+        System.out.println("Generating partial metadata for type: " + this);
+        symbol = getJvmClassWith(getFullyQualifiedName(), isInterface, isEnum,
+                isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected);
+        return symbol;
     }
 
     /**

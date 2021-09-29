@@ -322,6 +322,8 @@ public class Driver {
     }
 
     private void registerSymbol(JvmMetadata bm, SymbolWithId symbol) {
+        if (symbol == null)
+            return;
         if (symbol instanceof JvmClass)
             bm.jvmClasses.add((JvmClass) symbol);
         else if (symbol instanceof JvmField)
@@ -345,17 +347,15 @@ public class Driver {
     private void generateJSON(Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping,
                               Collection<SourceFile> sources, boolean matchIR) {
         for (Map.Entry<String, Collection<? extends ElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
-            String doopId = entry.getKey();
+            String symbolId = entry.getKey();
             if (debug)
-                System.out.println("[JSON] Processing id: " + doopId);
+                System.out.println("[JSON] Processing id: " + symbolId);
             for (ElementWithPosition<?, ?> srcElem : entry.getValue()) {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
-                    if (!matchIR && (srcElem instanceof JType)) {
-                        System.out.println("Generating partial metadata for element: " + srcElem);
-                        JType jt = (JType) srcElem;
-                        symbol = jt.getJvmClassWith(jt.getFullyQualifiedName(), jt.isInterface, jt.isEnum, jt.isInner, jt.isAnonymous, jt.isAbstract, jt.isFinal, jt.isPublic, jt.isProtected);
-                    } else {
+                    if (!matchIR)
+                        symbol = srcElem.generatePartialMetadata();
+                    else {
                         System.out.println("Source element has no symbol: " + srcElem);
                         continue;
                     }

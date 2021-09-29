@@ -220,6 +220,21 @@ public class Matcher {
             matchLambdas(idMapper, srcMethod);
 
         generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
+        generateUnknownMethodFieldAccesses(idMapper.fieldAccessMap, srcMethods);
+    }
+
+    /**
+     * Keep unmatched field accesses (due to field value inlining).
+     */
+    private void generateUnknownMethodFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, List<JMethod> srcMethods) {
+        for (JMethod jm : srcMethods) {
+            for (JFieldAccess fieldAccess : jm.fieldAccesses)
+                if (!fieldAccess.hasBeenMatched()) {
+                    if (debug)
+                        System.out.println("Adding unmatched field access: " + fieldAccess);
+                    fieldAccessMap.computeIfAbsent("UNKNOWN_FIELD", k -> new ArrayList<>()).add(fieldAccess);
+                }
+        }
     }
 
     private void matchInsideMethod(IdMapper idMapper, JMethod srcMethod, boolean isLambda) {

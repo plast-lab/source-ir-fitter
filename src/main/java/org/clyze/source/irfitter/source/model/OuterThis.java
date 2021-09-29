@@ -29,7 +29,7 @@ public class OuterThis {
      * @return             the source code field access
      */
     public JFieldAccess getFieldAccess(String fieldId) {
-        return new JFieldAccess(srcFile, pos, AccessType.READ, fieldId);
+        return new JFieldAccess(srcFile, pos, AccessType.READ, fieldId, null);
     }
 
     @Override

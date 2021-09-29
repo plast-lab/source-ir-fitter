@@ -543,8 +543,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 SimpleName name = nameExpr.getName();
                 String strName = name.asString();
                 // Only register accesses to fields in the enclosing type.
-                if (jt.fields.stream().anyMatch(fld -> fld.name.equals(strName)))
-                    visitFieldAccess(parentNode, name, accessType);
+                Optional<JField> matchingField = jt.fields.stream().filter(fld -> fld.name.equals(strName)).findFirst();
+                if (matchingField.isPresent())
+                    visitFieldAccess(parentNode, name, accessType, matchingField.get());
                 else
                     System.err.println("WARNING: ignoring expresssion involving name '" + name + "' from nested scope: " + parentNode + ", position: " + JavaUtils.createPositionFromNode(name));
             }
@@ -640,7 +641,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     private void visitFieldAccess(FieldAccessExpr fieldAccess, AccessType accessType) {
-        visitFieldAccess(fieldAccess, fieldAccess.getName(), accessType);
+        visitFieldAccess(fieldAccess, fieldAccess.getName(), accessType, null);
         JType jt = scope.getEnclosingType();
         if (jt == null)
             System.out.println("ERROR: field access outside type: " + fieldAccess + ": " + sourceFile);
@@ -651,7 +652,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             });
     }
 
-    private void visitFieldAccess(Node fieldAccess, SimpleName name, AccessType accType) {
+    private void visitFieldAccess(Node fieldAccess, SimpleName name,
+                                  AccessType accType, JField target) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
         if (debug)
@@ -660,7 +662,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (parentMethod == null)
             System.out.println("TODO: field access outside method: " + fieldAccess + ": " + sourceFile);
         else
-            parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, accType, fieldName));
+            parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, accType, fieldName, target));
     }
 
     @Override

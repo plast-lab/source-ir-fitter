@@ -35,4 +35,14 @@ implements Matchable {
     public boolean hasBeenMatched() {
         return this.matchId != null;
     }
+
+    /**
+     * Generates partial metadata for elements with partial information.
+     * Override in subclasses as needed.
+     */
+    public SymbolWithId generatePartialMetadata() {
+        if (srcFile.debug)
+            System.out.println("WARNING: not generating partial metadata for element: " + this);
+        return null;
+    }
 }

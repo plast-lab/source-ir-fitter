@@ -682,7 +682,7 @@ public class Matcher {
                     Position pos = new Position(line, line, 0, 0);
                     String mName = irMethod.name;
                     boolean inIIB = "<init>".equals(mName) || JInit.isInitName(mName);
-                    JBlock block = new JBlock(mName, null);
+                    JBlock block = new JBlock(mName, null, null);
                     JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null);
                     srcMethod.invocations.add(fakeSrcInvo);
                     recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);

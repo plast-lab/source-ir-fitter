@@ -4,13 +4,14 @@ import com.github.javaparser.Position;
 import com.github.javaparser.ast.nodeTypes.NodeWithRange;
 import org.clyze.source.irfitter.source.model.JBlock;
 import org.clyze.source.irfitter.source.model.JMethod;
+import org.clyze.source.irfitter.source.model.JType;
 
 import java.util.*;
 
 /** A collection of utilities used during parsing of Java sources. */
 public class JavaUtils {
-    public static JBlock newBlock(NodeWithRange<?> sn, JBlock block, JMethod method) {
-        JBlock innerBlock = new JBlock(createPositionFromNode(sn), block);
+    public static JBlock newBlock(NodeWithRange<?> sn, JBlock block, JMethod method, JType enclosingType) {
+        JBlock innerBlock = new JBlock(createPositionFromNode(sn), block, enclosingType);
         method.blocks.add(innerBlock);
         return innerBlock;
     }

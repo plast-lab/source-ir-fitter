@@ -82,7 +82,7 @@ implements AbstractMethodInvocation, Targetable {
     public JVariable getBase() {
         if (block == null)
             return null;
-        return block.lookup(base);
+        return block.lookup(base).variable;
     }
 
     @Override

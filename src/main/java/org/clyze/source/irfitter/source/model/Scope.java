@@ -1,7 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
-import java.util.EmptyStackException;
-import java.util.Stack;
+import java.util.*;
 import java.util.function.Consumer;
 
 /** Nested scopes functionality. */

@@ -262,7 +262,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Collection<TypeUse> paramTypeUses = new HashSet<>();
         boolean isVarArgs = false;
         Position methodPos = JavaUtils.createPositionFromNode(name);
-        JBlock argsBlock = new JBlock(methodPos, block);
+        JType jt = scope.getEnclosingType();
+        JBlock argsBlock = new JBlock(methodPos, block, jt);
         for (Parameter param : md.getParameters()) {
             if (param.isVarArgs())
                 isVarArgs = true;
@@ -274,7 +275,6 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             parameters.add(paramVar);
             argsBlock.addVariable(paramVar);
         }
-        JType jt = scope.getEnclosingType();
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt,
@@ -321,7 +321,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
                 } else {
                     JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
-                    JBlock methodBlock = new JBlock(initBlock.name, block);
+                    JBlock methodBlock = new JBlock(initBlock.name, block, jt);
                     scope.enterMethodScope(initBlock, init -> initExpr.accept(this, methodBlock));
                 }
             }
@@ -479,7 +479,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (debug)
             for (Statement statement : n.getStatements())
                 System.out.println("STATEMENT: " + statement.getClass().getSimpleName());
-        super.visit(n, JavaUtils.newBlock(n, block, scope.getEnclosingMethod()));
+        super.visit(n, JavaUtils.newBlock(n, block, scope.getEnclosingMethod(), null));
     }
 
     @Override
@@ -493,7 +493,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(final CatchClause cc, JBlock block) {
-        JBlock catchBlock = new JBlock(JavaUtils.createPositionFromNode(cc), block);
+        JBlock catchBlock = new JBlock(JavaUtils.createPositionFromNode(cc), block, null);
         visit(cc.getParameter(), catchBlock);
         visit(cc.getBody(), catchBlock);
     }
@@ -529,10 +529,11 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     private void proccessNameAccess(Expression expr, Node parentNode, JBlock block,
                                     AccessType accessType) {
-        if (expr == null || !expr.isNameExpr())
+        if (expr == null || !expr.isNameExpr() || block == null)
             return;
         NameExpr nameExpr = expr.asNameExpr();
-        JVariable localVar = getLocalVariable(nameExpr, block);
+        JBlock.Result lookupRes = block.lookup(nameExpr.getNameAsString());
+        JVariable localVar = lookupRes.variable;
         if (debug)
             System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar + ", accessType=" + accessType);
         if (localVar == null) {
@@ -541,11 +542,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 System.err.println("ERROR: no enclosing type for expression: " + parentNode);
             else {
                 SimpleName name = nameExpr.getName();
-                String strName = name.asString();
-                // Only register accesses to fields in the enclosing type.
-                Optional<JField> matchingField = jt.fields.stream().filter(fld -> fld.name.equals(strName)).findFirst();
-                if (matchingField.isPresent())
-                    visitFieldAccess(parentNode, name, accessType, matchingField.get());
+                JField matchingField = lookupRes.field;
+                if (matchingField != null) {
+                    visitFieldAccess(parentNode, name, accessType, matchingField);
+                }
                 else
                     System.err.println("WARNING: ignoring expresssion involving name '" + name + "' from nested scope: " + parentNode + ", position: " + JavaUtils.createPositionFromNode(name));
             }
@@ -610,7 +610,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         value.accept(this, block);
 
         if ((block != null) && (target.isNameExpr()))
-            registerPossibleTarget((() -> block.lookup(((NameExpr) target).getNameAsString())), value);
+            registerPossibleTarget((() -> block.lookup(((NameExpr) target).getNameAsString()).variable), value);
     }
 
     /**
@@ -674,14 +674,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(NameExpr nameExpr, JBlock block) {
         if (debug)
-            System.out.println("nameExpr=" + nameExpr + ", local=" + getLocalVariable(nameExpr, block));
+            if (nameExpr != null && block != null)
+                System.out.println("nameExpr=" + nameExpr + ", lookup=" + block.lookup(nameExpr.getNameAsString()));
         super.visit(nameExpr, block);
-    }
-
-    static JVariable getLocalVariable(NameExpr nameExpr, JBlock block) {
-        if (nameExpr != null && block != null)
-            return block.lookup(nameExpr.getNameAsString());
-        return null;
     }
 
     private JType findOuterClassWithName(JType parent, String className) {
@@ -746,7 +741,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 }
                 jt.addSigTypeRefs(null, typeUses);
                 JLambda lam = new JLambda(sourceFile, "lambda@" + pos, parameters, outerPos, jt, pos);
-                JBlock lambdaBlock = JavaUtils.newBlock(lambdaExpr, block, lam);
+                JBlock lambdaBlock = JavaUtils.newBlock(lambdaExpr, block, lam, jt);
                 for (JVariable parameter : parameters)
                     lambdaBlock.addVariable(parameter);
 

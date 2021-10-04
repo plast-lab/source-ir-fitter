@@ -194,38 +194,38 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(final InstanceOfExpr instanceOfExpr, final JBlock block) {
-        proccessNameAccess(instanceOfExpr.getExpression(), instanceOfExpr, block, AccessType.READ);
+        processNameAccess(instanceOfExpr.getExpression(), instanceOfExpr, block, AccessType.READ);
         super.visit(instanceOfExpr, block);
     }
 
     @Override
     public void visit(final ReturnStmt retStmt, final JBlock block) {
-        retStmt.getExpression().ifPresent(expr -> proccessNameAccess(expr, retStmt, block, AccessType.READ));
+        retStmt.getExpression().ifPresent(expr -> processNameAccess(expr, retStmt, block, AccessType.READ));
         super.visit(retStmt, block);
     }
 
     @Override
     public void visit(final ThrowStmt throwStmt, final JBlock block) {
-        proccessNameAccess(throwStmt.getExpression(), throwStmt, block, AccessType.READ);
+        processNameAccess(throwStmt.getExpression(), throwStmt, block, AccessType.READ);
         super.visit(throwStmt, block);
     }
 
     @Override
     public void visit(final UnaryExpr uExpr, final JBlock block) {
-        proccessNameAccess(uExpr.getExpression(), uExpr, block, AccessType.READ);
+        processNameAccess(uExpr.getExpression(), uExpr, block, AccessType.READ);
         super.visit(uExpr, block);
     }
 
     @Override
     public void visit(final BinaryExpr bExpr, final JBlock block) {
-        proccessNameAccess(bExpr.getLeft(), bExpr, block, AccessType.READ);
-        proccessNameAccess(bExpr.getRight(), bExpr, block, AccessType.READ);
+        processNameAccess(bExpr.getLeft(), bExpr, block, AccessType.READ);
+        processNameAccess(bExpr.getRight(), bExpr, block, AccessType.READ);
         super.visit(bExpr, block);
     }
 
     @Override
     public void visit(final YieldStmt yStmt, final JBlock block) {
-        proccessNameAccess(yStmt.getExpression(), yStmt, block, AccessType.READ);
+        processNameAccess(yStmt.getExpression(), yStmt, block, AccessType.READ);
         super.visit(yStmt, block);
     }
 
@@ -358,7 +358,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", arguments.size(), pos, sourceFile, block, null);
             callSites.put(constrInvo, invo);
         }
-        constrInvo.getExpression().ifPresent(expr -> proccessNameAccess(expr, constrInvo, block, AccessType.READ));
+        constrInvo.getExpression().ifPresent(expr -> processNameAccess(expr, constrInvo, block, AccessType.READ));
         processNameReadsInArgs(arguments, constrInvo, block);
         super.visit(constrInvo, block);
     }
@@ -468,7 +468,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         else {
             JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
             callSites.put(call, invo);
-            call.getScope().ifPresent(scopeExpr -> proccessNameAccess(scopeExpr, call, block, AccessType.READ));
+            call.getScope().ifPresent(scopeExpr -> processNameAccess(scopeExpr, call, block, AccessType.READ));
             processNameReadsInArgs(call.getArguments(), call, block);
         }
         super.visit(call, block);
@@ -523,12 +523,12 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 System.err.println("WARNING: found cast outside method: " + castExpr);
         } else
             System.err.println("WARNING: found cast outside type: " + castExpr);
-        proccessNameAccess(castExpr.getExpression(), castExpr, block, AccessType.READ);
+        processNameAccess(castExpr.getExpression(), castExpr, block, AccessType.READ);
         super.visit(castExpr, block);
     }
 
-    private void proccessNameAccess(Expression expr, Node parentNode, JBlock block,
-                                    AccessType accessType) {
+    private void processNameAccess(Expression expr, Node parentNode, JBlock block,
+                                   AccessType accessType) {
         if (expr == null || !expr.isNameExpr() || block == null)
             return;
         NameExpr nameExpr = expr.asNameExpr();
@@ -565,7 +565,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (args == null)
             return;
         for (Expression argument : args)
-            proccessNameAccess(argument, parentExpr, block, AccessType.READ);
+            processNameAccess(argument, parentExpr, block, AccessType.READ);
     }
 
     @Override
@@ -573,7 +573,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (debug)
             System.out.println("Visiting synchronized statement: " + syncStmt);
         Expression expr = syncStmt.getExpression();
-        proccessNameAccess(expr, expr, block, AccessType.READ);
+        processNameAccess(expr, expr, block, AccessType.READ);
         super.visit(syncStmt, block);
     }
 
@@ -586,7 +586,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             visitFieldAccess(fieldAcc, AccessType.WRITE);
         } else if (target.isNameExpr()) {
             NameExpr nameExpr = (NameExpr) target;
-            proccessNameAccess(nameExpr, parentNode, block, AccessType.WRITE);
+            processNameAccess(nameExpr, parentNode, block, AccessType.WRITE);
         } else if (target.isArrayAccessExpr()) {
             ArrayAccessExpr arrayAcc = (ArrayAccessExpr) target;
             Expression name = arrayAcc.getName();
@@ -595,7 +595,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             // Any index accesses in the "scope" should be reads. This ignores
             // mutating expressions such as "i++".
             Expression indexExpr = arrayAcc.getIndex();
-            proccessNameAccess(indexExpr, parentNode, block, AccessType.READ);
+            processNameAccess(indexExpr, parentNode, block, AccessType.READ);
             indexExpr.accept(this, block);
         } else
             target.accept(this, block);
@@ -608,7 +608,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         Expression target = assignExpr.getTarget();
         visitAssignmentTarget(target, assignExpr, block);
         Expression value = assignExpr.getValue();
-        proccessNameAccess(value, assignExpr, block, AccessType.READ);
+        processNameAccess(value, assignExpr, block, AccessType.READ);
         value.accept(this, block);
 
         if ((block != null) && (target.isNameExpr()))
@@ -716,7 +716,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
 
     @Override
     public void visit(final SwitchEntry switchEntry, final JBlock block) {
-        switchEntry.getLabels().forEach(lab -> proccessNameAccess(lab, switchEntry, block, AccessType.READ));
+        switchEntry.getLabels().forEach(lab -> processNameAccess(lab, switchEntry, block, AccessType.READ));
         super.visit(switchEntry, block);
     }
 

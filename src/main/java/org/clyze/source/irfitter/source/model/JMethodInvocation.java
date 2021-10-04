@@ -82,7 +82,8 @@ implements AbstractMethodInvocation, Targetable {
     public JVariable getBase() {
         if (block == null)
             return null;
-        return block.lookup(base).variable;
+        JBlock.Result lookup = block.lookup(base);
+        return lookup == null ? null : lookup.variable;
     }
 
     @Override

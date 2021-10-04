@@ -165,7 +165,13 @@ public class Driver {
         if (resolveInvocations) {
             if (debug)
                 System.out.println("Trying to (statically) resolve invocation targets...");
-            resolveInvocationTargets(sources, irTypes);
+            Set<String> invocationTargets = resolveInvocationTargets(sources, irTypes);
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(out, "InvocationTargets.csv")))) {
+                for (String line : invocationTargets)
+                    bw.write(line);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
         if (debug)
@@ -205,7 +211,7 @@ public class Driver {
                 registerSymbol(bm, elemUse.getUse());
     }
 
-    private void resolveInvocationTargets(Collection<SourceFile> sources, Collection<IRType> irTypes) {
+    private Set<String> resolveInvocationTargets(Collection<SourceFile> sources, Collection<IRType> irTypes) {
         Map<String, IRType> irTypeLookup = new HashMap<>();
         for (IRType irType : irTypes)
             irTypeLookup.put(irType.getId(), irType);
@@ -226,6 +232,7 @@ public class Driver {
             }
         }
 
+        Set<String> invocationTargets = new HashSet<>();
         for (JMethodInvocation srcInvo : srcInvos) {
             IRMethodInvocation irInvo = srcInvo.matchElement;
             JvmMethodInvocation jvmInvo = srcInvo.symbol;
@@ -239,9 +246,12 @@ public class Driver {
                 if (debug)
                     System.out.println("Invocation resolution failed, using: " + jvmInvo.targetMethodId);
             }
+            String targetMethodId = jvmInvo.targetMethodId;
             if (debug)
-                System.out.println("Resolved: " + irInvo + " => " + jvmInvo.targetMethodId);
+                System.out.println("Resolved: " + irInvo + " => " + targetMethodId);
+            invocationTargets.add(irInvo.getId() + '\t' + targetMethodId + '\n');
         }
+        return invocationTargets;
     }
 
     private static boolean resolveTarget(Map<String, IRType> irTypes,

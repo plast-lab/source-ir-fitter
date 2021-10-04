@@ -39,6 +39,7 @@ implements Matchable {
     /**
      * Generates partial metadata for elements with partial information.
      * Override in subclasses as needed.
+     * @return the (partial) metadata object
      */
     public SymbolWithId generatePartialMetadata() {
         if (srcFile.debug)

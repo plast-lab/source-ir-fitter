@@ -98,7 +98,7 @@ public class IRMethod extends IRElement implements AbstractMethod {
      * @param fieldType      the field type
      * @param accessType     the access type (read, write)
      * @param debug          if true, enable debug messages
-     * @return
+     * @return               the field access added
      */
     public IRFieldAccess addFieldAccess(String fieldId, String fieldName, String fieldType, AccessType accessType, boolean debug) {
         String key = accessType.fieldAccessId + fieldName;

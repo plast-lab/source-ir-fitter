@@ -103,5 +103,10 @@ public class JBlock {
             this.field = f;
             this.variable = null;
         }
+
+        @Override
+        public String toString() {
+            return "Result: " + this.field + " || " + this.variable;
+        }
     }
 }

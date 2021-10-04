@@ -533,9 +533,11 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             return;
         NameExpr nameExpr = expr.asNameExpr();
         JBlock.Result lookupRes = block.lookup(nameExpr.getNameAsString());
-        JVariable localVar = lookupRes.variable;
         if (debug)
-            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", localVar=" + localVar + ", accessType=" + accessType);
+            System.out.println("processNameAccess(): nameExpr=" + nameExpr + ", parentNode=" + parentNode + ", lookupRes=" + lookupRes + ", accessType=" + accessType);
+        if (lookupRes == null)
+            return;
+        JVariable localVar = lookupRes.variable;
         if (localVar == null) {
             JType jt = scope.getEnclosingType();
             if (jt == null)
@@ -610,7 +612,10 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         value.accept(this, block);
 
         if ((block != null) && (target.isNameExpr()))
-            registerPossibleTarget((() -> block.lookup(((NameExpr) target).getNameAsString()).variable), value);
+            registerPossibleTarget((() -> {
+                JBlock.Result lookup = block.lookup(((NameExpr) target).getNameAsString());
+                return lookup != null && lookup.variable != null ? lookup.variable : null;
+            }), value);
     }
 
     /**

@@ -166,7 +166,7 @@ public class Driver {
             if (debug)
                 System.out.println("Trying to (statically) resolve invocation targets...");
             Set<String> invocationTargets = resolveInvocationTargets(sources, irTypes);
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(out, "InvocationTargets.csv")))) {
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(db, "InvocationTargets.csv")))) {
                 for (String line : invocationTargets)
                     bw.write(line);
             } catch (IOException e) {

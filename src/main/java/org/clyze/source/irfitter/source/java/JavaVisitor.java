@@ -551,14 +551,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 else
                     System.err.println("WARNING: ignoring expresssion involving name '" + name + "' from nested scope: " + parentNode + ", position: " + JavaUtils.createPositionFromNode(name));
             }
-        } else {
-            JMethod enclosingMethod = scope.getEnclosingMethod();
-            if (enclosingMethod != null)
-                enclosingMethod.addVarAccess(JavaUtils.createPositionFromNode(nameExpr),
-                        accessType.kind, localVar);
-            else
-                System.err.println("WARNING: found variable use outside method: " + parentNode);
-        }
+        } else
+            scope.registerVarAccess(localVar, JavaUtils.createPositionFromNode(nameExpr), accessType, parentNode);
     }
 
     private void processNameReadsInArgs(NodeList<Expression> args, Node parentExpr, JBlock block) {
@@ -661,13 +655,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                                   AccessType accType, JField target) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
-        if (debug)
-            System.out.println("Field access [" + (accType.name()) + "]: " + fieldName + "@" + sourceFile + ":" + pos);
-        JMethod parentMethod = scope.getEnclosingMethod();
-        if (parentMethod == null)
-            System.out.println("TODO: field access outside method: " + fieldAccess + ": " + sourceFile);
-        else
-            parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, accType, fieldName, target));
+        scope.registerFieldAccess(fieldAccess, fieldName, pos, sourceFile, accType, target, debug);
     }
 
     @Override

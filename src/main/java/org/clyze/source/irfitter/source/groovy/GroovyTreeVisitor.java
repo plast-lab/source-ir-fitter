@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 import org.apache.groovy.parser.antlr4.GroovyParser.*;
 import org.apache.groovy.parser.antlr4.GroovyParserBaseVisitor;
 import org.clyze.persistent.model.Position;
+import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.base.ModifierPack;
 import org.clyze.source.irfitter.source.model.*;
 
@@ -190,24 +191,27 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
     }
 
     @Override
-    public Void visitBlock(BlockContext block) {
-        if (block != null) {
-            BlockStatementsOptContext blockStatementsOpt = block.blockStatementsOpt();
-            if (blockStatementsOpt != null) {
-                BlockStatementsContext blockStatements = blockStatementsOpt.blockStatements();
-                if (blockStatements != null) {
-                    for (BlockStatementContext blockStmt : blockStatements.blockStatement()) {
-                        LocalVariableDeclarationContext localVar = blockStmt.localVariableDeclaration();
-                        if (localVar != null && debug) {
-                            for (JVariable jVar : processVariableDeclaration(localVar.variableDeclaration()))
-                                System.out.println("TODO: local variable " + jVar.name);
+    public Void visitBlock(BlockContext grBlock) {
+        if (grBlock != null) {
+            GroovyTreeVisitor thisVisitor = this;
+            scope.enterBlockScope(GroovyUtils.createPositionFromToken(grBlock.start), null, ((JBlock block) -> {
+                BlockStatementsOptContext blockStatementsOpt = grBlock.blockStatementsOpt();
+                if (blockStatementsOpt != null) {
+                    BlockStatementsContext blockStatements = blockStatementsOpt.blockStatements();
+                    if (blockStatements != null) {
+                        for (BlockStatementContext blockStmt : blockStatements.blockStatement()) {
+                            LocalVariableDeclarationContext localVar = blockStmt.localVariableDeclaration();
+                            if (localVar != null && debug) {
+                                for (JVariable jVar : processVariableDeclaration(localVar.variableDeclaration()))
+                                    block.addVariable(jVar);
+                            }
+                            StatementContext stmt = blockStmt.statement();
+                            if (stmt != null)
+                                stmt.accept(thisVisitor);
                         }
-                        StatementContext stmt = blockStmt.statement();
-                        if (stmt != null)
-                            stmt.accept(this);
                     }
                 }
-            }
+            }));
         }
         return null;
     }
@@ -465,6 +469,31 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                             return new JStringConstant<>(sourceFile, pos, decl, s);
                         }
                     }
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public Void visitIdentifier(IdentifierContext ctx) {
+        if (ctx == null || ctx.Identifier() == null)
+            return null;
+        String name = ctx.Identifier().getText();
+        JBlock block = scope.getEnclosingBlock();
+        if (block != null) {
+            JBlock.Result lookup = block.lookup(name);
+            System.out.println("READ_ACCESS: " + lookup);
+            if (lookup != null) {
+                Position pos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
+                if (lookup.variable != null) {
+                    scope.registerVarAccess(lookup.variable, pos, AccessType.READ, ctx);
+                } else {
+                    JField field = lookup.field;
+                    if (field != null)
+                        scope.registerFieldAccess(ctx, field.name, pos, sourceFile, AccessType.READ, field, debug);
+                    else
+                        System.err.println("Internal error during Groovy identifier lookup: " + lookup);
                 }
             }
         }

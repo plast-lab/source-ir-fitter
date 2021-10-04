@@ -23,7 +23,7 @@ public class TestMapper {
         String outDir = "build/test-out-java-groovy";
         RunResult rr = generateJson("clue-common-3.24.1.jar", "clue-common-3.24.1-sources.jar", outDir);
         assert (new File(outDir).listFiles() != null);
-        assert (rr.unmatched == 23);
+        assert (rr.unmatched == 32);
     }
 
     /**

@@ -72,14 +72,65 @@ public class Matcher {
         for (JType jt : sourceFile.jTypes) {
             // Task: mark declaring symbol ids.
             jt.updateDeclaringSymbolId();
-            // Task: resolve outer class "this" access.
             if (jt.hasBeenMatched()) {
                 IRType irType = jt.matchElement;
                 for (JMethod jm : jt.methods) {
-                    Collection<OuterThis> outerThisAccesses = jm.outerThisAccesses;
-                    if (outerThisAccesses != null && jm.hasBeenMatched())
-                        for (OuterThis otAccess : outerThisAccesses)
-                            matchOuterThisAccesses(idMapper, jm, irType, otAccess);
+                    if (jm.hasBeenMatched()) {
+                        // Task: resolve outer class "this" access.
+                        Collection<OuterThis> outerThisAccesses = jm.outerThisAccesses;
+                        if (outerThisAccesses != null)
+                            for (OuterThis otAccess : outerThisAccesses)
+                                matchOuterThisAccesses(idMapper, jm, irType, otAccess);
+                        // Task: resolve reflective array initialization on Android.
+                        matchReflectiveArrayAllocations(idMapper, jm);
+                    }
+                }
+            }
+        }
+    }
+
+    private void matchReflectiveArrayAllocations(IdMapper idMapper, JMethod jm) {
+        List<JAllocation> srcMultiAllocs = null;
+        List<IRMethodInvocation> irReflAllocs = null;
+        for (JAllocation srcAlloc : jm.allocations)
+            if (!srcAlloc.hasBeenMatched() && srcAlloc.allocType.endsWith("[][]")) {
+                if (srcMultiAllocs == null)
+                    srcMultiAllocs = new ArrayList<>();
+                srcMultiAllocs.add(srcAlloc);
+                if (debug)
+                    System.out.println("Unmatched multidimensional source allocation with type: " + srcAlloc.allocType);
+            }
+        if (srcMultiAllocs != null) {
+            IRMethod irMethod = jm.matchElement;
+            for (IRMethodInvocation irInvo : irMethod.invocations)
+                if (!irInvo.matched && irInvo.methodId.equals("java.lang.reflect.Array.newInstance")) {
+                    if (debug)
+                        System.out.println("Unmatched reflective array allocation: " + irInvo);
+                    if (irReflAllocs == null)
+                        irReflAllocs = new ArrayList<>();
+                    irReflAllocs.add(irInvo);
+                }
+            if (irReflAllocs != null) {
+                int irReflAllocsSize = irReflAllocs.size();
+                int srcMultiAllocsSize = srcMultiAllocs.size();
+                if (irReflAllocsSize == srcMultiAllocsSize) {
+                    System.out.println("Matching multidimensional source allocations with IR reflective invocations...");
+                    for (int i = 0; i < irReflAllocsSize; i++) {
+                        // Record two matches: a source-to-fake-IR for source metadata
+                        // generation and a fake-source-to-IR for IR results translation.
+                        String irMethodId = irMethod.getId();
+                        String allocId = "MULTI-ALLOC-" + irMethodId + "/" + i;
+                        IRAllocation irMultiAlloc = new IRAllocation(allocId, "java.lang.Object[]", irMethodId, false, true, null);
+                        JAllocation srcAlloc = srcMultiAllocs.get(i);
+                        recordMatch(idMapper.allocationMap, "allocation", irMultiAlloc, srcAlloc);
+                        IRMethodInvocation irInvo = irReflAllocs.get(i);
+                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null);
+                        recordMatch(idMapper.invocationMap, "invocation", irInvo, fakeSrcInvo);
+                    }
+                } else if (debug) {
+                    System.out.println("Cannot resolve unmatched multidimensional allocations: SRC=" + srcMultiAllocsSize + " vs. IR=" + irReflAllocsSize);
+                    srcMultiAllocs.forEach(System.out::println);
+                    irReflAllocs.forEach(System.out::println);
                 }
             }
         }

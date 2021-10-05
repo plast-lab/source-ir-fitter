@@ -74,6 +74,9 @@ public class Main {
         Option translateResultsOpt = new Option(null, "translate-results", false, "Translate Doop results to source results.");
         options.addOption(translateResultsOpt);
 
+        Option uniqueResultsOpt = new Option(null, "unique-results", false, "Make translated Doop results unique (remove duplicates).");
+        options.addOption(uniqueResultsOpt);
+
         Option jsonOpt = new Option("j", "json", false, "Enable JSON output.");
         options.addOption(jsonOpt);
 
@@ -116,6 +119,7 @@ public class Main {
             boolean sarif = cli.hasOption(sarifOpt.getLongOpt());
             boolean resolveVars = cli.hasOption(resolveVarsOpt.getLongOpt());
             boolean translateResults = cli.hasOption(translateResultsOpt.getLongOpt());
+            boolean uniqueResults = cli.hasOption(uniqueResultsOpt.getLongOpt());
             String dbVal = cli.getOptionValue(dbOpt.getOpt());
             if (missingOption(cli, resolveVarsOpt, dbOpt) ||
                 missingOption(cli, translateResultsOpt, dbOpt) ||
@@ -166,7 +170,7 @@ public class Main {
             }
 
             // Match information between IR and sources.
-            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, matchIR, aliaser, relVars);
+            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, uniqueResults, matchIR, aliaser, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

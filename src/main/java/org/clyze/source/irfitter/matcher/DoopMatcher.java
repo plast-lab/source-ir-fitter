@@ -183,7 +183,7 @@ public class DoopMatcher {
         return ret;
     }
 
-    public void translateResults() {
+    public void translateResults(boolean uniqueResults) {
         System.out.println("Translating results in " + db);
         for (Map.Entry<String, int[]> entry : relationVarColumns.entrySet()) {
             File rel = new File(db, entry.getKey());
@@ -197,6 +197,7 @@ public class DoopMatcher {
                     return;
                 int maxCol = max.getAsInt();
                 try (BufferedWriter bw = new BufferedWriter(new FileWriter(newFile)))  {
+                    DoopResultsWriter resWriter = new DoopResultsWriter(uniqueResults, bw);
                     Files.lines(rel.toPath()).forEach(line -> {
                         String[] parts = line.split("\t");
                         if (parts.length < maxCol) {
@@ -221,11 +222,12 @@ public class DoopMatcher {
                         }
                         if (write)
                             try {
-                                bw.write(String.join("\t", parts) + '\n');
+                                resWriter.write(String.join("\t", parts) + '\n');
                             } catch (IOException e) {
                                 e.printStackTrace();
                             }
                     });
+                    resWriter.flush();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -238,3 +240,4 @@ public class DoopMatcher {
         }
     }
 }
+

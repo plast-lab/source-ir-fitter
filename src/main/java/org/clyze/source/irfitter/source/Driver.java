@@ -137,6 +137,7 @@ public class Driver {
      * @param resolveInvocations if true, resolve invocation targets
      * @param resolveVars        if true, resolve variables from Doop facts
      * @param translateResults   if true, map Doop results to sources
+     * @param uniqueResults      if true, make Doop results a set (remove duplicates)
      * @param matchIR            if true, keep only results that match both source and IR elements
      * @param aliaser            the symbol aliasing helper
      * @param relVars            the column-variable relation spec
@@ -144,7 +145,7 @@ public class Driver {
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                            boolean json, boolean sarif,  boolean resolveInvocations,
-                           boolean resolveVars, boolean translateResults,
+                           boolean resolveVars, boolean translateResults, boolean uniqueResults,
                            boolean matchIR, Aliaser aliaser, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
@@ -188,7 +189,7 @@ public class Driver {
             DoopMatcher doopMatcher = new DoopMatcher(db, debug, idMapper, aliaser, relVars);
             doopMatcher.resolveDoopVariables();
             if (translateResults)
-                doopMatcher.translateResults();
+                doopMatcher.translateResults(uniqueResults);
         }
 
         System.out.println(unmatched + " elements not matched.");

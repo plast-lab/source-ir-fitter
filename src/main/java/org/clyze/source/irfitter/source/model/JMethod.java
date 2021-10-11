@@ -321,4 +321,34 @@ implements AbstractMethod {
             System.out.println("Adding outer class reference: " + outerThis);
         outerThisAccesses.add(outerThis);
     }
+
+    /**
+     * Returns the shifting of method parameters due to environment capture in
+     * lambdas.
+     * @param irParamSize    the number of the IR parameters
+     * @param srcParamSize   the number of the source parameters
+     * @param isLambda       if true, this is known to be a lambda method
+     * @param srcMethod      the source method to display in error messages
+     * @return               the amount of shifting done in the IR method
+     */
+    public static int calcCaptureShift(int irParamSize, int srcParamSize,
+                                       boolean isLambda, JMethod srcMethod) throws BadArity {
+        if (irParamSize == srcParamSize)
+            return 0;
+        else {
+            String msg = "different number of parameters, source: " + srcParamSize +
+                    " vs. IR: " + irParamSize + " for method: " + srcMethod.matchId;
+            if (irParamSize < srcParamSize || !isLambda) {
+                System.out.println("ERROR: " + msg);
+                throw new BadArity();
+            } else
+                System.out.println("WARNING: " + msg + ". Assuming this is a capturing lambda.");
+            return irParamSize - srcParamSize;
+        }
+    }
+
+    /**
+     * Custom exception, thrown when we fail to compute capture shifts.
+     */
+    public static class BadArity extends Exception {}
 }

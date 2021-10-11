@@ -168,11 +168,13 @@ public class Matcher {
         if (irLambdas == null)
             return;
         int irLambdasSize = irLambdas.size();
-        if (srcLambdasSize > irLambdasSize)
-            System.err.println("WARNING: SRC/IR lambda arities differ for method " + srcMethod + ": " + srcLambdasSize + " vs. " + irLambdasSize);
-        else if (srcLambdasSize < irLambdasSize)
-            System.err.println("WARNING: SRC/IR lambda arities differ for method " + srcMethod + ": " + srcLambdasSize + " vs. " + irLambdasSize + ", handling it as an environment-capturing lambda...");
-        int captureShift = irLambdasSize - srcLambdasSize;
+        int captureShift;
+        try {
+            captureShift = JMethod.calcCaptureShift(irLambdasSize, srcLambdasSize, true, srcMethod);
+        } catch (JMethod.BadArity e) {
+            System.err.println("ERROR: bad arity: " + srcMethod);
+            return;
+        }
         for (int i = 0; i < srcLambdasSize; i++) {
             JLambda jLambda = lambdas.get(i);
             // We assume that capture parameters are first, then original lambda parameters.
@@ -356,20 +358,19 @@ public class Matcher {
         List<IRVariable> irParameters = irMethod.parameters;
         int irParamSize = irParameters.size();
         int srcParamSize = srcParameters.size();
-        if (irParamSize != srcParamSize) {
-            String msg = "different number of parameters, source: " + srcParamSize +
-                    " vs. IR: " + irParamSize + " for method: " + srcMethod.matchId;
-            if (irParamSize < srcParamSize || !isLambda) {
-                System.out.println("ERROR: " + msg);
-                return;
-            } else
-                System.out.println("WARNING: " + msg + ". Assuming this is a capturing lambda.");
-            int captureShift = irParamSize - srcParamSize;
+        if (debug)
+            System.out.println("Processing parameters in method: " + srcMethod + ", srcParamSize=" + srcParamSize);
+        try {
+            int captureShift = JMethod.calcCaptureShift(irParamSize, srcParamSize, isLambda, srcMethod);
             for (int i = 0; i < srcParamSize; i++) {
                 JVariable srcVar = srcParameters.get(i);
+                if (debug)
+                    System.out.println("Processing parameter #" + i + ": " + srcVar);
                 idMapper.registerSourceVariable(srcMethod, srcVar, debug);
                 aliaser.addIrAlias(idMapper.variableMap, "PARAMETER", srcVar, irParameters.get(captureShift + i));
             }
+        } catch (JMethod.BadArity ex) {
+            System.err.println("ERROR: lambda not supported, possibly a method reference?");
         }
     }
 

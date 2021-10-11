@@ -27,11 +27,15 @@ public class JLambda extends JMethod {
             return;
         } else if (irArgTypesSize > srcArgsSize)
             System.out.println("WARNING: SRC/IR argument information arity mismatch: " + srcArgsSize + " vs. " + irArgTypesSize + ". Handling as capturing lambda.");
-        int captureShift = irArgTypesSize - srcArgsSize;
-        for (int i = 0; i < srcArgsSize; i++) {
-            parameterNames.add(this.parameters.get(i).name);
-            // We assume that capture parameters are first, then original lambda parameters.
-            parameterTypes.add(irArgTypes.get(i + captureShift));
+        try {
+            int captureShift = calcCaptureShift(irArgTypesSize, srcArgsSize, true, this);
+            for (int i = 0; i < srcArgsSize; i++) {
+                parameterNames.add(this.parameters.get(i).name);
+                // We assume that capture parameters are first, then original lambda parameters.
+                parameterTypes.add(irArgTypes.get(i + captureShift));
+            }
+        } catch (BadArity badArity) {
+            System.err.println("ERROR: bad arity in lambda: " + this);
         }
         symbol = JMethod.fromIRMethod(irMethod, srcFile, irMethod.name, parameterNames, parameterTypes, pos, outerPos, parent);
     }

@@ -33,7 +33,7 @@ dependencies {
     implementation group: 'org.ow2.asm', name: 'asm-tree', version: asmVersion
     implementation group: 'org.ow2.asm', name: 'asm-util', version: asmVersion
     // Java parser, Apache 2.0
-    implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.23.0'
+    implementation 'com.github.javaparser:javaparser-symbol-solver-core:3.23.1'
     // Groovy parser, Apache 2.0
     api "org.codehaus.groovy:groovy:3.0.9"
     // Kotlin parser, Apache 2.0

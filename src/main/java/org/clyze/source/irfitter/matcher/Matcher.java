@@ -358,14 +358,10 @@ public class Matcher {
         List<IRVariable> irParameters = irMethod.parameters;
         int irParamSize = irParameters.size();
         int srcParamSize = srcParameters.size();
-        if (debug)
-            System.out.println("Processing parameters in method: " + srcMethod + ", srcParamSize=" + srcParamSize);
         try {
             int captureShift = JMethod.calcCaptureShift(irParamSize, srcParamSize, isLambda, srcMethod);
             for (int i = 0; i < srcParamSize; i++) {
                 JVariable srcVar = srcParameters.get(i);
-                if (debug)
-                    System.out.println("Processing parameter #" + i + ": " + srcVar);
                 idMapper.registerSourceVariable(srcMethod, srcVar, debug);
                 aliaser.addIrAlias(idMapper.variableMap, "PARAMETER", srcVar, irParameters.get(captureShift + i));
             }

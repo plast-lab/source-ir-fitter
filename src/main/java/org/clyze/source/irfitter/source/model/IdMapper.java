@@ -45,6 +45,7 @@ public class IdMapper {
         long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;
         long allAllocs = 0, matchedAllocs = 0, allMethodRefs = 0, matchedMethodRefs = 0;
         long allFieldAccesses = 0, matchedFieldAccesses = 0, allUses = 0, matchedUses = 0;
+        long allVariables = 0, matchedVariables = 0;
         for (SourceFile sf : sources) {
             Set<JType> srcTypes = sf.jTypes;
             allTypes += srcTypes.size();
@@ -72,6 +73,16 @@ public class IdMapper {
                     }
                     allUses += srcMethod.elementUses.size();
                     matchedUses += countMatched(srcMethod.elementUses);
+                    allVariables += srcMethod.parameters.size();
+                    matchedVariables += countMatched(srcMethod.parameters);
+                    for (JBlock block : srcMethod.blocks) {
+                        List<JVariable> locals = block.getVariables();
+                        if (locals != null) {
+                            allVariables += locals.size();
+                            matchedVariables += countMatched(locals);
+                        }
+                    }
+
                 }
                 List<JField> srcFields = srcType.fields;
                 allFields += srcFields.size();
@@ -82,6 +93,7 @@ public class IdMapper {
         System.out.printf("Matched (source) types          : %6.2f%%%n", (100.0 * matchedTypes) / allTypes);
         System.out.printf("Matched (source) fields         : %6.2f%%%n", (100.0 * matchedFields) / allFields);
         System.out.printf("Matched (source) methods        : %6.2f%%%n", (100.0 * matchedMethods) / allMethods);
+        System.out.printf("Matched (source) variables      : %6.2f%%%n", (100.0 * matchedVariables) / allVariables);
         System.out.printf("Matched (source) invocations    : %6.2f%%%n", (100.0 * matchedInvos) / allInvos);
         System.out.printf("Matched (source) allocations    : %6.2f%%%n", (100.0 * matchedAllocs) / allAllocs);
         System.out.printf("Matched (source) method-refs    : %6.2f%%%n", (100.0 * matchedMethodRefs) / allMethodRefs);

@@ -759,6 +759,10 @@ public class Matcher {
                         for (int i = 0; i < irMethod.arity; i++) {
                             String srcParamType = srcMethod.parameters.get(i).type;
                             String irParamType = irMethod.paramTypes.get(i);
+                            // Fix parameter type if it is the last parameter/accumulator
+                            // in varargs method.
+                            if (srcMethod.isVarArgs() && i == (irMethod.arity - 1))
+                                srcParamType += "[]";
                             if (!Utils.simpleTypesAreEqual(srcParamType, irParamType)) {
                                 equal = false;
                                 break;

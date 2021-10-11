@@ -50,6 +50,7 @@ public class Aliaser {
 
     /**
      * Adds a symbol alias: "IR variable i is an alias for source variable x".
+     * @param variableMap    the variable map to update
      * @param tag            a tag to use when printing debugging information
      * @param srcVar         the source variable
      * @param irVar          the IR variable

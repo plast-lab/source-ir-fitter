@@ -48,6 +48,8 @@ public class Driver {
      * @param out          the output directory
      * @param db           the database (used in SARIF mode)
      * @param debug        debug mode
+     * @param translateResults if true, translate Doop results
+     * @param json         if true, generate JSON metadata
      * @param vaIrMethods  the vararg methods found in the IR
      */
     public Driver(File out, File db, boolean debug, boolean translateResults,

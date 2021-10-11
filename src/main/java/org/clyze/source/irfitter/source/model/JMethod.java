@@ -330,6 +330,7 @@ implements AbstractMethod {
      * @param isLambda       if true, this is known to be a lambda method
      * @param srcMethod      the source method to display in error messages
      * @return               the amount of shifting done in the IR method
+     * @throws BadArity      on IR/source arities mismatch
      */
     public static int calcCaptureShift(int irParamSize, int srcParamSize,
                                        boolean isLambda, JMethod srcMethod) throws BadArity {

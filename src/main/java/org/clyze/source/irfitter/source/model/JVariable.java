@@ -10,7 +10,7 @@ public class JVariable extends ElementWithPosition<IRVariable, JvmVariable> {
     /** The element name. */
     public final String name;
     /** The element type. Can be null when the type is omitted (Groovy, Kotlin). */
-    public final String type;
+    public String type;
     /** If true, this is a local variable; if false, this is a method parameter. */
     private final boolean isLocal;
     /** The modifiers of the element. */

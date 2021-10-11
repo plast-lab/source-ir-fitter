@@ -275,6 +275,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             parameters.add(paramVar);
             argsBlock.addVariable(paramVar);
         }
+        // Fix parameter type if it is the last parameter/varargs accumulator.
+        if (isVarArgs)
+            parameters.get(parameters.size()-1).type += "[]";
         JavaModifierPack mp = new JavaModifierPack(sourceFile, md, false, false, isVarArgs);
         JMethod jm = new JMethod(sourceFile, name.toString(), retType, parameters,
                 mp.getAnnotations(), JavaUtils.createPositionFromNode(md), jt,

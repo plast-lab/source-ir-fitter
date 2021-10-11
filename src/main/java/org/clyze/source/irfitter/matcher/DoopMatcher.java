@@ -23,6 +23,8 @@ public class DoopMatcher {
     private final Aliaser aliaser;
     /** The variable columns in interesting Doop outputs. */
     private final Map<String, int[]> relationVarColumns;
+    /** The variables that are not redefined inside a method. */
+    private final Map<JMethod, Map<String, JVariable>> uniqueVariables = new HashMap<>();
 
     public DoopMatcher(File db, boolean debug, IdMapper idMapper, Aliaser aliaser, String[] relVars) {
         this.db = db;
@@ -44,6 +46,7 @@ public class DoopMatcher {
         processAssignHeap();
         processAssignLocal();
         processAssignReturnValue();
+        processLoadArrayIndex();
     }
 
     private void processFacts(String factsFileName, int columns, Consumer<String[]> proc) {
@@ -102,40 +105,111 @@ public class DoopMatcher {
     }
 
     /**
-     * Process local variable assignments. Used to detect formal parameter aliases.
+     * Finds a source variable declared in a method. The variable must be
+     * declared once; redefined variables are skipped.
+     * @param srcMethod   the source method
+     * @param varName     the name of the variable
+     * @return            the source variable (or null if multiple variables are declared)
+     */
+    private JVariable getUniqueVariable(JMethod srcMethod, String varName) {
+        return uniqueVariables.computeIfAbsent(srcMethod, (m -> {
+            Map<String, List<JVariable>> uVars = new HashMap<>();
+            for (JBlock block : m.blocks) {
+                List<JVariable> locals = block.getVariables();
+                if (locals != null)
+                    for (JVariable variable : locals)
+                        uVars.computeIfAbsent(variable.name, (k -> new ArrayList<>())).add(variable);
+            }
+            Map<String, JVariable> ret = new HashMap<>();
+            for (Map.Entry<String, List<JVariable>> entry : uVars.entrySet())
+                if (entry.getValue().size() == 1)
+                    ret.put(entry.getKey(), entry.getValue().get(0));
+            return ret;
+        })).get(varName);
+    }
+
+    /**
+     * Helper to generate source variables from IR locals. This is a heuristic
+     * and only succeeds when the IR local name follows a specific pattern
+     * (e.g. "this" receiver, parameter, or "_$$A_" variable.
+     *
+     * @param irVarName    the name of the IR local
+     * @return             the source variable that corresponds to the IR local
+     */
+    private Function<JMethod, JVariable> getVarSupplier(String irVarName) {
+        int preIdx = irVarName.indexOf(IRVariable.PARAM_PRE);
+        if (preIdx >= 0)
+            return ((JMethod srcMethod) -> {
+                try {
+                    int paramIdx = Integer.parseInt(irVarName.substring(preIdx + IRVariable.PARAM_PRE.length()));
+                    return srcMethod.parameters.get(paramIdx);
+                } catch (Exception ex) {
+                    System.err.println("ERROR: could not create alias for variable: " + irVarName + ": " + ex.getMessage());
+                    return null;
+                }
+            });
+        else if (irVarName.endsWith(IRVariable.THIS_NAME))
+            return ((JMethod srcMethod) -> srcMethod.receiver);
+        else {
+            int slashIdx = irVarName.indexOf('/');
+            int ssaIdx = irVarName.indexOf("_$$A_");
+            if (slashIdx > 0 && ssaIdx > 0) {
+                String name = irVarName.substring(slashIdx+1, ssaIdx);
+                return ((JMethod srcMethod) -> getUniqueVariable(srcMethod, name));
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Process local variable assignments.
      */
     private void processAssignLocal() {
         processFacts("AssignLocal.facts", 5, ((String[] parts) -> {
             String fromVar = parts[2];
+            String toVar = parts[3];
             // The variable extractor (only defined for interesting relation entries).
-            Function<JMethod, JVariable> varSupplier = null;
-            int preIdx = fromVar.indexOf(IRVariable.PARAM_PRE);
-            if (preIdx >= 0)
-                varSupplier = ((JMethod srcMethod) -> {
-                    try {
-                        int paramIdx = Integer.parseInt(fromVar.substring(preIdx + IRVariable.PARAM_PRE.length()));
-                        return srcMethod.parameters.get(paramIdx);
-                    } catch (Exception ex) {
-                        System.err.println("ERROR: could not create alias for variable: " + fromVar + ": " + ex.getMessage());
-                        return null;
-                    }
-                });
-            else if (fromVar.endsWith(IRVariable.THIS_NAME))
-                varSupplier = ((JMethod srcMethod) -> srcMethod.receiver);
-            if (varSupplier != null) {
-                String toIrVarId = parts[3], declaringMethodId = parts[4];
+            Function<JMethod, JVariable> fromVarSupplier = getVarSupplier(fromVar);
+            Function<JMethod, JVariable> toVarSupplier = getVarSupplier(toVar);
+            if (fromVarSupplier != null || toVarSupplier != null) {
+                String declaringMethodId = parts[4];
                 Collection<JMethod> srcMethods = idMapper.methodMap.get(declaringMethodId);
                 if (srcMethods != null)
                     for (JMethod srcMethod : srcMethods) {
-                        JVariable srcVar = varSupplier.apply(srcMethod);
-                        if (srcVar != null)
-                            aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", srcVar, toIrVarId);
+                        if (fromVarSupplier != null) {
+                            JVariable fromSrcVar = fromVarSupplier.apply(srcMethod);
+                            if (fromSrcVar != null)
+                                aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", fromSrcVar, fromVar);
+                        }
+                        if (toVarSupplier != null) {
+                            JVariable toSrcVar = toVarSupplier.apply(srcMethod);
+                            if (toSrcVar != null)
+                                aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", toSrcVar, toVar);
+                        }
                     }
             }
         }));
     }
 
-
+    /**
+     * Process local variable assignments from arrays.
+     */
+    private void processLoadArrayIndex() {
+        processFacts("LoadArrayIndex.facts", 5, ((String[] parts) -> {
+            String toVar = parts[2];
+            Function<JMethod, JVariable> toVarSupplier = getVarSupplier(toVar);
+            if (toVarSupplier != null) {
+                String declaringMethodId = parts[4];
+                Collection<JMethod> srcMethods = idMapper.methodMap.get(declaringMethodId);
+                if (srcMethods != null)
+                    for (JMethod srcMethod : srcMethods) {
+                        JVariable toSrcVar = toVarSupplier.apply(srcMethod);
+                        if (toSrcVar != null)
+                            aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", toSrcVar, toVar);
+                    }
+            }
+        }));
+    }
 
     /**
      * Process a facts file representing an instance method invocation, to

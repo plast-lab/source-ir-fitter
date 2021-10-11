@@ -155,10 +155,9 @@ public class Main {
 
             File db = dbVal == null ? null : new File(dbVal);
             File outPath = out ? new File(cli.getOptionValue(outOpt.getOpt())) : null;
-            Driver driver = new Driver(outPath, db, debug, vaIrMethods);
+            Driver driver = new Driver(outPath, db, debug, translateResults, json, vaIrMethods);
 
             // Process source code.
-            Aliaser aliaser = new Aliaser(translateResults, debug, json);
             List<SourceFile> sources = new ArrayList<>();
             for (String s : srcs) {
                 File srcFile = new File(s);
@@ -166,11 +165,11 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser));
+                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes));
             }
 
             // Match information between IR and sources.
-            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, uniqueResults, matchIR, aliaser, relVars);
+            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, uniqueResults, lossy, matchIR, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

@@ -45,4 +45,21 @@ public class IRVariable extends IRElement {
     public static IRVariable newThis(String methodId) {
         return new IRVariable(methodId + THIS_NAME, "@this", methodId);
     }
+
+    /**
+     * Create an IR "variable" from a given low-level id.
+     * @param id   a symbol id of the form "method-id/name"
+     * @return     a new IRVariable object
+     */
+    public static IRVariable fromSymbolId(String id) {
+        int slashIdx = id.indexOf('/');
+        String methodId = null;
+        String name = null;
+        if (slashIdx > 0) {
+            methodId = id.substring(0, slashIdx);
+            name = id.substring(slashIdx+1);
+        } else
+            System.err.println("ERROR: bad IR variable id: " + id);
+        return new IRVariable(id, name, methodId);
+    }
 }

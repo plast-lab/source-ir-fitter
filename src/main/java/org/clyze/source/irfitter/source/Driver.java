@@ -40,7 +40,8 @@ public class Driver {
     /** If true, enable debug reports. */
     private final boolean debug;
     private final Set<String> varargIrMethods;
-    private final IdMapper idMapper = new IdMapper();
+    private final IdMapper idMapper;
+    private final Aliaser aliaser;
 
     /**
      * Create a new driver / processing pipeline.
@@ -49,11 +50,14 @@ public class Driver {
      * @param debug        debug mode
      * @param vaIrMethods  the vararg methods found in the IR
      */
-    public Driver(File out, File db, boolean debug, Set<String> vaIrMethods) {
+    public Driver(File out, File db, boolean debug, boolean translateResults,
+                  boolean json, Set<String> vaIrMethods) {
         this.varargIrMethods = vaIrMethods;
         this.db = db;
         this.out = out;
         this.debug = debug;
+        this.idMapper = new IdMapper(debug);
+        this.aliaser = new Aliaser(translateResults, debug, json, idMapper);
     }
 
     /**
@@ -61,25 +65,21 @@ public class Driver {
      * @param srcFile             the source file/archive/directory
      * @param debug               debug mode
      * @param synthesizeTypes     if true, attempt to synthesize erased types
-     * @param lossy               if true, enable lossy heuristics
-     * @param matchIR             if true, keep only results that match both source and IR elements
-     * @param aliaser             the symbol aliasing helper
      * @return                    the processed source file objects
      */
     public Collection<SourceFile> readSources(File srcFile, boolean debug,
-                                              boolean synthesizeTypes, boolean lossy,
-                                              boolean matchIR, Aliaser aliaser) {
+                                              boolean synthesizeTypes) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = extractZipToTempDir("extracted-sources", srcFile);
-                return readSources(tmpDir, tmpDir, debug, synthesizeTypes, lossy, matchIR, aliaser);
+                return readSources(tmpDir, tmpDir, debug, synthesizeTypes);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser);
+            return readSources(srcFile, srcFile, debug, synthesizeTypes);
     }
 
     /**
@@ -98,8 +98,7 @@ public class Driver {
     }
 
     private Collection<SourceFile> readSources(File topDir, File srcFile,
-                                               boolean debug, boolean synthesizeTypes,
-                                               boolean lossy, boolean matchIR, Aliaser aliaser) {
+                                               boolean debug, boolean synthesizeTypes) {
         Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -107,18 +106,18 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes, lossy, matchIR, aliaser));
+                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser, varargIrMethods));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
             }
         }
         return sources;
@@ -138,21 +137,21 @@ public class Driver {
      * @param resolveVars        if true, resolve variables from Doop facts
      * @param translateResults   if true, map Doop results to sources
      * @param uniqueResults      if true, make Doop results a set (remove duplicates)
+     * @param lossy              if true, enable lossy heuristics
      * @param matchIR            if true, keep only results that match both source and IR elements
-     * @param aliaser            the symbol aliasing helper
      * @param relVars            the column-variable relation spec
      * @return                   the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                            boolean json, boolean sarif,  boolean resolveInvocations,
                            boolean resolveVars, boolean translateResults, boolean uniqueResults,
-                           boolean matchIR, Aliaser aliaser, String[] relVars) {
+                           boolean lossy, boolean matchIR, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
         for (SourceFile sf : sources) {
             addImportUses(sf.getJvmMetadata(), sf);
             System.out.println("==> Matching elements in " + sf.getRelativePath());
-            sf.matcher.matchTypes(idMapper, irTypes);
+            sf.getMatcher(lossy, matchIR, idMapper, aliaser).matchTypes(irTypes);
             unmatched += sf.reportUmatched(debug);
         }
 

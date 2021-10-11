@@ -68,16 +68,16 @@ public class DoopMatcher {
     }
 
     private <T extends Targetable>
-    void processTargetVariable(String TAG, Map<String, Collection<T>> map,
+    void processTargetVariable(String tag, Map<String, Collection<T>> map,
                                String irInstrId, String irVarId) {
         Collection<? extends Targetable> srcInstrs = map.get(irInstrId);
         if (srcInstrs != null)
             for (Targetable srcInstr : srcInstrs) {
                 if (debug)
-                    System.out.println(TAG + ": IR targetable: " + irInstrId + " -> " + srcInstr);
+                    System.out.println(tag + ": IR targetable: " + irInstrId + " -> " + srcInstr);
                 JVariable srcVar = srcInstr.getTarget();
                 if (srcVar != null)
-                    aliaser.addIrAlias(TAG, srcVar, irVarId);
+                    aliaser.addIrAlias(idMapper.variableMap, tag, srcVar, irVarId);
             }
     }
 
@@ -129,7 +129,7 @@ public class DoopMatcher {
                     for (JMethod srcMethod : srcMethods) {
                         JVariable srcVar = varSupplier.apply(srcMethod);
                         if (srcVar != null)
-                            aliaser.addIrAlias("LOCAL_FACTS", srcVar, toIrVarId);
+                            aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", srcVar, toIrVarId);
                     }
             }
         }));
@@ -160,7 +160,7 @@ public class DoopMatcher {
                             System.out.println("INVOCATION_FACTS: IR invocation: " + irInvoId + " -> " + srcInvo);
                         JVariable base = srcInvo.getBase();
                         if (base != null)
-                            aliaser.addIrAlias("INVOCATION_FACTS", base, baseId);
+                            aliaser.addIrAlias(idMapper.variableMap, "INVOCATION_FACTS", base, baseId);
                     }
                 }));
     }

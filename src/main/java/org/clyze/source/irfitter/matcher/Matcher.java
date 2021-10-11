@@ -23,7 +23,8 @@ public class Matcher {
     private final SourceFile sourceFile;
     /** If true, keep only results that match both source and IR elements. */
     private final boolean matchIR;
-
+    /** The source-to-IR mapper object to update. */
+    private final IdMapper idMapper;
     /** The symbol-id aliasing handler. */
     private final Aliaser aliaser;
 
@@ -32,24 +33,25 @@ public class Matcher {
      * @param debug        debugging mode
      * @param lossy        if true, use unsafe heuristics
      * @param matchIR      if true, keep only results that match both source and IR elements
+     * @param idMapper     the source-to-IR mapper object to update
      * @param aliaser      the symbol aliasing helper
      */
     public Matcher(SourceFile sourceFile, boolean debug, boolean lossy,
-                   boolean matchIR, Aliaser aliaser) {
+                   boolean matchIR, IdMapper idMapper, Aliaser aliaser) {
         this.sourceFile = sourceFile;
         this.lossy = lossy;
         this.debug = debug;
         this.matchIR = matchIR;
+        this.idMapper = idMapper;
         this.aliaser = aliaser;
     }
 
     /**
      * Main entry point, matches source types and IR types. Call this method
      * before matching elements inside types (such as methods or invocations).
-     * @param idMapper   the source-to-IR mapper object
      * @param irTypes    the IR type representations
      */
-    public void matchTypes(IdMapper idMapper, Iterable<IRType> irTypes) {
+    public void matchTypes(Iterable<IRType> irTypes) {
         for (JType jt : sourceFile.jTypes) {
             String id = jt.getFullyQualifiedName();
             if (debug)
@@ -57,7 +59,7 @@ public class Matcher {
             boolean typeMatched = false;
             for (IRType irType : irTypes)
                 if (!irType.matched && irType.getId().equals(id)) {
-                    recordMatch(idMapper.typeMap, "type", irType, jt);
+                    idMapper.recordMatch(idMapper.typeMap, "type", irType, jt);
                     typeMatched = true;
                     matchFields(idMapper.fieldMap, irType.fields, jt.fields);
                     matchMethods(idMapper, irType.methods, jt.methods, irType.outerTypes);
@@ -122,10 +124,10 @@ public class Matcher {
                         String allocId = "MULTI-ALLOC-" + irMethodId + "/" + i;
                         IRAllocation irMultiAlloc = new IRAllocation(allocId, "java.lang.Object[]", irMethodId, false, true, null);
                         JAllocation srcAlloc = srcMultiAllocs.get(i);
-                        recordMatch(idMapper.allocationMap, "allocation", irMultiAlloc, srcAlloc);
+                        idMapper.recordMatch(idMapper.allocationMap, "allocation", irMultiAlloc, srcAlloc);
                         IRMethodInvocation irInvo = irReflAllocs.get(i);
                         JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null);
-                        recordMatch(idMapper.invocationMap, "invocation", irInvo, fakeSrcInvo);
+                        idMapper.recordMatch(idMapper.invocationMap, "invocation", irInvo, fakeSrcInvo);
                     }
                 } else if (debug) {
                     System.out.println("Cannot resolve unmatched multidimensional allocations: SRC=" + srcMultiAllocsSize + " vs. IR=" + irReflAllocsSize);
@@ -148,7 +150,7 @@ public class Matcher {
                 if (debug)
                     System.out.println("Resolved outer 'this' access via field: " + srcThisAcc);
                 IRFieldAccess irThisAcc = jm.matchElement.addFieldAccess(fieldId, irField.name, irField.type, AccessType.READ, debug);
-                recordMatch(idMapper.fieldAccessMap, "outer-this$-access", irThisAcc, srcThisAcc);
+                idMapper.recordMatch(idMapper.fieldAccessMap, "outer-this$-access", irThisAcc, srcThisAcc);
                 // Add field access here for statistics.
                 jm.fieldAccesses.add(srcThisAcc);
             }
@@ -177,7 +179,7 @@ public class Matcher {
             IRLambda irLambda = irLambdas.get(i + captureShift);
             IRMethod implMethod = irLambda.implMethod;
             if (implMethod != null) {
-                recordMatch(idMapper.methodMap, "lambda", implMethod, jLambda);
+                idMapper.recordMatch(idMapper.methodMap, "lambda", implMethod, jLambda);
                 matchInsideMethod(idMapper, jLambda, true);
             }
         }
@@ -194,7 +196,7 @@ public class Matcher {
         for (IRField irField : irType.fields)
             if (!irField.matched) {
                 JField fakeField = new JField(sourceFile, irField.type, irField.name, new HashSet<>(), jt.pos, jt);
-                recordMatch(idMapper.fieldMap, "field", irField, fakeField);
+                idMapper.recordMatch(idMapper.fieldMap, "field", irField, fakeField);
                 fakeField.symbol.setSource(false);
             }
     }
@@ -206,7 +208,7 @@ public class Matcher {
         for (JField srcField : srcFields)
             for (IRField irField : irFields) {
                 if (!irField.matched && irField.name.equals(srcField.name)) {
-                    recordMatch(mapping, "field", irField, srcField);
+                    idMapper.recordMatch(mapping, "field", irField, srcField);
                     break;
                 }
             }
@@ -244,7 +246,7 @@ public class Matcher {
             if (srcMatches.size() == 1 && irMatches.size() == 1) {
                 JMethod srcMethod = srcMatches.iterator().next();
                 IRMethod irMethod = irMatches.iterator().next();
-                recordMatch(methodMap, "method", irMethod, srcMethod);
+                idMapper.recordMatch(methodMap, "method", irMethod, srcMethod);
             } else
                 matchMethodsWithSameNameArity(methodMap, srcMatches, irMatches);
         }
@@ -289,11 +291,11 @@ public class Matcher {
     }
 
     private void matchInsideMethod(IdMapper idMapper, JMethod srcMethod, boolean isLambda) {
-        matchParameters(idMapper.variableMap, srcMethod, isLambda);
+        matchParameters(idMapper, srcMethod, isLambda);
         matchAllocations(idMapper.allocationMap, srcMethod);
         matchFieldAccesses(idMapper.fieldAccessMap, srcMethod);
         matchMethodReferences(idMapper.methodRefMap, srcMethod);
-        matchVariables(idMapper.variableMap, srcMethod);
+        matchVariables(idMapper, srcMethod);
         matchCasts(srcMethod);
     }
 
@@ -315,7 +317,7 @@ public class Matcher {
                 System.out.println("Cast groups have size " + srcSize);
             for (int i = 0; i < srcSize; i++) {
                 IRCast irCast = irCasts.get(i);
-                matchElements("cast", irCast, srcCasts.get(i), irCast.getId());
+                idMapper.matchElements("cast", irCast, srcCasts.get(i), irCast.getId());
             }
         } else if (debug)
             System.out.println("WARNING: Casts not matched: srcSize=" + srcSize + " but irSize=" + irSize);
@@ -330,38 +332,25 @@ public class Matcher {
 
     /**
      * Process the local variables of the source method.
-     * @param variableMap   the variable map to update
+     * @param idMapper      the object with the variable map
      * @param srcMethod     the source method being processed
      */
-    private void matchVariables(Map<String, Collection<JVariable>> variableMap, JMethod srcMethod) {
+    private void matchVariables(IdMapper idMapper, JMethod srcMethod) {
         for (JBlock block : srcMethod.blocks) {
             List<JVariable> variables = block.getVariables();
             if (variables != null)
                 for (JVariable variable : variables)
-                    registerSourceVariable(variableMap, srcMethod, variable);
+                    idMapper.registerSourceVariable(srcMethod, variable, debug);
         }
     }
 
-    private void registerSourceVariable(Map<String, Collection<JVariable>> variableMap,
-                                        JMethod srcMethod, JVariable variable) {
-        if (variable == null)
-            return;
-        if (variable.symbol == null) {
-            variable.initSyntheticIRVariable(srcMethod.matchId);
-            if (debug)
-                System.out.println("Initialized source variable: " + variable + " -> " + variable.symbol);
-        }
-        variableMap.computeIfAbsent(variable.symbol.getSymbolId(), (k -> new ArrayList<>())).add(variable);
-    }
-
-    private void matchParameters(Map<String, Collection<JVariable>> variableMap,
-                                 JMethod srcMethod, boolean isLambda) {
+    private void matchParameters(IdMapper idMapper, JMethod srcMethod, boolean isLambda) {
         IRMethod irMethod = srcMethod.matchElement;
         JVariable srcReceiver = srcMethod.receiver;
         IRVariable irReceiver = irMethod.receiver;
         if (srcReceiver != null && irReceiver != null) {
-            registerSourceVariable(variableMap, srcMethod, srcReceiver);
-            aliaser.addIrAlias("THIS", srcReceiver, irReceiver.getId());
+            idMapper.registerSourceVariable(srcMethod, srcReceiver, debug);
+            aliaser.addIrAlias(idMapper.variableMap, "THIS", srcReceiver, irReceiver);
         }
         List<JVariable> srcParameters = srcMethod.parameters;
         List<IRVariable> irParameters = irMethod.parameters;
@@ -378,8 +367,8 @@ public class Matcher {
             int captureShift = irParamSize - srcParamSize;
             for (int i = 0; i < srcParamSize; i++) {
                 JVariable srcVar = srcParameters.get(i);
-                registerSourceVariable(variableMap, srcMethod, srcVar);
-                aliaser.addIrAlias("PARAMETER", srcVar, irParameters.get(captureShift + i).getId());
+                idMapper.registerSourceVariable(srcMethod, srcVar, debug);
+                aliaser.addIrAlias(idMapper.variableMap, "PARAMETER", srcVar, irParameters.get(captureShift + i));
             }
         }
     }
@@ -403,7 +392,7 @@ public class Matcher {
             int irSize = irRefs.size();
             if (srcSize == irSize) {
                 for (int i = 0; i < srcSize; i++) {
-                    recordMatch(mapper, "method-reference", irRefs.get(i), srcRefs.get(i));
+                    idMapper.recordMatch(mapper, "method-reference", irRefs.get(i), srcRefs.get(i));
                 }
             } else {
                 System.out.println("WARNING: method reference '" + mName +
@@ -444,7 +433,7 @@ public class Matcher {
                             srcInit + " vs. " + irInit + ": " +
                             srcParamTypes + " vs. " + irParamTypes);
                 if (irParamTypes.equals(srcParamTypes))
-                    recordMatch(methodMap, "method", irInit, srcInit);
+                    idMapper.recordMatch(methodMap, "method", irInit, srcInit);
             }
         }
     }
@@ -487,7 +476,7 @@ public class Matcher {
                     AccessType irRead = irAccess.accessType;
                     AccessType srcRead = srcAccess.accessType;
                     if (irRead == srcRead)
-                        recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
+                        idMapper.recordMatch(fieldAccessMap, "field-access", irAccess, srcAccess);
                     else {
                         System.out.println("WARNING: incompatible field accesses found, aborting matching for field '" + fieldName + "' (IR/SRC 'read'): " + irRead + "/" + srcRead);
                         break;
@@ -524,7 +513,7 @@ public class Matcher {
                         for (int i = 0; i < srcSize; i++) {
                             IRAllocation irAlloc = irAllocs.get(i);
                             JAllocation srcAlloc = srcAllocs.get(i);
-                            recordMatch(allocationMap, "allocation", irAlloc, srcAlloc);
+                            idMapper.recordMatch(allocationMap, "allocation", irAlloc, srcAlloc);
                         }
                     } else if (lossy) {
                         if (debug) {
@@ -558,7 +547,7 @@ public class Matcher {
                         JAllocation approxSrcAlloc = srcMethod.addAllocation(sourceFile, pos, irAlloc.getBareIrType());
                         if (debug)
                             System.out.println("Adding approximate allocation: " + approxSrcAlloc);
-                        recordMatch(allocationMap, "allocation", irAlloc, approxSrcAlloc);
+                        idMapper.recordMatch(allocationMap, "allocation", irAlloc, approxSrcAlloc);
                         approxSrcAlloc.symbol.setSource(false);
                     }
                 }
@@ -608,7 +597,7 @@ public class Matcher {
                 Collection<IRAllocation> irAllocations = irAllocsPerLine.get(entry.getKey());
                 if (irAllocations != null)
                     for (IRAllocation irAlloc : irAllocations) {
-                        recordMatch(allocationMap, "allocation", irAlloc, lineAllocs.get(0));
+                        idMapper.recordMatch(allocationMap, "allocation", irAlloc, lineAllocs.get(0));
                         break;
                     }
             }
@@ -708,7 +697,7 @@ public class Matcher {
             for (int i = 0; i < srcCount; i++) {
                 IRMethodInvocation irInvo = (IRMethodInvocation) irInvos.get(i);
                 JMethodInvocation srcInvo = (JMethodInvocation) srcInvos.get(i);
-                recordMatch(invocationMap, "invocation", irInvo, srcInvo);
+                idMapper.recordMatch(invocationMap, "invocation", irInvo, srcInvo);
             }
         else if (debug)
             System.out.println("WARNING: name/arity invocation combination (" +
@@ -736,7 +725,7 @@ public class Matcher {
                     JBlock block = new JBlock(mName, null, null);
                     JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null);
                     srcMethod.invocations.add(fakeSrcInvo);
-                    recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
+                    idMapper.recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
                     fakeSrcInvo.symbol.setSource(false);
                 }
             }
@@ -789,7 +778,7 @@ public class Matcher {
                     irMethodMatch = matches.get(0);
             }
             if (irMethodMatch != null)
-                recordMatch(methodMap, "method", irMethodMatch, srcMethodMatch);
+                idMapper.recordMatch(methodMap, "method", irMethodMatch, srcMethodMatch);
         }
     }
 
@@ -807,43 +796,11 @@ public class Matcher {
                     continue;
                 String irElemId = irMethod.getId();
                 if (ids.contains(irElemId)) {
-                    recordMatch(methodMap, "method", irMethod, srcMethod);
+                    idMapper.recordMatch(methodMap, "method", irMethod, srcMethod);
                     break;
                 }
             }
         }
-    }
-
-    /**
-     * The core method that records a match between an IR and a source element.
-     * @param mapping         the mapping to update
-     * @param kind            the description of the element type
-     * @param irElem          the IR code element
-     * @param srcElem         the source code element
-     * @param <IR_ELEM_T>     the type of the IR code element
-     * @param <SRC_ELEM_T>    the type of the source code element
-     */
-    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
-    void recordMatch(Map<String, Collection<SRC_ELEM_T>> mapping, String kind, IR_ELEM_T irElem,
-                     SRC_ELEM_T srcElem) {
-        String id = irElem.getId();
-        mapping.computeIfAbsent(id, (k -> new ArrayList<>())).add(srcElem);
-        matchElements(kind, irElem, srcElem, id);
-    }
-
-    private <IR_ELEM_T extends IRElement, SRC_ELEM_T extends ElementWithPosition<IR_ELEM_T, ?>>
-    void matchElements(String kind, IR_ELEM_T irElem, SRC_ELEM_T srcElem, String id) {
-        if (debug) {
-            String pos = srcElem.pos == null ? "unknown" : srcElem.pos.toString();
-            System.out.println("Match [" + kind + "] " + id + " -> " + sourceFile + ":" + pos);
-        }
-        if (srcElem.matchId == null) {
-            srcElem.matchId = id;
-            srcElem.matchElement = irElem;
-            irElem.matched = true;
-        } else
-            System.err.println("WARNING: multiple matches: " + id + " vs. " + srcElem.matchId);
-        srcElem.initSymbolFromIRElement(irElem);
     }
 
     private <T> Map<String, Set<T>> getOverloadingTable(Iterable<T> methods,

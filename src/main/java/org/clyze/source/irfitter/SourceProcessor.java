@@ -2,8 +2,6 @@ package org.clyze.source.irfitter;
 
 import java.io.File;
 import java.util.Set;
-
-import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** Source code processor interface. */
@@ -15,11 +13,8 @@ public interface SourceProcessor {
      * @param srcFile   the Groovy source file to process
      * @param debug     if true, run extra debug code
      * @param synthesizeTypes if true, try to synthesize high-level types from source/IR types
-     * @param lossy     if true, enable lossy heuristics
-     * @param matchIR   if true, keep only results that match both source and IR elements
-     * @param aliaser   the symbol aliasing helper
      * @param vaIrMethods the vararg methods found in the IR
      * @return          the source file object
      */
-    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, boolean lossy, boolean matchIR, Aliaser aliaser, Set<String> vaIrMethods);
+    SourceFile process(File topDir, File srcFile, boolean debug, boolean synthesizeTypes, Set<String> vaIrMethods);
 }

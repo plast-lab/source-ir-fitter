@@ -38,15 +38,24 @@ public class SourceFile {
     private FileInfo cachedFileInfo = null;
     private String cachedRelativePath = null;
     private JvmMetadata cachedJvmMetadata = null;
-    public final Matcher matcher;
 
-    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes,
-                      boolean lossy, boolean matchIR, Aliaser aliaser) {
+    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes) {
         this.topDir = topDir;
         this.file = file;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
-        this.matcher = new Matcher(this, debug, lossy, matchIR, aliaser);
+    }
+
+    /**
+     * Create a matcher object to do the mapping between source and IR elements.
+     * @param lossy     if true, enable lossy heuristics
+     * @param matchIR   if true, keep only results that match both source and IR elements
+     * @param idMapper  the source-to-IR mapper object
+     * @param aliaser   the symbol aliasing helper
+     * @return          the matcher object to use for this source file
+     */
+    public Matcher getMatcher(boolean lossy, boolean matchIR, IdMapper idMapper, Aliaser aliaser) {
+        return new Matcher(this, debug, lossy, matchIR, idMapper, aliaser);
     }
 
     /**

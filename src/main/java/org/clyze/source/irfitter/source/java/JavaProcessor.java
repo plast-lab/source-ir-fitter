@@ -14,13 +14,12 @@ import org.clyze.source.irfitter.source.model.SourceFile;
 public class JavaProcessor implements SourceProcessor {
     @Override
     public SourceFile process(File topDir, File srcFile, boolean debug,
-                              boolean synthesizeTypes, boolean lossy, boolean matchIR,
-                              Aliaser aliaser, Set<String> vaIrMethods) {
+                              boolean synthesizeTypes, Set<String> vaIrMethods) {
         JavaParser jp = new JavaParser();
         try {
             Optional<CompilationUnit> optCu = jp.parse(srcFile).getResult();
             if (optCu.isPresent()) {
-                SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes, lossy, matchIR, aliaser);
+                SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes);
                 optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf, debug), null));
                 return sf;
             } else

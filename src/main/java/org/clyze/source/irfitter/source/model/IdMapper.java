@@ -39,7 +39,6 @@ public class IdMapper {
         return mapping;
     }
 
-    @SuppressWarnings("MagicNumber")
     public void printStats(Collection<SourceFile> sources) {
         long allTypes = 0, matchedTypes = 0, allMethods = 0, matchedMethods = 0;
         long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;
@@ -90,15 +89,24 @@ public class IdMapper {
             }
         }
         System.out.println("== Statistics ==");
-        System.out.printf("Matched (source) types          : %6.2f%%%n", (100.0 * matchedTypes) / allTypes);
-        System.out.printf("Matched (source) fields         : %6.2f%%%n", (100.0 * matchedFields) / allFields);
-        System.out.printf("Matched (source) methods        : %6.2f%%%n", (100.0 * matchedMethods) / allMethods);
-        System.out.printf("Matched (source) variables      : %6.2f%%%n", (100.0 * matchedVariables) / allVariables);
-        System.out.printf("Matched (source) invocations    : %6.2f%%%n", (100.0 * matchedInvos) / allInvos);
-        System.out.printf("Matched (source) allocations    : %6.2f%%%n", (100.0 * matchedAllocs) / allAllocs);
-        System.out.printf("Matched (source) method-refs    : %6.2f%%%n", (100.0 * matchedMethodRefs) / allMethodRefs);
-        System.out.printf("Matched (source) field accesses : %6.2f%%%n", (100.0 * matchedFieldAccesses) / allFieldAccesses);
-        System.out.printf("Matched (source) element uses   : %6.2f%%%n", (100.0 * matchedUses) / allUses);
+        printStat("Matched (source) types          : ", matchedTypes, allTypes);
+        printStat("Matched (source) fields         : ", matchedFields, allFields);
+        printStat("Matched (source) methods        : ", matchedMethods, allMethods);
+        printStat("Matched (source) variables      : ", matchedVariables, allVariables);
+        printStat("Matched (source) invocations    : ", matchedInvos, allInvos);
+        printStat("Matched (source) allocations    : ", matchedAllocs, allAllocs);
+        printStat("Matched (source) method-refs    : ", matchedMethodRefs, allMethodRefs);
+        printStat("Matched (source) field accesses : ", matchedFieldAccesses, allFieldAccesses);
+        printStat("Matched (source) element uses   : ", matchedUses, allUses);
+    }
+
+    @SuppressWarnings("MagicNumber")
+    private static void printStat(String label, long matched, long all) {
+        System.out.print(label);
+        if (all == 0)
+            System.out.println("      -");
+        else
+            System.out.printf("%6.2f%%%n", (100.0 * matched) / all);
     }
 
     private static <T extends Matchable> long countMatched(Collection<T> elems) {

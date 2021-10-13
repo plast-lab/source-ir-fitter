@@ -35,6 +35,7 @@ public class JInit extends JMethod {
     private JInit(SourceFile srcFile, JType declaringType, String name, boolean isStatic) {
         super(srcFile, name, "void", Collections.emptyList(), Collections.emptySet(), null, declaringType, null, false);
         this.isStatic = isStatic;
+        setReceiver(declaringType.pos);
     }
 
     public static JInit createClinit(SourceFile srcFile, JType declaringType) {

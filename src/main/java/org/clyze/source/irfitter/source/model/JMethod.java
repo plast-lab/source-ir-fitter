@@ -282,6 +282,10 @@ implements AbstractMethod {
      * Sets up the hidden receiver parameter for instance methods.
      */
     public void setReceiver() {
+        setReceiver(pos);
+    }
+
+    protected void setReceiver(Position pos) {
         this.receiver = new JVariable(getSourceFile(), pos, "this", parent.getSimpleName(), false, null);
     }
 

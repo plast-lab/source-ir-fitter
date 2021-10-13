@@ -176,19 +176,19 @@ public class DoopMatcher {
                 Collection<JMethod> srcMethods = idMapper.methodMap.get(declaringMethodId);
                 if (srcMethods != null)
                     for (JMethod srcMethod : srcMethods) {
-                        if (fromVarSupplier != null) {
-                            JVariable fromSrcVar = fromVarSupplier.apply(srcMethod);
-                            if (fromSrcVar != null)
-                                aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", fromSrcVar, fromVar);
-                        }
-                        if (toVarSupplier != null) {
-                            JVariable toSrcVar = toVarSupplier.apply(srcMethod);
-                            if (toSrcVar != null)
-                                aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", toSrcVar, toVar);
-                        }
+                        addIrAlias(srcMethod, fromVar, fromVarSupplier);
+                        addIrAlias(srcMethod, toVar, toVarSupplier);
                     }
             }
         }));
+    }
+
+    private void addIrAlias(JMethod srcMethod, String varId, Function<JMethod, JVariable> srcVarSupplier) {
+        if (srcVarSupplier != null) {
+            JVariable srcVar = srcVarSupplier.apply(srcMethod);
+            if (srcVar != null)
+                aliaser.addIrAlias(idMapper.variableMap, "LOCAL_FACTS", srcVar, varId);
+        }
     }
 
     /**

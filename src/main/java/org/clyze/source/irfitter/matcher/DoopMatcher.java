@@ -152,11 +152,16 @@ public class DoopMatcher {
             return ((JMethod srcMethod) -> srcMethod.receiver);
         else {
             int slashIdx = irVarName.indexOf('/');
-            int ssaIdx = irVarName.indexOf("_$$A_");
-            if (slashIdx > 0 && ssaIdx > 0) {
-                String name = irVarName.substring(slashIdx+1, ssaIdx);
-                return ((JMethod srcMethod) -> getUniqueVariable(srcMethod, name));
-            }
+            Function<JMethod, JVariable> ret = getVarSupplierPrefix(irVarName, slashIdx, "_$$A_");
+            return ret != null ? ret : getVarSupplierPrefix(irVarName, slashIdx, "#_");
+        }
+    }
+
+    private Function<JMethod, JVariable> getVarSupplierPrefix(String irVarName, int slashIdx, String delim) {
+        int delimIdx = irVarName.indexOf(delim);
+        if (slashIdx > 0 && delimIdx > 0) {
+            String name = irVarName.substring(slashIdx+1, delimIdx);
+            return ((JMethod srcMethod) -> getUniqueVariable(srcMethod, name));
         }
         return null;
     }

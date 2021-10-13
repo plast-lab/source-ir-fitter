@@ -16,6 +16,7 @@ public class JField extends FuzzyTypeElementWithPosition<IRField, JvmField> {
     public final JType parent;
     public final Set<String> annotations;
     private Collection<String> cachedIds = null;
+    public boolean mayBeInlined = false;
 
     public JField(SourceFile srcFile, String type, String name,
                   Set<String> annotations, Position pos, JType parent) {

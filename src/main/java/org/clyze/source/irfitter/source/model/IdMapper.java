@@ -1,6 +1,7 @@
 package org.clyze.source.irfitter.source.model;
 
 import java.util.*;
+import java.util.function.Predicate;
 import org.clyze.source.irfitter.ir.model.IRElement;
 
 /**
@@ -89,7 +90,7 @@ public class IdMapper {
                 }
                 List<JField> srcFields = srcType.fields;
                 allFields += srcFields.size();
-                matchedFields += countMatched(srcFields);
+                matchedFields += countMatchedFields(srcFields);
             }
         }
         System.out.println("== Statistics ==");
@@ -113,13 +114,33 @@ public class IdMapper {
             System.out.printf("%6.2f%%%n", (100.0 * matched) / all);
     }
 
-    private static <T extends Matchable> long countMatched(Collection<T> elems) {
+    private static <T extends Matchable> long countMatchedElems(Collection<T> elems, Predicate<T> altCheckOnFail) {
         return elems.stream().filter(e -> {
-            boolean check = e.hasBeenMatched();
+            boolean check = e.hasBeenMatched() || (altCheckOnFail != null && altCheckOnFail.test(e));
             if (!check)
                 System.out.println("UNMATCHED: " + e);
             return check;
         }).count();
+    }
+
+    /**
+     * Count the source elements that have not been matched against the IR.
+     * @param elems      the elements to process
+     * @param <T>        the type of the elements
+     * @return           the number of unmatched elements
+     */
+    private static <T extends Matchable> long countMatched(Collection<T> elems) {
+        return countMatchedElems(elems, null);
+    }
+
+    /**
+     * Ignore unmatched fields that may be missing from the IR due to inlining
+     * (e.g. {@code static final String x = "hello"}).
+     * @param fields   the fields to process
+     * @return         the number of unmatched fields
+     */
+    private static long countMatchedFields(Collection<JField> fields) {
+        return countMatchedElems(fields, (fld -> fld.mayBeInlined));
     }
 
     public void registerSourceVariable(JMethod srcMethod, JVariable variable, boolean debug) {

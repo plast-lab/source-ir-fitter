@@ -516,6 +516,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 if (initStringValue != null) {
                     System.out.println("Adding initial string constant: " + initStringValue);
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, initStringValue.pos, field, initStringValue.value));
+                    field.mayBeInlined = true;
                 }
             }
         }

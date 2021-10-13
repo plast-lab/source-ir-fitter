@@ -322,6 +322,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                         System.out.println("Java static final field points to string constant: " + sValue);
                     Position pos = JavaUtils.createPositionFromNode(s);
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
+                    srcField.mayBeInlined = true;
                 } else {
                     JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
                     JBlock methodBlock = new JBlock(initBlock.name, block, jt);

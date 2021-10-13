@@ -694,11 +694,17 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             if (thisType == null)
                 System.err.println("ERROR: no enclosing type information available for qualified 'this': " + thisExpr);
             else {
-                JType outerClass = findOuterClassWithName(thisType.parentType, thisExpr.getTypeName().get().asString());
-                if (outerClass == null)
-                    System.err.println("ERROR: qualified 'this' is not supported yet, outer class not found: " + thisExpr);
-                else
-                    enclosingMethod.addOuterThisAccess(new OuterThis(sourceFile, JavaUtils.createPositionFromNode(thisExpr), outerClass), debug);
+                String qType = thisExpr.getTypeName().get().asString();
+                if (thisType.getSimpleName().equals(qType)) {
+                    if (debug)
+                        System.err.println("Ignoring 'this' qualified with current type.");
+                } else {
+                    JType outerClass = findOuterClassWithName(thisType.parentType, qType);
+                    if (outerClass == null)
+                        System.err.println("ERROR: qualified 'this' is not supported yet, outer class not found: " + thisExpr);
+                    else
+                        enclosingMethod.addOuterThisAccess(new OuterThis(sourceFile, JavaUtils.createPositionFromNode(thisExpr), outerClass), debug);
+                }
             }
         } else
             enclosingMethod.addThisAccess(JavaUtils.createPositionFromNode(thisExpr));

@@ -323,13 +323,7 @@ public class Matcher {
             }
         } else if (debug)
             System.out.println("WARNING: Casts not matched: srcSize=" + srcSize + " but irSize=" + irSize);
-    }
 
-    private static <T> void printGroups(Map<String, List<T>> group) {
-        for (Map.Entry<String, List<T>> entry : group.entrySet()) {
-            System.out.println("== Key: " + entry.getKey() + " ==");
-            entry.getValue().forEach(v -> System.out.println("  " + v));
-        }
     }
 
     /**

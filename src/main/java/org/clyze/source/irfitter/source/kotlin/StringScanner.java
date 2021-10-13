@@ -41,6 +41,7 @@ public class StringScanner<T> extends KotlinParserBaseVisitor<Void> {
         return saveText(ctx);
     }
 
+    @SuppressWarnings("SameReturnValue")
     private Void saveText(ParserRuleContext ctx) {
         Position pos = KotlinUtils.createPositionFromTokens(ctx.start, ctx.stop);
         String value = Utils.stripQuotes(ctx.getText());

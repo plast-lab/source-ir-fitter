@@ -17,6 +17,15 @@ public class IdMapper {
     public final Map<String, Collection<JMethodRef>> methodRefMap = new HashMap<>();
     public final Map<String, Collection<JVariable>> variableMap = new HashMap<>();
     private final boolean debug;
+    public long allTypes = 0, matchedTypes = 0;
+    public long allMethods = 0, matchedMethods = 0;
+    public long allFields = 0, matchedFields = 0;
+    public long allInvos = 0, matchedInvos = 0;
+    public long allAllocs = 0, matchedAllocs = 0;
+    public long allMethodRefs = 0, matchedMethodRefs = 0;
+    public long allFieldAccesses = 0, matchedFieldAccesses = 0;
+    public long allUses = 0, matchedUses = 0;
+    public long allVariables = 0, matchedVariables = 0;
 
     public IdMapper(boolean debug) {
         this.debug = debug;
@@ -39,12 +48,7 @@ public class IdMapper {
         return mapping;
     }
 
-    public void printStats(Collection<SourceFile> sources) {
-        long allTypes = 0, matchedTypes = 0, allMethods = 0, matchedMethods = 0;
-        long allFields = 0, matchedFields = 0, allInvos = 0, matchedInvos = 0;
-        long allAllocs = 0, matchedAllocs = 0, allMethodRefs = 0, matchedMethodRefs = 0;
-        long allFieldAccesses = 0, matchedFieldAccesses = 0, allUses = 0, matchedUses = 0;
-        long allVariables = 0, matchedVariables = 0;
+    public void calcStats(Collection<SourceFile> sources) {
         for (SourceFile sf : sources) {
             Set<JType> srcTypes = sf.jTypes;
             allTypes += srcTypes.size();

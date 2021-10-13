@@ -8,7 +8,6 @@ import java.util.Set;
 
 import org.antlr.v4.runtime.*;
 import org.clyze.source.irfitter.SourceProcessor;
-import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.antlr.grammars.KotlinLexer;
 import org.antlr.grammars.KotlinParser;

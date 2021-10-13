@@ -8,7 +8,6 @@ import java.util.Set;
 import org.apache.groovy.parser.antlr4.GroovyLangLexer;
 import org.apache.groovy.parser.antlr4.GroovyLangParser;
 import org.clyze.source.irfitter.SourceProcessor;
-import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.model.SourceFile;
 
 /** This class handles Groovy source processing. */

@@ -141,13 +141,14 @@ public class Driver {
      * @param uniqueResults      if true, make Doop results a set (remove duplicates)
      * @param lossy              if true, enable lossy heuristics
      * @param matchIR            if true, keep only results that match both source and IR elements
+     * @param stats              if true, show statistics
      * @param relVars            the column-variable relation spec
      * @return                   the result of the matching operation
      */
     public RunResult match(Collection<IRType> irTypes, Collection<SourceFile> sources,
                            boolean json, boolean sarif,  boolean resolveInvocations,
                            boolean resolveVars, boolean translateResults, boolean uniqueResults,
-                           boolean lossy, boolean matchIR, String[] relVars) {
+                           boolean lossy, boolean matchIR, boolean stats, String[] relVars) {
         System.out.println("Matching " + irTypes.size() + " IR types against " + sources.size() + " source files...");
         int unmatched = 0;
         for (SourceFile sf : sources) {
@@ -201,10 +202,10 @@ public class Driver {
         if (json)
             generateJSON(flatMapping, sources, matchIR);
 
-        if (debug)
-            idMapper.printStats(sources);
+        if (stats || debug)
+            idMapper.calcStats(sources);
 
-        return new RunResult(unmatched);
+        return new RunResult(unmatched, idMapper);
     }
 
     private void processElementUses(JvmMetadata bm, JType jt) {

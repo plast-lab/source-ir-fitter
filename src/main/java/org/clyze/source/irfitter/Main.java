@@ -8,7 +8,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.commons.cli.*;
 import org.clyze.source.irfitter.ir.IRState;
-import org.clyze.source.irfitter.matcher.Aliaser;
 import org.clyze.source.irfitter.source.Driver;
 import org.clyze.source.irfitter.source.model.SourceFile;
 import org.clyze.source.irfitter.ir.IRProcessor;
@@ -95,6 +94,9 @@ public class Main {
         Option helpOpt = new Option("h", "help", false, "Print help.");
         options.addOption(helpOpt);
 
+        Option statsOpt = new Option(null, "stats", false, "Calculate statistics.");
+        options.addOption(statsOpt);
+
         if (args.length == 0) {
             printUsage(options);
             return null;
@@ -136,6 +138,7 @@ public class Main {
             boolean lossy = cli.hasOption(lossyOpt.getLongOpt());
             boolean resolveInvocations = cli.hasOption(resolveInvocationsOpt.getLongOpt());
             boolean matchIR = cli.hasOption(matchIROpt.getLongOpt());
+            boolean stats = cli.hasOption(statsOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] platforms = cli.getOptionValues(platformOpt.getLongOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
@@ -169,7 +172,7 @@ public class Main {
             }
 
             // Match information between IR and sources.
-            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, uniqueResults, lossy, matchIR, relVars);
+            return driver.match(irState.irTypes, sources, json, sarif, resolveInvocations, resolveVars, translateResults, uniqueResults, lossy, matchIR, stats, relVars);
         } catch (ParseException e) {
             e.printStackTrace();
             return null;

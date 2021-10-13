@@ -38,7 +38,7 @@ public class JVariable extends ElementWithPosition<IRVariable, JvmVariable> {
 
     @Override
     public String toString() {
-        return (type == null ? "*" : type) + " " + name + getLocation();
+        return "var:: " + (type == null ? "*" : type) + " " + name + getLocation();
     }
 
     @Override

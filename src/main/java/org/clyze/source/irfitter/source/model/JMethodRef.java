@@ -21,7 +21,7 @@ public class JMethodRef extends ElementWithPosition<IRMethodRef, Usage> {
 
     @Override
     public String toString() {
-        return "METHOD-REFERENCE: " + methodName + "@" + this.srcFile + ", " + pos;
+        return "method-ref:: " + methodName + "@" + this.srcFile + ", " + pos;
     }
 
     @Override

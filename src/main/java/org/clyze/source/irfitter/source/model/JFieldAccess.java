@@ -1,5 +1,6 @@
 package org.clyze.source.irfitter.source.model;
 
+import java.util.Locale;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.SymbolWithId;
 import org.clyze.persistent.model.Usage;
@@ -42,7 +43,7 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
 
     @Override
     public String toString() {
-        return "FIELD-" + accessType.name() + ": " + fieldName + getLocation();
+        return "field-" + accessType.name().toLowerCase(Locale.ROOT) + ":: " + fieldName + getLocation();
     }
 
     private Usage getUsageWith(String id, String fieldId) {

@@ -27,7 +27,7 @@ public class JCast extends ElementWithPosition<IRCast, Usage> implements Targeta
 
     @Override
     public String toString() {
-        return "CAST: " + type + " [target=" + target + "]@" + this.srcFile + ", " + pos;
+        return "cast:: " + type + " [target=" + target + "]@" + this.srcFile + ", " + pos;
     }
 
     @Override

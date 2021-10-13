@@ -122,7 +122,7 @@ implements AbstractMethod {
             sj.add(param.toString());
         String parentName = parent.getUnqualifiedName();
         String parentDesc = parentName == null ? parent.toString() : parentName;
-        return "method{name=" + name + ", type=" + retType + "(" + sj + "), parent=" + parentDesc + ", low-level-name=" + getLowLevelName() + "}";
+        return "method:: name=" + name + ", type=" + retType + "(" + sj + "), parent=" + parentDesc + ", low-level-name=" + getLowLevelName() + "}";
     }
 
     @Override

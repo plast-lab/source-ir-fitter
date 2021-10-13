@@ -42,6 +42,6 @@ public class JLambda extends JMethod {
 
     @Override
     public String toString() {
-        return "Lambda" + getLocation();
+        return "lambda:: " + getLocation();
     }
 }

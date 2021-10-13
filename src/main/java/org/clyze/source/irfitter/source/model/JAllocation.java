@@ -41,7 +41,7 @@ implements AbstractAllocation, Targetable {
 
     @Override
     public String toString() {
-        return "new " + allocType + "() " + getLocation() + " [target=" + target + "]";
+        return "new:: " + allocType + "() " + getLocation() + " [target=" + target + "]";
     }
 
     @Override

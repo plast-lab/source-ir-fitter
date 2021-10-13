@@ -115,7 +115,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
 
     @Override
     public String toString() {
-        return "type{name=" + getUnqualifiedName() + " (" + getSimpleName() + "), " + fields.size() + " fields, " + methods.size() + " methods}" + getLocation();
+        return "type:: name=" + getUnqualifiedName() + " (" + getSimpleName() + "), " + fields.size() + " fields, " + methods.size() + " methods}" + getLocation();
     }
 
     /**

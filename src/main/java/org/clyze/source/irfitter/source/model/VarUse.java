@@ -23,6 +23,6 @@ public class VarUse extends ElementUse {
 
     @Override
     public String toString() {
-        return "VAR-USE: " + kind.toString() + " " + var + "@" + sourceFile.getRelativePath() + ", " + position;
+        return "var-use:: " + kind.toString() + " " + var + "@" + sourceFile.getRelativePath() + ", " + position;
     }
 }

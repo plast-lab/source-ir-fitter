@@ -31,6 +31,6 @@ public class TypeUse extends ElementUse implements FuzzyTypes {
 
     @Override
     public String toString() {
-        return "TYPE-USE: " + type + "@" + sourceFile.getRelativePath() + ", " + position;
+        return "type-use:: " + type + "@" + sourceFile.getRelativePath() + ", " + position;
     }
 }

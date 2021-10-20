@@ -254,6 +254,12 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         scope.enterInitializerScope(initMethod, (cl -> init.getBody().accept(this, block)));
     }
 
+    private JVariable newVarForParam(Parameter param, Type pType) {
+        Position paramPos = JavaUtils.createPositionFromNode(param);
+        JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
+        return new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), false, mp);
+    }
+
     private <T extends CallableDeclaration<?>>
     void visit(CallableDeclaration<T> md, String retType, Collection<TypeUse> retTypeUses,
                JBlock block, Consumer<JBlock> methodProcessor) {
@@ -269,9 +275,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 isVarArgs = true;
             Type pType = param.getType();
             addTypeUsesFromType(paramTypeUses, pType);
-            Position paramPos = JavaUtils.createPositionFromNode(param);
-            JavaModifierPack mp = new JavaModifierPack(sourceFile, param);
-            JVariable paramVar = new JVariable(sourceFile, paramPos, param.getNameAsString(), pType.asString(), false, mp);
+            JVariable paramVar = newVarForParam(param, pType);
             parameters.add(paramVar);
             argsBlock.addVariable(paramVar);
         }
@@ -498,7 +502,9 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(final CatchClause cc, JBlock block) {
         JBlock catchBlock = new JBlock(JavaUtils.createPositionFromNode(cc), block, null);
-        visit(cc.getParameter(), catchBlock);
+        Parameter param = cc.getParameter();
+        block.addVariable(newVarForParam(param, param.getType()));
+        visit(param, catchBlock);
         visit(cc.getBody(), catchBlock);
     }
 

@@ -353,6 +353,14 @@ implements AbstractMethod {
     }
 
     /**
+     * This reports if the method can be ignored when computing matching success.
+     * @return   if true, the method can be ignored
+     */
+    public boolean mayNotBeMatched() {
+        return false;
+    }
+
+    /**
      * Custom exception, thrown when we fail to compute capture shifts.
      */
     public static class BadArity extends Exception {}

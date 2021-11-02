@@ -61,8 +61,10 @@ public class IdMapper {
                 List<JMethod> srcMethods = srcType.methods;
                 allMethods += srcMethods.size();
                 for (JMethod srcMethod : srcMethods) {
-                    if (srcMethod.matchId != null)
+                    if (srcMethod.matchId != null || srcMethod.mayNotBeMatched())
                         matchedMethods++;
+                    else
+                        reportUnmatched(srcMethod);
                     List<JMethodInvocation> srcInvos = srcMethod.invocations;
                     allInvos += srcInvos.size();
                     matchedInvos += countMatched(srcInvos);

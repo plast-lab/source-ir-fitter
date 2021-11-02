@@ -76,4 +76,13 @@ public class JInit extends JMethod {
     public static boolean isInitName(String name) {
         return CLINIT.equals(name) || INIT_BLOCK.equals(name);
     }
+
+    /**
+     * Static initializers can be ignored when computing statistics.
+     * @return  true for class initializers, false otherwise
+     */
+    @Override
+    public boolean mayNotBeMatched() {
+        return isStatic;
+    }
 }

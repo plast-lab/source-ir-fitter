@@ -38,6 +38,8 @@ public class SourceFile {
     private FileInfo cachedFileInfo = null;
     private String cachedRelativePath = null;
     private JvmMetadata cachedJvmMetadata = null;
+    /** The field accesses that are outside any types (e.g. fields used in annotations). */
+    public final List<JFieldAccess> fieldAccesses = new ArrayList<>();
 
     public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes) {
         this.topDir = topDir;

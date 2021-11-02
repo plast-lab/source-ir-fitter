@@ -26,6 +26,10 @@ public class Scope {
         }
     }
 
+    /**
+     * Returns the inner-most outer method at this point.
+     * @return   a method or null on failure
+     */
     public JMethod getEnclosingMethod() {
         try {
             return methodScope.peek();
@@ -34,16 +38,33 @@ public class Scope {
         }
     }
 
+    /**
+     * Returns the inner-most outer block at this point.
+     * @return   a block or null on failure
+     */
     public JBlock getEnclosingBlock() {
         return blocks.isEmpty() ? null : blocks.peek();
     }
 
+    /**
+     * Returns the inner-most element at this point.
+     * @return   an element or null on failure
+     */
     public ElementWithPosition<?, ?> getEnclosingElement() {
         try {
             return elementScope.peek();
         } catch (EmptyStackException ignored) {
             return null;
         }
+    }
+
+    /**
+     * Returns the method that directly contains the current block.
+     * @return   a method or null on failure
+     */
+    public JMethod getDirectEnclosingMethod() {
+        ElementWithPosition<?, ?> enclosingElement = getEnclosingElement();
+        return enclosingElement instanceof JMethod ? (JMethod) enclosingElement : null;
     }
 
     public void enterTypeScope(JType jt, Consumer<JType> scopeProcessor) {
@@ -92,11 +113,12 @@ public class Scope {
     public void registerFieldAccess(Object astFieldAccess, String fieldName, Position pos, SourceFile sourceFile, AccessType accType, JField target, boolean debug) {
         if (debug)
             System.out.println("Field access [" + (accType.name()) + "]: " + fieldName + "@" + sourceFile + ":" + pos);
-        JMethod parentMethod = getEnclosingMethod();
+        JMethod parentMethod = getDirectEnclosingMethod();
+        JFieldAccess fieldAccess = new JFieldAccess(sourceFile, pos, accType, fieldName, target);
         if (parentMethod == null)
-            System.out.println("TODO: field access outside method: " + astFieldAccess + ": " + sourceFile);
+            sourceFile.fieldAccesses.add(fieldAccess);
         else
-            parentMethod.fieldAccesses.add(new JFieldAccess(sourceFile, pos, accType, fieldName, target));
+            parentMethod.fieldAccesses.add(fieldAccess);
     }
 
     /**

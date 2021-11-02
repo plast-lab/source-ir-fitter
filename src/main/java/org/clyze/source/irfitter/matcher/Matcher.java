@@ -52,6 +52,8 @@ public class Matcher {
      * @param irTypes    the IR type representations
      */
     public void matchTypes(Iterable<IRType> irTypes) {
+        generateUnknownFieldAccesses(idMapper.fieldAccessMap, sourceFile.fieldAccesses);
+
         for (JType jt : sourceFile.jTypes) {
             String id = jt.getFullyQualifiedName();
             if (debug)
@@ -275,21 +277,21 @@ public class Matcher {
             matchLambdas(idMapper, srcMethod);
 
         generateUnknownMethodAllocations(idMapper.allocationMap, srcMethods);
-        generateUnknownMethodFieldAccesses(idMapper.fieldAccessMap, srcMethods);
+        for (JMethod jm : srcMethods)
+            generateUnknownFieldAccesses(idMapper.fieldAccessMap, jm.fieldAccesses);
     }
 
     /**
      * Keep unmatched field accesses (due to field value inlining).
      */
-    private void generateUnknownMethodFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap, List<JMethod> srcMethods) {
-        for (JMethod jm : srcMethods) {
-            for (JFieldAccess fieldAccess : jm.fieldAccesses)
-                if (!fieldAccess.hasBeenMatched()) {
-                    if (debug)
-                        System.out.println("Adding unmatched field access: " + fieldAccess);
-                    fieldAccessMap.computeIfAbsent("UNKNOWN_FIELD", k -> new ArrayList<>()).add(fieldAccess);
-                }
-        }
+    public void generateUnknownFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap,
+                                             List<JFieldAccess> fieldAccesses) {
+        for (JFieldAccess fieldAccess : fieldAccesses)
+            if (!fieldAccess.hasBeenMatched()) {
+                if (debug)
+                    System.out.println("Adding unmatched field access: " + fieldAccess);
+                fieldAccessMap.computeIfAbsent("UNKNOWN_FIELD", k -> new ArrayList<>()).add(fieldAccess);
+            }
     }
 
     private void matchInsideMethod(IdMapper idMapper, JMethod srcMethod, boolean isLambda) {

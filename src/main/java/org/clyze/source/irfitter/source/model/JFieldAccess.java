@@ -56,7 +56,7 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> {
             System.out.println("Generating partial metadata for field access: " + this);
             symbol = getUsageWith("FieldAccess" + getLocation(), target.matchElement.getId());
         } else
-            System.out.println("Cannot generate partial metadata for field access: " + this);
+            System.out.println("ERROR: Cannot generate partial metadata for field access: " + this);
         return symbol;
     }
 }

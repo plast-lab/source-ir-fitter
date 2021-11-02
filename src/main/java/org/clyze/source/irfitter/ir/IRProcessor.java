@@ -38,7 +38,7 @@ public abstract class IRProcessor {
             } else if (name.endsWith(".apk")) {
                 processZipArchive(irFile, ".dex", debug,
                         is -> new DexParser(debug, enterMethods, varArgMethods).processDex(irState, is));
-            } else if (name.endsWith(".war")) {
+            } else if (name.endsWith(".war") || name.endsWith(".ear")) {
                 try {
                     File tmpDir = Driver.extractZipToTempDir("war-ir", irFile);
                     processIRDir(irState, varArgMethods, tmpDir, debug, enterMethods);

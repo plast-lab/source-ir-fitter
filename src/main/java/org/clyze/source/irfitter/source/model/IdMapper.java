@@ -56,6 +56,8 @@ public class IdMapper {
             for (JType srcType : srcTypes) {
                 if (srcType.matchId != null)
                     matchedTypes++;
+                else
+                    reportUnmatched(srcType);
                 List<JMethod> srcMethods = srcType.methods;
                 allMethods += srcMethods.size();
                 for (JMethod srcMethod : srcMethods) {
@@ -118,9 +120,13 @@ public class IdMapper {
         return elems.stream().filter(e -> {
             boolean check = e.hasBeenMatched() || (altCheckOnFail != null && altCheckOnFail.test(e));
             if (!check)
-                System.out.println("UNMATCHED: " + e);
+                reportUnmatched(e);
             return check;
         }).count();
+    }
+
+    private static void reportUnmatched(Matchable e) {
+        System.out.println("UNMATCHED: " + e);
     }
 
     /**

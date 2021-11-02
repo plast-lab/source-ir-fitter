@@ -45,8 +45,8 @@ public abstract class IRProcessor {
                 } catch (IOException ex) {
                     System.err.println("ERROR: failed to extract " + name);
                 }
-            } else
-                System.err.println("ERROR: unknown IR file type: " + name);
+            } else if (debug)
+                System.err.println("WARNING: unknown IR file type: " + name);
         } else if (irFile.isDirectory())
             processIRDir(irState, varArgMethods, irFile, debug, enterMethods);
     }

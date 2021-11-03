@@ -14,11 +14,8 @@ import org.clyze.persistent.model.jvm.JvmMethod;
 public class JInit extends JMethod {
     /** The low-level name of class initializers. */
     public static final String CLINIT = "<clinit>";
-    /**
-     * A name for the pseudo-method that represents instance initializer blocks
-     * and instance field initializers.
-     */
-    public static final String INIT_BLOCK = "<init>-block";
+    /** The low-level name of instance initializers (constructors). */
+    public static final String INIT = "<init>";
 
     /** True if this initializer corresponds to an init block in the source. */
     public boolean source = false;
@@ -43,7 +40,7 @@ public class JInit extends JMethod {
     }
 
     public static JInit createInitBlock(SourceFile srcFile, JType declaringType) {
-        return new JInit(srcFile, declaringType, INIT_BLOCK, false);
+        return new JInit(srcFile, declaringType, INIT, false);
     }
 
     /**
@@ -74,7 +71,7 @@ public class JInit extends JMethod {
      * @return       true if the method name is a class/instance initializer
      */
     public static boolean isInitName(String name) {
-        return CLINIT.equals(name) || INIT_BLOCK.equals(name);
+        return CLINIT.equals(name) || INIT.equals(name);
     }
 
     /**

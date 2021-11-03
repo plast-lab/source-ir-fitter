@@ -20,6 +20,8 @@ implements AbstractMethodInvocation, Targetable {
     private final String base;
     /** The target of the allocation (such as "x" in {@code x = obj.m()}). */
     private JVariable target = null;
+    /** If true, this is a call to "super()/this()". */
+    public final boolean isExplicitConstructor;
 
     /**
      * Create a method invocation.
@@ -31,10 +33,12 @@ implements AbstractMethodInvocation, Targetable {
      * @param inIIB        true if the invocation is inside an initializer block
      * @param block        the containing block
      * @param base         the name of the base variable (if it exists)
+     * @param isExplicitConstructor  true if this is a call to super()/this()
      */
     public JMethodInvocation(SourceFile srcFile, Position pos,
                              String methodName, int arity, JMethod parent,
-                             boolean inIIB, JBlock block, String base) {
+                             boolean inIIB, JBlock block, String base,
+                             boolean isExplicitConstructor) {
         super(srcFile, pos);
         this.methodName = methodName;
         this.arity = arity;
@@ -42,6 +46,7 @@ implements AbstractMethodInvocation, Targetable {
         this.inIIB = inIIB;
         this.block = block;
         this.base = base;
+        this.isExplicitConstructor = isExplicitConstructor;
     }
 
     @Override

@@ -245,7 +245,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         }
         jt.typeUses.addAll(new JavaModifierPack(sourceFile, init.getAnnotations()).getAnnotationUses());
 
-        JInit initMethod = init.isStatic() ? jt.classInitializer : jt.initBlock;
+        JInit initMethod = init.isStatic() ? jt.classInitializer : jt.instInitializer;
         initMethod.setSource(true);
         Position outerPos = JavaUtils.createPositionFromNode(init);
         long startColumn = outerPos.getStartColumn();
@@ -309,7 +309,8 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             jt.typeUses.addAll(fieldTypeUses);
 
             JavaModifierPack mp = new JavaModifierPack(sourceFile, fd, false, false, false);
-            JField srcField = new JField(sourceFile, typeOf(vd), vd.getNameAsString(),
+            String fieldName = vd.getNameAsString();
+            JField srcField = new JField(sourceFile, typeOf(vd), fieldName,
                     mp.getAnnotations(), JavaUtils.createPositionFromNode(vd), jt);
             jt.typeUses.addAll(mp.getAnnotationUses());
             if (debug)
@@ -328,10 +329,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     sourceFile.stringConstants.add(new JStringConstant<>(sourceFile, pos, srcField, sValue));
                     srcField.mayBeInlined = true;
                 } else {
-                    JMethod initBlock = isStaticField ? jt.classInitializer : jt.initBlock;
+                    JMethod initBlock = isStaticField ? jt.classInitializer : jt.instInitializer;
                     JBlock methodBlock = new JBlock(initBlock.name, block, jt);
                     scope.enterMethodScope(initBlock, init -> initExpr.accept(this, methodBlock));
                 }
+                Position initExprPos = JavaUtils.createPositionFromNode(initExpr);
+                JFieldAccess fieldAcc = new JFieldAccess(sourceFile, initExprPos, AccessType.WRITE, fieldName, srcField);
+                if (debug)
+                    System.out.println("Adding field initializer: " + fieldAcc);
+                (isStaticField ? jt.classInitializer : jt.instInitializer).fieldAccesses.add(fieldAcc);
             }
         }
     }
@@ -358,23 +364,27 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     @Override
     public void visit(ExplicitConstructorInvocationStmt constrInvo, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(constrInvo);
-        JMethod parentMethod = scope.getEnclosingMethod();
+        JMethod parentMethod = scope.getDirectEnclosingMethod();
         NodeList<Expression> arguments = constrInvo.getArguments();
-        if (parentMethod == null)
-            System.out.println("TODO: explicit constructors in initializers");
-        else {
-            JMethodInvocation invo = parentMethod.addInvocation(scope, "<init>", arguments.size(), pos, sourceFile, block, null);
-            callSites.put(constrInvo, invo);
+        if (parentMethod == null) {
+            System.out.println("ERROR: explicit constructor in initializer: " + pos);
+            return;
         }
+        JMethodInvocation invo = parentMethod.addInvocation(scope, JInit.INIT, arguments.size(), pos, sourceFile, block, null, true);
+        callSites.put(constrInvo, invo);
+        if (debug)
+            System.out.println("Adding explicit constructor invocation: " + invo);
         constrInvo.getExpression().ifPresent(expr -> processNameAccess(expr, constrInvo, block, AccessType.READ));
         processNameReadsInArgs(arguments, constrInvo, block);
         super.visit(constrInvo, block);
+        // After a full visit of this instruction, remember current position.
+        parentMethod.setExplicitConstructorEnd();
     }
 
     @Override
     public void visit(ObjectCreationExpr objCExpr, JBlock block) {
         Position pos = JavaUtils.createPositionFromNode(objCExpr);
-        JMethod parentMethod = scope.getEnclosingMethod();
+        JMethod parentMethod = scope.getDirectEnclosingMethod();
         Optional<NodeList<BodyDeclaration<?>>> anonymousClassBody = objCExpr.getAnonymousClassBody();
         boolean isAnonymousClassDecl = anonymousClassBody.isPresent();
         Collection<TypeUse> typeUses = new ArrayList<>();
@@ -396,11 +406,13 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         }
         NodeList<Expression> arguments = objCExpr.getArguments();
         if (parentMethod == null)
-            System.out.println("ERROR: allocations/invocations in object creation in initializers");
+            System.out.println("TODO: allocations/invocations in object creation in initializers");
         else {
             String base = getName(objCExpr.getScope());
-            JMethodInvocation invo = parentMethod.addInvocation(this.scope, "<init>", arguments.size(), pos, sourceFile, block, base);
+            JMethodInvocation invo = parentMethod.addInvocation(this.scope, JInit.INIT, arguments.size(), pos, sourceFile, block, base, false);
             callSites.put(objCExpr, invo);
+            if (debug)
+                System.out.println("Adding object creation invocation: " + invo);
             // If anonymous, add placeholder allocation, to be matched later.
             JAllocation alloc = parentMethod.addAllocation(sourceFile, pos, isAnonymousClassDecl ? ":ANONYMOUS_CLASS:" : allocationType);
             heapSites.put(objCExpr, alloc);
@@ -423,7 +435,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         String id = mRef.getIdentifier();
         Expression baseExpr = mRef.getScope();
         if (id.equals("new"))
-            id = "<init>";
+            id = JInit.INIT;
         if (baseExpr.isTypeExpr()) {
             // TypeExpr tScope = (TypeExpr) baseExpr;
             Position pos = JavaUtils.createPositionFromNode(mRef);
@@ -454,7 +466,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         for (ArrayCreationLevel level : arrayCreationExpr.getLevels())
             jt.typeUses.addAll((new JavaModifierPack(sourceFile, level.getAnnotations())).getAnnotationUses());
 
-        JMethod parentMethod = scope.getEnclosingMethod();
+        JMethod parentMethod = scope.getDirectEnclosingMethod();
         Position pos = JavaUtils.createPositionFromNode(arrayCreationExpr);
         if (parentMethod == null)
             System.out.println("TODO: array creation in initializers: " + sourceFile + ": " + pos);
@@ -470,12 +482,14 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     public void visit(MethodCallExpr call, JBlock block) {
         int arity = call.getArguments().size();
         Position pos = JavaUtils.createPositionFromNode(call);
-        JMethod parentMethod = scope.getEnclosingMethod();
+        JMethod parentMethod = scope.getDirectEnclosingMethod();
         if (parentMethod == null)
             System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
         else {
-            JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()));
+            JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()), false);
             callSites.put(call, invo);
+            if (debug)
+                System.out.println("Adding method call: " + invo);
             call.getScope().ifPresent(scopeExpr -> processNameAccess(scopeExpr, call, block, AccessType.READ));
             processNameReadsInArgs(call.getArguments(), call, block);
         }

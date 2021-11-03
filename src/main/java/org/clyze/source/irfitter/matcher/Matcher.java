@@ -58,6 +58,7 @@ public class Matcher {
             String id = jt.getFullyQualifiedName();
             if (debug)
                 System.out.println("Matching source type: " + jt + ", fully qualified name: " + id);
+            jt.processInitBlocks();
             boolean typeMatched = false;
             for (IRType irType : irTypes)
                 if (!irType.matched && irType.getId().equals(id)) {
@@ -128,7 +129,7 @@ public class Matcher {
                         JAllocation srcAlloc = srcMultiAllocs.get(i);
                         idMapper.recordMatch(idMapper.allocationMap, "allocation", irMultiAlloc, srcAlloc);
                         IRMethodInvocation irInvo = irReflAllocs.get(i);
-                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null);
+                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null, false);
                         idMapper.recordMatch(idMapper.invocationMap, "invocation", irInvo, fakeSrcInvo);
                     }
                 } else if (debug) {
@@ -407,11 +408,11 @@ public class Matcher {
     private void matchInnerConstructors(Map<String, Collection<JMethod>> methodMap,
                                         Iterable<JMethod> srcMethods, Collection<IRMethod> irMethods,
                                         Collection<String> outerTypes) {
-        List<IRMethod> irInits = irMethods.stream().filter(m -> m.name.equals("<init>")).collect(Collectors.toList());
+        List<IRMethod> irInits = irMethods.stream().filter(m -> m.name.equals(JInit.INIT)).collect(Collectors.toList());
         List<String> outerSimpleTypes = outerTypes.stream().map(Utils::getSimpleIrType).collect(Collectors.toList());
         int outerTypesCount = outerTypes.size();
         for (JMethod srcInit : srcMethods) {
-            if (srcInit.matchId != null || !srcInit.getLowLevelName().equals("<init>"))
+            if (srcInit.matchId != null || !srcInit.getLowLevelName().equals(JInit.INIT))
                 continue;
             for (IRMethod irInit : irInits) {
                 List<String> irParamTypes = irInit.paramTypes.stream().map(Utils::getSimpleIrType).collect(Collectors.toList());
@@ -714,9 +715,9 @@ public class Matcher {
                 if (line != null) {
                     Position pos = new Position(line, line, 0, 0);
                     String mName = irMethod.name;
-                    boolean inIIB = "<init>".equals(mName) || JInit.isInitName(mName);
+                    boolean inIIB = JInit.INIT.equals(mName) || JInit.isInitName(mName);
                     JBlock block = new JBlock(mName, null, null);
-                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null);
+                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null, false);
                     srcMethod.invocations.add(fakeSrcInvo);
                     idMapper.recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
                     fakeSrcInvo.symbol.setSource(false);

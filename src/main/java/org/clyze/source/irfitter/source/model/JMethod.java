@@ -44,6 +44,11 @@ implements AbstractMethod {
     private final boolean isVarArgs;
     /** Accesses to outer class instances. */
     public Collection<OuterThis> outerThisAccesses = null;
+    /**
+     * This field is filled in for constructors that contain calls to super/this
+     * and represents the end of such calls.
+     */
+    public MethodBodyFrontier explicitConstrEnd = null;
 
     public JMethod(SourceFile srcFile, String name, String retType,
                    List<JVariable> parameters, Set<String> annotations,
@@ -180,7 +185,11 @@ implements AbstractMethod {
      * @return   the low level name that executable code will see
      */
     public String getLowLevelName() {
-        return (name != null && name.equals(parent.getUnqualifiedName())) ? "<init>" : name;
+        return isConstructor() ? JInit.INIT : name;
+    }
+
+    public boolean isConstructor() {
+        return name != null && name.equals(parent.getUnqualifiedName());
     }
 
     @Override
@@ -202,14 +211,16 @@ implements AbstractMethod {
      * @param sourceFile     the source file
      * @param block          the containing block
      * @param base           the receiver variable (if it exists)
+     * @param isExplicitConstructor  true if this is a call to super()/this()
      * @return               the invocation that was added
      */
     public JMethodInvocation
     addInvocation(Scope scope, String name, int arity, Position pos,
-                  SourceFile sourceFile, JBlock block, String base) {
+                  SourceFile sourceFile, JBlock block, String base,
+                  boolean isExplicitConstructor) {
         boolean inIIB = scope.inInitializer || parent == null;
         JMethodInvocation invo = new JMethodInvocation(sourceFile, pos,
-                name, arity, this, inIIB, block, base);
+                name, arity, this, inIIB, block, base, isExplicitConstructor);
         if (parent == null)
             System.out.println("TODO: invocations in initializers");
         else {
@@ -361,7 +372,26 @@ implements AbstractMethod {
     }
 
     /**
+     * Sets the location directly after an explicit constructor call. Used
+     * inside constructors, to aid the insertion of instance initializers.
+     */
+    public void setExplicitConstructorEnd() {
+        int mRefsSize = methodRefs == null ? 0 : methodRefs.size();
+        int castsSize = casts == null ? 0 : casts.size();
+        int lambdasSize = lambdas == null ? 0 : lambdas.size();
+        this.explicitConstrEnd = new MethodBodyFrontier(allocations.size(), invocations.size(), fieldAccesses.size(), mRefsSize, castsSize, lambdasSize, elementUses.size());
+    }
+
+    /**
      * Custom exception, thrown when we fail to compute capture shifts.
      */
     public static class BadArity extends Exception {}
+
+    /**
+     * Checks if this method has an empty body (for matching).
+     * @return  if true, the method can be skipped during matching
+     */
+    public boolean isEmpty() {
+        return allocations.isEmpty() && invocations.isEmpty() && fieldAccesses.isEmpty() && elementUses.isEmpty();
+    }
 }

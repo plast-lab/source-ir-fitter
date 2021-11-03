@@ -27,8 +27,13 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     public final boolean isAnonymous;
     public final boolean isLambdaType;
     public final boolean isInner;
+    /** The class initializer ({@code <clinit>} in bytecode). */
     public final JInit classInitializer;
-    public final JInit initBlock;
+    /**
+     * The instance initialization code that appears outside constructors
+     * (such as initializer blocks or field initializers).
+     */
+    public final JInit instInitializer;
     public final List<JField> fields = new ArrayList<>();
     public final List<JMethod> methods = new ArrayList<>();
     public final List<TypeUse> typeUses = new ArrayList<>();
@@ -66,10 +71,8 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
         this.isEnum = isEnum;
         // Add <clinit>() method.
         this.classInitializer = JInit.createClinit(srcFile, this);
-        this.methods.add(classInitializer);
         // Add instance initializer block.
-        this.initBlock = JInit.createInitBlock(srcFile, this);
-        this.methods.add(initBlock);
+        this.instInitializer = JInit.createInitBlock(srcFile, this);
     }
 
     /**
@@ -233,5 +236,66 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
         }
         String declaringSymbolId = (declaringElement != null && declaringElement.matchId != null) ? declaringElement.matchId : "";
         symbol.setDeclaringSymbolId(declaringSymbolId);
+    }
+
+    /**
+     * Process initializer blocks:
+     * (a) fuse static initializer blocks to a single {@code <clinit>} method and
+     * (b) insert instance initialization code in all constructors (or
+     *     declare default constructor if no constructors exist).
+     */
+    public void processInitBlocks() {
+        // Non-empty class initialization code becomes a "<clinit>" method.
+        if (!classInitializer.isEmpty())
+            this.methods.add(classInitializer);
+
+        // Non-empty instance initialization code must be inserted in every
+        // constructor, after the call to super(). If no constructors are found,
+        // an appropriate constructor is created.
+        if (!instInitializer.isEmpty()) {
+            boolean foundConstructors = false;
+            for (JMethod jm : methods) {
+                if (jm.isConstructor()) {
+                    foundConstructors = true;
+                    MethodBodyFrontier explicitConstrEnd = jm.explicitConstrEnd;
+                    // If no constructor end is found, it must be reconstructed.
+                    if (explicitConstrEnd == null)
+                        System.out.println("TODO: handle instance initializer " + instInitializer);
+                    else {
+                        if (srcFile.debug)
+                            System.out.println("Inserting " + instInitializer + " at " + explicitConstrEnd);
+                        insertFromInit(explicitConstrEnd.allocIndex, instInitializer.allocations, jm.allocations);
+                        insertFromInit(explicitConstrEnd.invoIndex, instInitializer.invocations, jm.invocations);
+                        insertFromInit(explicitConstrEnd.fieldAccIndex, instInitializer.fieldAccesses, jm.fieldAccesses);
+                        if (jm.methodRefs == null)
+                            jm.methodRefs = new ArrayList<>();
+                        insertFromInit(explicitConstrEnd.methodRefsIndex, instInitializer.methodRefs, jm.methodRefs);
+                        if (jm.casts == null)
+                            jm.casts = new ArrayList<>();
+                        insertFromInit(explicitConstrEnd.castsIndex, instInitializer.casts, jm.casts);
+                        if (jm.lambdas == null)
+                            jm.lambdas = new ArrayList<>();
+                        insertFromInit(explicitConstrEnd.lambdasIndex, instInitializer.lambdas, jm.lambdas);
+                        insertFromInit(explicitConstrEnd.elementUsesIndex, instInitializer.elementUses, jm.elementUses);
+                    }
+                }
+            }
+            if (!foundConstructors)
+                this.methods.add(instInitializer);
+        }
+    }
+
+    private <E> void insertFromInit(int start, List<E> from, List<E> target) {
+        if (from == null) {
+            if (srcFile.debug)
+                System.out.println("Added 0 elements.");
+            return;
+        }
+        int fromSize = from.size();
+        if (target == null)
+            target = new ArrayList<>();
+        target.addAll(start, from);
+        if (srcFile.debug)
+            System.out.println("Added " + fromSize + " elements.");
     }
 }

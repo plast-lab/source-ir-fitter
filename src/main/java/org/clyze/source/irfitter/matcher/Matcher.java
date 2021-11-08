@@ -129,7 +129,7 @@ public class Matcher {
                         JAllocation srcAlloc = srcMultiAllocs.get(i);
                         idMapper.recordMatch(idMapper.allocationMap, "allocation", irMultiAlloc, srcAlloc);
                         IRMethodInvocation irInvo = irReflAllocs.get(i);
-                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null, false);
+                        JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, srcAlloc.pos, "newInstance", 2, jm, false, null, null, null);
                         idMapper.recordMatch(idMapper.invocationMap, "invocation", irInvo, fakeSrcInvo);
                     }
                 } else if (debug) {
@@ -717,7 +717,7 @@ public class Matcher {
                     String mName = irMethod.name;
                     boolean inIIB = JInit.INIT.equals(mName) || JInit.isInitName(mName);
                     JBlock block = new JBlock(mName, null, null);
-                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null, false);
+                    JMethodInvocation fakeSrcInvo = new JMethodInvocation(sourceFile, pos, irInvo.methodName, irInvo.arity, srcMethod, inIIB, block, null, null);
                     srcMethod.invocations.add(fakeSrcInvo);
                     idMapper.recordMatch(invocationMap, "invocation", irInvo, fakeSrcInvo);
                     fakeSrcInvo.symbol.setSource(false);

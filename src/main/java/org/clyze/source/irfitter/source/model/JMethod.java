@@ -211,16 +211,16 @@ implements AbstractMethod {
      * @param sourceFile     the source file
      * @param block          the containing block
      * @param base           the receiver variable (if it exists)
-     * @param isExplicitConstructor  true if this is a call to super()/this()
+     * @param explicitConstructor  set if this is a call to super()/this()
      * @return               the invocation that was added
      */
     public JMethodInvocation
     addInvocation(Scope scope, String name, int arity, Position pos,
                   SourceFile sourceFile, JBlock block, String base,
-                  boolean isExplicitConstructor) {
+                  JMethodInvocation.ExplicitConstructor explicitConstructor) {
         boolean inIIB = scope.inInitializer || parent == null;
         JMethodInvocation invo = new JMethodInvocation(sourceFile, pos,
-                name, arity, this, inIIB, block, base, isExplicitConstructor);
+                name, arity, this, inIIB, block, base, explicitConstructor);
         if (parent == null)
             System.out.println("TODO: invocations in initializers");
         else {

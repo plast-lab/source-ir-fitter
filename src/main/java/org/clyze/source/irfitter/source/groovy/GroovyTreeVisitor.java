@@ -380,7 +380,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 // TODO: containing block, base variable
                 JMethodInvocation invo = new JMethodInvocation(sourceFile,
                         GroovyUtils.createPositionFromToken(pathExpr.start), methodName,
-                        methodArity, jm, false, null, null, false);
+                        methodArity, jm, false, null, null, null);
                 if (jm == null)
                     System.out.println("TODO: handle invocations outside methods");
                 else

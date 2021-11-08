@@ -257,15 +257,27 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
             for (JMethod jm : methods) {
                 if (jm.isConstructor()) {
                     foundConstructors = true;
+                    List<JMethodInvocation> invos = jm.invocations;
+                    Optional<JMethodInvocation> invo = invos.stream().filter((JMethodInvocation i) -> i.explicitConstructor != null).findAny();
+                    if (invo.isPresent()) {
+                        // Do not insert initializer code in constructors starting with this().
+                        JMethodInvocation.ExplicitConstructor ec0 = invo.get().explicitConstructor;
+                        if (ec0.equals(JMethodInvocation.ExplicitConstructor.THIS))
+                            break;
+                    } else {
+                        // If no explicit constructors exist, prefix body with a call to super().
+                        invos.add(0, new JMethodInvocation(jm.srcFile, jm.pos, JInit.INIT, 0, jm, false, jm.blocks.get(0), null, JMethodInvocation.ExplicitConstructor.SUPER));
+                        jm.explicitConstrEnd = new MethodBodyFrontier(0, 1, 0, 0, 0, 0, 0);
+                    }
                     MethodBodyFrontier explicitConstrEnd = jm.explicitConstrEnd;
                     // If no constructor end is found, it must be reconstructed.
                     if (explicitConstrEnd == null)
-                        System.out.println("TODO: handle instance initializer " + instInitializer);
+                        System.out.println("ERROR: super() is missing position information: " + instInitializer + ", jm=" + jm);
                     else {
                         if (srcFile.debug)
                             System.out.println("Inserting " + instInitializer + " at " + explicitConstrEnd);
                         insertFromInit(explicitConstrEnd.allocIndex, instInitializer.allocations, jm.allocations);
-                        insertFromInit(explicitConstrEnd.invoIndex, instInitializer.invocations, jm.invocations);
+                        insertFromInit(explicitConstrEnd.invoIndex, instInitializer.invocations, invos);
                         insertFromInit(explicitConstrEnd.fieldAccIndex, instInitializer.fieldAccesses, jm.fieldAccesses);
                         if (jm.methodRefs == null)
                             jm.methodRefs = new ArrayList<>();

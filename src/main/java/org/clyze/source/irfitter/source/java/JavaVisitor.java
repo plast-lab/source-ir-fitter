@@ -17,6 +17,7 @@ import java.util.stream.Collectors;
 import org.clyze.persistent.model.Position;
 import org.clyze.source.irfitter.base.AccessType;
 import org.clyze.source.irfitter.source.model.*;
+import org.clyze.source.irfitter.source.model.JMethodInvocation.ExplicitConstructor;
 
 /** The AST visitor that reads Java sources. */
 public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
@@ -370,15 +371,19 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.out.println("ERROR: explicit constructor in initializer: " + pos);
             return;
         }
-        JMethodInvocation invo = parentMethod.addInvocation(scope, JInit.INIT, arguments.size(), pos, sourceFile, block, null, true);
+        boolean isThis = constrInvo.isThis();
+        ExplicitConstructor ec = isThis ? ExplicitConstructor.THIS : ExplicitConstructor.SUPER;
+        JMethodInvocation invo = parentMethod.addInvocation(scope, JInit.INIT, arguments.size(), pos, sourceFile, block, null, ec);
         callSites.put(constrInvo, invo);
         if (debug)
             System.out.println("Adding explicit constructor invocation: " + invo);
         constrInvo.getExpression().ifPresent(expr -> processNameAccess(expr, constrInvo, block, AccessType.READ));
         processNameReadsInArgs(arguments, constrInvo, block);
         super.visit(constrInvo, block);
-        // After a full visit of this instruction, remember current position.
-        parentMethod.setExplicitConstructorEnd();
+        if (!isThis) {
+            // After a full visit of this instruction, remember current position for super().
+            parentMethod.setExplicitConstructorEnd();
+        }
     }
 
     @Override
@@ -409,7 +414,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             System.out.println("TODO: allocations/invocations in object creation in initializers");
         else {
             String base = getName(objCExpr.getScope());
-            JMethodInvocation invo = parentMethod.addInvocation(this.scope, JInit.INIT, arguments.size(), pos, sourceFile, block, base, false);
+            JMethodInvocation invo = parentMethod.addInvocation(this.scope, JInit.INIT, arguments.size(), pos, sourceFile, block, base, null);
             callSites.put(objCExpr, invo);
             if (debug)
                 System.out.println("Adding object creation invocation: " + invo);
@@ -486,7 +491,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
         if (parentMethod == null)
             System.out.println("TODO: invocations in initializers: " + sourceFile + ": " + pos);
         else {
-            JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()), false);
+            JMethodInvocation invo = parentMethod.addInvocation(scope, call.getName().getIdentifier(), arity, pos, sourceFile, block, getName(call.getScope()), null);
             callSites.put(call, invo);
             if (debug)
                 System.out.println("Adding method call: " + invo);

@@ -219,7 +219,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
     }
 
     @Override
-    public SymbolWithId generatePartialMetadata() {
+    public SymbolWithId generatePartialMetadata(Map<String, IRType> irTypeLookup) {
         System.out.println("Generating partial metadata for type: " + this);
         symbol = getJvmClassWith(getFullyQualifiedName(), isInterface, isEnum,
                 isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected);

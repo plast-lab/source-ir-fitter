@@ -103,6 +103,7 @@ public class Scope {
     /**
      * Registers an access to a field in the current scope.
      * @param astFieldAccess    the AST node to use for debugging messages
+     * @param staticTypeName    the name of the type declaring the (static) field
      * @param fieldName         the name of the field
      * @param pos               the source position of the access
      * @param sourceFile        the source file
@@ -110,11 +111,14 @@ public class Scope {
      * @param target            the target field
      * @param debug             if true, print debugging information
      */
-    public void registerFieldAccess(Object astFieldAccess, String fieldName, Position pos, SourceFile sourceFile, AccessType accType, JField target, boolean debug) {
+    public void registerFieldAccess(Object astFieldAccess, String staticTypeName,
+                                    String fieldName, Position pos, SourceFile sourceFile,
+                                    AccessType accType, JField target, boolean debug) {
         if (debug)
-            System.out.println("Field access [" + (accType.name()) + "]: " + fieldName + "@" + sourceFile + ":" + pos);
+            System.out.println("Field access [" + (accType.name()) + "]: " + fieldName +
+                    "@" + sourceFile + ":" + pos + ", astFieldAccess=" + astFieldAccess);
         JMethod parentMethod = getDirectEnclosingMethod();
-        JFieldAccess fieldAccess = new JFieldAccess(sourceFile, pos, accType, fieldName, target);
+        JFieldAccess fieldAccess = new JFieldAccess(sourceFile, pos, accType, staticTypeName, fieldName, target);
         if (parentMethod == null)
             sourceFile.fieldAccesses.add(fieldAccess);
         else

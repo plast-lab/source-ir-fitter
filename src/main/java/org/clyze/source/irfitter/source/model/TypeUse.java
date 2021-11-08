@@ -22,7 +22,10 @@ public class TypeUse extends ElementUse implements FuzzyTypes {
         return sourceFile;
     }
 
-    @Override
+    /**
+     * Return the possible ids that this element can match.
+     * @return              a collection of ids
+     */
     public Collection<String> getIds() {
         if (cachedIds == null)
             cachedIds = resolveType(type);

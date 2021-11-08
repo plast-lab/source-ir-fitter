@@ -64,10 +64,4 @@ public interface FuzzyTypes {
 
         return results.stream().map(Utils::dotsToDollars).collect(Collectors.toList());
     }
-
-    /**
-     * Return the possible ids that this element can match.
-     * @return              a collection of ids
-     */
-    Collection<String> getIds();
 }

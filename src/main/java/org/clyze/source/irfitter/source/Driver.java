@@ -158,17 +158,20 @@ public class Driver {
             unmatched += sf.reportUmatched(debug);
         }
 
+        Map<String, IRType> irTypeLookup = new HashMap<>();
         // Calculate the set of all referenced types.
         Set<String> allIrTypes = new HashSet<>();
         for (IRType irType : irTypes) {
-            allIrTypes.add(irType.getId());
+            String typeId = irType.getId();
+            irTypeLookup.put(typeId, irType);
+            allIrTypes.add(typeId);
             irType.addReferencedTypesTo(allIrTypes);
         }
 
         if (resolveInvocations) {
             if (debug)
                 System.out.println("Trying to (statically) resolve invocation targets...");
-            Set<String> invocationTargets = resolveInvocationTargets(sources, irTypes);
+            Set<String> invocationTargets = resolveInvocationTargets(sources, irTypeLookup);
             try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(db, "InvocationTargets.csv")))) {
                 for (String line : invocationTargets)
                     bw.write(line);
@@ -200,7 +203,7 @@ public class Driver {
         if (sarif)
             (new DoopSARIFGenerator(db, out, "1.0", false, flatMapping, debug)).process();
         if (json)
-            generateJSON(flatMapping, sources, matchIR);
+            generateJSON(flatMapping, sources, matchIR, irTypeLookup);
 
         if (stats || debug)
             idMapper.calcStats(sources);
@@ -214,10 +217,8 @@ public class Driver {
                 registerSymbol(bm, elemUse.getUse());
     }
 
-    private Set<String> resolveInvocationTargets(Collection<SourceFile> sources, Collection<IRType> irTypes) {
-        Map<String, IRType> irTypeLookup = new HashMap<>();
-        for (IRType irType : irTypes)
-            irTypeLookup.put(irType.getId(), irType);
+    private Set<String> resolveInvocationTargets(Collection<SourceFile> sources,
+                                                 Map<String, IRType> irTypeLookup) {
         List<JMethodInvocation> srcInvos = new ArrayList<>();
         for (SourceFile sf : sources) {
             for (JType srcType : sf.jTypes) {
@@ -358,7 +359,8 @@ public class Driver {
     }
 
     private void generateJSON(Map<String, Collection<? extends ElementWithPosition<?, ?>>> mapping,
-                              Collection<SourceFile> sources, boolean matchIR) {
+                              Collection<SourceFile> sources, boolean matchIR,
+                              Map<String, IRType> irTypeLookup) {
         for (Map.Entry<String, Collection<? extends ElementWithPosition<?, ?>>> entry : mapping.entrySet()) {
             String symbolId = entry.getKey();
             if (debug)
@@ -367,7 +369,7 @@ public class Driver {
                 SymbolWithId symbol = srcElem.getSymbol();
                 if (symbol == null) {
                     if (!matchIR)
-                        symbol = srcElem.generatePartialMetadata();
+                        symbol = srcElem.generatePartialMetadata(irTypeLookup);
                     else {
                         System.out.println("Source element has no symbol: " + srcElem);
                         continue;

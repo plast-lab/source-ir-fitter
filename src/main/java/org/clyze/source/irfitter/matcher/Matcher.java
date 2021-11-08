@@ -146,10 +146,11 @@ public class Matcher {
         if (outerIrClass == null)
             return;
         String outerIrClassId = outerIrClass.getId();
-        for (IRField irField : irType.fields)
-            if (irField.name.startsWith("this$") && irField.type.equals(outerIrClassId)) {
+        for (IRField irField : irType.fields) {
+            String irFieldName = irField.name;
+            if (irFieldName.startsWith("this$") && irField.type.equals(outerIrClassId)) {
                 String fieldId = irField.getId();
-                JFieldAccess srcThisAcc = otAccess.getFieldAccess(fieldId);
+                JFieldAccess srcThisAcc = otAccess.getFieldAccess(fieldId, irFieldName);
                 if (debug)
                     System.out.println("Resolved outer 'this' access via field: " + srcThisAcc);
                 IRFieldAccess irThisAcc = jm.matchElement.addFieldAccess(fieldId, irField.name, irField.type, AccessType.READ, debug);
@@ -157,6 +158,7 @@ public class Matcher {
                 // Add field access here for statistics.
                 jm.fieldAccesses.add(srcThisAcc);
             }
+        }
     }
 
     private void matchLambdas(IdMapper idMapper, JMethod srcMethod) {

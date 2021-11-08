@@ -491,7 +491,7 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
                 } else {
                     JField field = lookup.field;
                     if (field != null)
-                        scope.registerFieldAccess(ctx, field.name, pos, sourceFile, AccessType.READ, field, debug);
+                        scope.registerFieldAccess(ctx, field.parent.getSimpleName(), field.name, pos, sourceFile, AccessType.READ, field, debug);
                     else
                         System.err.println("Internal error during Groovy identifier lookup: " + lookup);
                 }

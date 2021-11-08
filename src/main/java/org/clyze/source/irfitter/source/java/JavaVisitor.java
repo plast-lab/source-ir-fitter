@@ -335,7 +335,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                     scope.enterMethodScope(initBlock, init -> initExpr.accept(this, methodBlock));
                 }
                 Position initExprPos = JavaUtils.createPositionFromNode(initExpr);
-                JFieldAccess fieldAcc = new JFieldAccess(sourceFile, initExprPos, AccessType.WRITE, fieldName, srcField);
+                JFieldAccess fieldAcc = new JFieldAccess(sourceFile, initExprPos, AccessType.WRITE, null, fieldName, srcField);
                 if (debug)
                     System.out.println("Adding field initializer: " + fieldAcc);
                 (isStaticField ? jt.classInitializer : jt.instInitializer).fieldAccesses.add(fieldAcc);
@@ -575,7 +575,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
                 SimpleName name = nameExpr.getName();
                 JField matchingField = lookupRes.field;
                 if (matchingField != null) {
-                    visitFieldAccess(parentNode, name, accessType, matchingField);
+                    visitFieldAccess(parentNode, null, name, accessType, matchingField);
                 }
                 else
                     System.err.println("WARNING: ignoring expresssion involving name '" + name + "' from nested scope: " + parentNode + ", position: " + JavaUtils.createPositionFromNode(name));
@@ -669,8 +669,15 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     private void visitFieldAccess(FieldAccessExpr fieldAccess, AccessType accessType) {
-        visitFieldAccess(fieldAccess, fieldAccess.getName(), accessType, null);
-        JType jt = scope.getEnclosingType();
+        Expression scope = fieldAccess.getScope();
+        String staticTypeName = null;
+        if (scope instanceof NameExpr) {
+            String id = ((NameExpr)scope).getName().asString();
+            if (Character.isUpperCase(id.charAt(0)))
+                staticTypeName = id;
+        }
+        visitFieldAccess(fieldAccess, staticTypeName, fieldAccess.getName(), accessType, null);
+        JType jt = this.scope.getEnclosingType();
         if (jt == null)
             System.out.println("ERROR: field access outside type: " + fieldAccess + ": " + sourceFile);
         else
@@ -680,11 +687,11 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             });
     }
 
-    private void visitFieldAccess(Node fieldAccess, SimpleName name,
+    private void visitFieldAccess(Node fieldAccess, String staticTypeName, SimpleName name,
                                   AccessType accType, JField target) {
         String fieldName = name.asString();
         Position pos = JavaUtils.createPositionFromNode(name);
-        scope.registerFieldAccess(fieldAccess, fieldName, pos, sourceFile, accType, target, debug);
+        scope.registerFieldAccess(fieldAccess, staticTypeName, fieldName, pos, sourceFile, accType, target, debug);
     }
 
     @Override

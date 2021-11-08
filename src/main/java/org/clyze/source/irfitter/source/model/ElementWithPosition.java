@@ -1,8 +1,10 @@
 package org.clyze.source.irfitter.source.model;
 
-import org.clyze.source.irfitter.ir.model.IRElement;
+import java.util.Map;
 import org.clyze.persistent.model.Position;
 import org.clyze.persistent.model.SymbolWithId;
+import org.clyze.source.irfitter.ir.model.IRElement;
+import org.clyze.source.irfitter.ir.model.IRType;
 
 public abstract class ElementWithPosition<T extends IRElement, S extends SymbolWithId>
 implements Matchable {
@@ -39,9 +41,10 @@ implements Matchable {
     /**
      * Generates partial metadata for elements with partial information.
      * Override in subclasses as needed.
-     * @return the (partial) metadata object
+     * @param irTypeLookup the global id-to-IR-type mapping to use for auxiliary resolution
+     * @return             the (partial) metadata object
      */
-    public SymbolWithId generatePartialMetadata() {
+    public SymbolWithId generatePartialMetadata(Map<String, IRType> irTypeLookup) {
         if (srcFile.debug)
             System.out.println("WARNING: not generating partial metadata for element: " + this);
         return null;

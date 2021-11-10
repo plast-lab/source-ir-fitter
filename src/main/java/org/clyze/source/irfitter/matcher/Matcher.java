@@ -286,6 +286,8 @@ public class Matcher {
 
     /**
      * Keep unmatched field accesses (due to field value inlining).
+     * @param fieldAccessMap   the field-access map to update
+     * @param fieldAccesses    the field accesses to process
      */
     public void generateUnknownFieldAccesses(Map<String, Collection<JFieldAccess>> fieldAccessMap,
                                              List<JFieldAccess> fieldAccesses) {

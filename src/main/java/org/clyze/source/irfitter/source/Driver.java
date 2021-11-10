@@ -2,7 +2,9 @@ package org.clyze.source.irfitter.source;
 
 import com.google.common.collect.ImmutableSet;
 import java.io.*;
+import java.nio.file.CopyOption;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import org.clyze.source.irfitter.RunResult;
 import org.clyze.source.irfitter.ir.model.IRMethodInvocation;
@@ -168,17 +170,8 @@ public class Driver {
             irType.addReferencedTypesTo(allIrTypes);
         }
 
-        if (resolveInvocations) {
-            if (debug)
-                System.out.println("Trying to (statically) resolve invocation targets...");
-            Set<String> invocationTargets = resolveInvocationTargets(sources, irTypeLookup);
-            try (BufferedWriter bw = new BufferedWriter(new FileWriter(new File(db, "InvocationTargets.csv")))) {
-                for (String line : invocationTargets)
-                    bw.write(line);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        if (resolveInvocations)
+            generateInvocationTargets(sources, irTypeLookup);
 
         if (debug)
             System.out.println("* Matching type/field/variable references...");
@@ -209,6 +202,35 @@ public class Driver {
             idMapper.calcStats(sources);
 
         return new RunResult(unmatched, idMapper);
+    }
+
+    /**
+     * Generates the "invocation targets" information.
+     * @param sources           the source files
+     * @param irTypeLookup      the (complete) mapping from fully-qualified type names to IR types
+     */
+    private void generateInvocationTargets(Collection<SourceFile> sources, Map<String, IRType> irTypeLookup) {
+        if (debug)
+            System.out.println("Trying to (statically) resolve invocation targets...");
+        Set<String> invocationTargets = resolveInvocationTargets(sources, irTypeLookup);
+        String fileName = "InvocationTargets.csv";
+        File outFile = new File(out, fileName);
+        // Write to the "output" directory so that it is always available.
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(outFile))) {
+            for (String line : invocationTargets)
+                bw.write(line);
+        } catch (IOException e) {
+            System.err.println("ERROR: could not create " + outFile);
+            e.printStackTrace();
+        }
+        // If integrating with Doop, also copy information to the database directory.
+        if (db != null) {
+            try {
+                Files.copy(outFile.toPath(), new File(db, fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.err.println("ERROR: could not copy " + fileName + " to the database directory: " + db);
+            }
+        }
     }
 
     private void processElementUses(JvmMetadata bm, JType jt) {

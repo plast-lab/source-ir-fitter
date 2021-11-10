@@ -115,7 +115,7 @@ public class IdMapper {
         if (all == 0)
             System.out.println("      -");
         else
-            System.out.printf("%6.2f%%%n", (100.0 * matched) / all);
+            System.out.printf("%6.2f%% (%d/%d)%n", (100.0 * matched) / all, matched, all);
     }
 
     private static <T extends Matchable> long countMatchedElems(Collection<T> elems, Predicate<T> altCheckOnFail) {

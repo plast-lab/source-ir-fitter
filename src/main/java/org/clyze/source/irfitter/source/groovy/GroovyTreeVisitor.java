@@ -483,7 +483,6 @@ public class GroovyTreeVisitor extends GroovyParserBaseVisitor<Void> {
         JBlock block = scope.getEnclosingBlock();
         if (block != null) {
             JBlock.Result lookup = block.lookup(name);
-            System.out.println("READ_ACCESS: " + lookup);
             if (lookup != null) {
                 Position pos = GroovyUtils.createPositionFromTokens(ctx.start, ctx.stop);
                 if (lookup.variable != null) {

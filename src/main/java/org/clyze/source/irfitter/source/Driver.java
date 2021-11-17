@@ -2,7 +2,6 @@ package org.clyze.source.irfitter.source;
 
 import com.google.common.collect.ImmutableSet;
 import java.io.*;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -17,8 +16,8 @@ import org.clyze.source.irfitter.source.kotlin.KotlinProcessor;
 import org.clyze.source.irfitter.source.model.*;
 import org.clyze.persistent.metadata.Configuration;
 import org.clyze.persistent.metadata.FileInfo;
+import org.clyze.persistent.metadata.FileReporter;
 import org.clyze.persistent.metadata.Printer;
-import org.clyze.persistent.metadata.jvm.JvmFileReporter;
 import org.clyze.persistent.metadata.jvm.JvmMetadata;
 import org.clyze.persistent.model.SymbolAlias;
 import org.clyze.persistent.model.SymbolWithId;
@@ -413,7 +412,7 @@ public class Driver {
         configuration.setOutDir(out);
         for (SourceFile sf : sources) {
             FileInfo fileInfo = sf.getFileInfo();
-            JvmFileReporter reporter = new JvmFileReporter(configuration, fileInfo);
+            FileReporter reporter = new FileReporter(configuration, fileInfo.getElements());
             reporter.createReportFile(fileInfo.getOutputFilePath());
             if (debug)
                 reporter.printReportStats();

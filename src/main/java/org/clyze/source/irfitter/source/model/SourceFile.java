@@ -70,6 +70,7 @@ public class SourceFile {
                 String inputName = file.getName();
                 String inputFilePath = file.getCanonicalPath();
                 JvmMetadata elements = new JvmMetadata();
+                elements.sourceFiles.add(new org.clyze.persistent.model.SourceFile(inputFilePath, inputFilePath));
                 cachedFileInfo = new FileInfo(packageName == null || "".equals(packageName) ? "" : packageName + ".", inputName, inputFilePath, "", elements);
             } catch (IOException e) {
                 e.printStackTrace();

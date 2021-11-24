@@ -29,6 +29,6 @@ public class AnonymousClass extends JType {
             System.err.println("ERROR: anonymous class does not have a parent type.");
             return super.getSimpleName();
         }
-        return parentType.getUnqualifiedName() + '$' + n;
+        return parentType.getSimpleName() + '$' + n;
     }
 }

@@ -751,6 +751,16 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
     }
 
     @Override
+    public void visit(final TryStmt n, final JBlock block) {
+        // Reorder visit order of the parent class, so that catch bodies are
+        // visited after try bodies (for consistent anonymous class numbering).
+        n.getTryBlock().accept(this, block);
+        n.getCatchClauses().forEach(p -> p.accept(this, block));
+        n.getFinallyBlock().ifPresent(l -> l.accept(this, block));
+        n.getResources().forEach(p -> p.accept(this, block));
+    }
+
+    @Override
     public void visit(final LambdaExpr lambdaExpr, final JBlock block) {
         JType jt = scope.getEnclosingType();
         if (jt != null) {

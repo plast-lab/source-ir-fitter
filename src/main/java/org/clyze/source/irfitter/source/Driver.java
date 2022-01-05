@@ -70,19 +70,19 @@ public class Driver {
      * @param synthesizeTypes     if true, attempt to synthesize erased types
      * @return                    the processed source file objects
      */
-    public Collection<SourceFile> readSources(File srcFile, boolean debug,
-                                              boolean synthesizeTypes) {
+    public Collection<SourceFile> readSources(File srcFile,
+                                              boolean debug, boolean synthesizeTypes) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = extractZipToTempDir("extracted-sources", srcFile);
-                return readSources(tmpDir, tmpDir, debug, synthesizeTypes);
+                return readSources(tmpDir, tmpDir, srcName, debug, synthesizeTypes);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, debug, synthesizeTypes);
+            return readSources(srcFile, srcFile, null, debug, synthesizeTypes);
     }
 
     /**
@@ -100,7 +100,7 @@ public class Driver {
         return tmpDir;
     }
 
-    private Collection<SourceFile> readSources(File topDir, File srcFile,
+    private Collection<SourceFile> readSources(File topDir, File srcFile, String artifact,
                                                boolean debug, boolean synthesizeTypes) {
         Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
@@ -109,18 +109,18 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, debug, synthesizeTypes));
+                    sources.addAll(readSources(topDir, f, artifact, debug, synthesizeTypes));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
                 System.out.println("Found Java source: " + srcFile);
-                sources.add((new JavaProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
+                sources.add((new JavaProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
             } else if (srcName.endsWith(".groovy")) {
                 System.out.println("Found Groovy source: " + srcFile);
-                sources.add((new GroovyProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
+                sources.add((new GroovyProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
                 System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, debug, synthesizeTypes, varargIrMethods));
+                sources.add((new KotlinProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
             }
         }
         return sources;
@@ -308,7 +308,7 @@ public class Driver {
     private void addImportUses(JvmMetadata bm, SourceFile sf) {
         for (Import imp : sf.imports)
             if (!imp.isAsterisk && !imp.isStatic)
-                bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), true, imp.getUniqueId(sf), imp.name, UsageKind.TYPE));
+                bm.usages.add(new Usage(imp.pos, sf.getRelativePath(), true, sf.artifact, imp.getUniqueId(sf), imp.name, UsageKind.TYPE));
     }
 
     /**

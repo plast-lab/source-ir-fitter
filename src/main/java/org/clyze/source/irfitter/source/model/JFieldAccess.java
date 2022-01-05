@@ -55,7 +55,7 @@ public class JFieldAccess extends ElementWithPosition<IRFieldAccess, Usage> impl
     }
 
     private Usage getUsageWith(String id, String fieldId) {
-        return new Usage(pos, srcFile.getRelativePath(), true, id, fieldId, accessType.kind);
+        return new Usage(pos, srcFile.getRelativePath(), true, srcFile.artifact, id, fieldId, accessType.kind);
     }
 
     @Override

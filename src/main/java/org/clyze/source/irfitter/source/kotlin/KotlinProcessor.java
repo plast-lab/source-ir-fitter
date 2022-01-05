@@ -15,9 +15,9 @@ import org.antlr.grammars.KotlinParser;
 /** This class handles Kotlin source processing. */
 public class KotlinProcessor implements SourceProcessor {
     @Override
-    public SourceFile process(File topDir, File srcFile, boolean debug,
+    public SourceFile process(File topDir, File srcFile, String artifact, boolean debug,
                               boolean synthesizeTypes,Set<String> vaIrMethods) {
-        SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes);
+        SourceFile sf = new SourceFile(topDir, srcFile, artifact, debug, synthesizeTypes);
         try (InputStream inputStream = new FileInputStream(srcFile)) {
             Lexer lexer = new KotlinLexer(CharStreams.fromStream(inputStream));
             TokenStream tokenStream = new CommonTokenStream(lexer);

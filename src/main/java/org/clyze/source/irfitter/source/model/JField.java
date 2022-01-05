@@ -46,7 +46,7 @@ public class JField extends FuzzyTypeElementWithPosition<IRField, JvmField> {
     @Override
     public void initSymbolFromIRElement(IRField irField) {
         if (symbol == null) {
-            symbol = new JvmField(pos, srcFile.getRelativePath(), true, name,
+            symbol = new JvmField(pos, srcFile.getRelativePath(), true, srcFile.artifact, name,
                     irField.getId(), irField.type,
                     parent == null ? null : parent.getFullyQualifiedName(),
                     irField.mp.isStatic());

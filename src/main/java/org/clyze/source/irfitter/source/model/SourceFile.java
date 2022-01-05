@@ -16,6 +16,8 @@ import org.clyze.source.irfitter.matcher.Matcher;
  * name) for more precise matching and to localize matching failures.
  */
 public class SourceFile {
+    /** The artifact containing this source file (such as a JAR file). */
+    public final String artifact;
     /** A parent directory that should be used to form relative paths. */
     public final File topDir;
     /** The parsed source file. */
@@ -41,9 +43,10 @@ public class SourceFile {
     /** The field accesses that are outside any types (e.g. fields used in annotations). */
     public final List<JFieldAccess> fieldAccesses = new ArrayList<>();
 
-    public SourceFile(File topDir, File file, boolean debug, boolean synthesizeTypes) {
+    public SourceFile(File topDir, File file, String artifact, boolean debug, boolean synthesizeTypes) {
         this.topDir = topDir;
         this.file = file;
+        this.artifact = artifact;
         this.debug = debug;
         this.synthesizeTypes = synthesizeTypes;
     }
@@ -70,7 +73,7 @@ public class SourceFile {
                 String inputName = file.getName();
                 String inputFilePath = file.getCanonicalPath();
                 JvmMetadata elements = new JvmMetadata();
-                elements.sourceFiles.add(new org.clyze.persistent.model.SourceFile(inputFilePath, inputFilePath));
+                elements.sourceFiles.add(new org.clyze.persistent.model.SourceFile(artifact, inputFilePath, inputFilePath));
                 cachedFileInfo = new FileInfo(packageName == null || "".equals(packageName) ? "" : packageName + ".", inputName, inputFilePath, "", elements);
             } catch (IOException e) {
                 e.printStackTrace();

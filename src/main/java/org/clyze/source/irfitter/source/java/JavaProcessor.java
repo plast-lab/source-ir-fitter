@@ -12,13 +12,13 @@ import org.clyze.source.irfitter.source.model.SourceFile;
 /** This class handles Java source processing. */
 public class JavaProcessor implements SourceProcessor {
     @Override
-    public SourceFile process(File topDir, File srcFile, boolean debug,
+    public SourceFile process(File topDir, File srcFile, String artifact, boolean debug,
                               boolean synthesizeTypes, Set<String> vaIrMethods) {
         JavaParser jp = new JavaParser();
         try {
             Optional<CompilationUnit> optCu = jp.parse(srcFile).getResult();
             if (optCu.isPresent()) {
-                SourceFile sf = new SourceFile(topDir, srcFile, debug, synthesizeTypes);
+                SourceFile sf = new SourceFile(topDir, srcFile, artifact, debug, synthesizeTypes);
                 optCu.ifPresent((CompilationUnit cu) -> cu.accept(new JavaVisitor(sf, debug), null));
                 return sf;
             } else

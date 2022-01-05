@@ -141,7 +141,7 @@ public class JType extends ElementWithPosition<IRType, JvmClass> {
                                     boolean isInner, boolean isAnonymous, boolean isAbstract,
                                     boolean isFinal, boolean isPublic, boolean isProtected) {
         boolean isStatic = parentType != null && !isInner;
-        JvmClass jc = new JvmClass(pos, srcFile.getRelativePath(), true, getSimpleName(),
+        JvmClass jc = new JvmClass(pos, srcFile.getRelativePath(), true, srcFile.artifact, getSimpleName(),
                 srcFile.packageName, symbolId, isInterface, isEnum, isStatic,
                 isInner, isAnonymous, isAbstract, isFinal, isPublic, isProtected, isPrivate);
         jc.setAnnotations(annotationTypes);

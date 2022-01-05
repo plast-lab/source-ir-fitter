@@ -45,7 +45,7 @@ public class JVariable extends ElementWithPosition<IRVariable, JvmVariable> {
     public void initSymbolFromIRElement(IRVariable irElement) {
         if (symbol == null)
             symbol = new JvmVariable(pos, srcFile.getRelativePath(), true,
-                    irElement.name, irElement.getId(), type,
+                    srcFile.artifact, irElement.name, irElement.getId(), type,
                     irElement.declaringMethodId, isLocal, !isLocal, false);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

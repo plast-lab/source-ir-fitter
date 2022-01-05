@@ -20,7 +20,7 @@ public class JCast extends ElementWithPosition<IRCast, Usage> implements Targeta
     @Override
     public void initSymbolFromIRElement(IRCast irElement) {
         if (symbol == null)
-            symbol = new Usage(pos, srcFile.getRelativePath(), true, irElement.getId(), irElement.methodId, UsageKind.TYPE);
+            symbol = new Usage(pos, srcFile.getRelativePath(), true, srcFile.artifact, irElement.getId(), irElement.methodId, UsageKind.TYPE);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }

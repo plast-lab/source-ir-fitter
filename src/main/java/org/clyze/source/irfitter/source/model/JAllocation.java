@@ -28,7 +28,7 @@ implements AbstractAllocation, Targetable {
         if (symbol == null) {
             matchElement = irAlloc;
             symbol = new JvmHeapAllocation(pos, srcFile.getRelativePath(), true,
-                    irAlloc.getId(), irAlloc.allocatedTypeDoopId,
+                    srcFile.artifact, irAlloc.getId(), irAlloc.allocatedTypeDoopId,
                     irAlloc.allocatingMethodDoopId, irAlloc.inIIB, irAlloc.isArray);
         } else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());

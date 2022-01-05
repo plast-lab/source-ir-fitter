@@ -4,6 +4,7 @@ import org.clyze.persistent.model.SymbolAlias;
 import org.clyze.source.irfitter.ir.model.IRVariable;
 import org.clyze.source.irfitter.source.model.IdMapper;
 import org.clyze.source.irfitter.source.model.JVariable;
+import org.clyze.source.irfitter.source.model.SourceFile;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -67,8 +68,9 @@ public class Aliaser {
         }
         String srcSymbolId = srcVar.symbol.getSymbolId();
         if (json) {
-            SymbolAlias alias = new SymbolAlias(srcVar.srcFile.getRelativePath(), irVarId, srcSymbolId);
-            srcVar.srcFile.getJvmMetadata().aliases.add(alias);
+            SourceFile srcFile = srcVar.srcFile;
+            SymbolAlias alias = new SymbolAlias(srcFile.getRelativePath(), srcFile.artifact, irVarId, srcSymbolId);
+            srcFile.getJvmMetadata().aliases.add(alias);
             if (debug)
                 System.out.println(tag + ": alias = " + alias);
         }

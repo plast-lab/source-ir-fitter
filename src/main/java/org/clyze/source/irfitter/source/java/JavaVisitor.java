@@ -401,7 +401,7 @@ public class JavaVisitor extends VoidVisitorAdapter<JBlock> {
             List<String> superTypes = Collections.singletonList(allocationType);
             JType anonymousType = enclosingType.createAnonymousClass(sourceFile, superTypes, scope.getEnclosingElement(), pos, false);
             if (debug)
-                System.out.println("Adding type [anonymous]: " + anonymousType);
+                System.out.println("Adding type [anonymous]: " + anonymousType + " inside type: " + enclosingType);
             sourceFile.jTypes.add(anonymousType);
             JavaVisitor jv = this;
             scope.enterTypeScope(anonymousType, jt0 -> {

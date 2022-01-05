@@ -27,7 +27,7 @@ public class JMethodRef extends ElementWithPosition<IRMethodRef, Usage> {
     @Override
     public void initSymbolFromIRElement(IRMethodRef irElement) {
         if (symbol == null)
-            symbol = new Usage(pos, srcFile.getRelativePath(), true, irElement.getId(), irElement.methodId, UsageKind.FUNCTION);
+            symbol = new Usage(pos, srcFile.getRelativePath(), true, srcFile.artifact, irElement.getId(), irElement.methodId, UsageKind.FUNCTION);
         else
             System.out.println("WARNING: symbol already initialized: " + symbol.getSymbolId());
     }

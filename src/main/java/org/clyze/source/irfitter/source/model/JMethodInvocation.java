@@ -55,7 +55,8 @@ implements AbstractMethodInvocation, Targetable {
     public void initSymbolFromIRElement(IRMethodInvocation irMethodInvocation) {
         if (symbol == null) {
             matchElement = irMethodInvocation;
-            symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(), true,
+            symbol = new JvmMethodInvocation(pos, srcFile.getRelativePath(),
+                    true, srcFile.artifact,
                     methodName, irMethodInvocation.getId(),
                     irMethodInvocation.targetType,
                     irMethodInvocation.targetReturnType,

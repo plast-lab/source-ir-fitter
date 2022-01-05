@@ -34,7 +34,7 @@ public abstract class ElementUse implements Matchable {
         if (referenceId == null)
             System.out.println("ERROR: Use not matched: " + this);
         String useId = this.toString();
-        return new Usage(position, sourceFile.getRelativePath(), true, useId, referenceId, kind);
+        return new Usage(position, sourceFile.getRelativePath(), true, sourceFile.artifact, useId, referenceId, kind);
     }
 
     @Override

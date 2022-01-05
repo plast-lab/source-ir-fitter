@@ -172,7 +172,7 @@ implements AbstractMethod {
         if (pNames.length != pTypes.length)
             System.out.println("WARNING: arity mismatch, source names: " + Arrays.toString(pNames) +
                     " vs. IR types: " + Arrays.toString(pTypes));
-        return new JvmMethod(pos, srcFile.getRelativePath(), true, name,
+        return new JvmMethod(pos, srcFile.getRelativePath(), true, srcFile.artifact, name,
                 parent.matchId, irMethod.returnType, irMethod.getId(), pNames,
                 pTypes, mp.isStatic(), irMethod.isInterface, mp.isAbstract(),
                 mp.isNative(), mp.isSynchronized(), mp.isFinal(), mp.isSynthetic(),

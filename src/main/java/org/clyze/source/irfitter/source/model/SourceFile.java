@@ -69,15 +69,11 @@ public class SourceFile {
      */
     public FileInfo getFileInfo() {
         if (cachedFileInfo == null) {
-            try {
-                String inputName = file.getName();
-                String inputFilePath = file.getCanonicalPath();
-                JvmMetadata elements = new JvmMetadata();
-                elements.sourceFiles.add(new org.clyze.persistent.model.SourceFile(artifact, inputFilePath, inputFilePath));
-                cachedFileInfo = new FileInfo(packageName == null || "".equals(packageName) ? "" : packageName + ".", inputName, inputFilePath, "", elements);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            String inputName = file.getName();
+            String inputFilePath = getRelativePath();
+            JvmMetadata elements = new JvmMetadata();
+            elements.sourceFiles.add(new org.clyze.persistent.model.SourceFile(artifact, inputFilePath, inputFilePath));
+            cachedFileInfo = new FileInfo(packageName == null || "".equals(packageName) ? "" : packageName + ".", inputName, inputFilePath, "", elements);
         }
         return cachedFileInfo;
     }

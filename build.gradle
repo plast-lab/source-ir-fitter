@@ -16,10 +16,17 @@ repositories {
     mavenLocal()
     mavenCentral()
     maven { url 'https://clyze.jfrog.io/artifactory/default-maven-local' }
-    maven { url "http://centauri.di.uoa.gr:8081/artifactory/plast-public" }
+    maven {
+        url "http://centauri.di.uoa.gr:8081/artifactory/plast-public"
+        allowInsecureProtocol true
+    }
 }
 
 mainClassName = 'org.clyze.source.irfitter.Main'
+
+wrapper {
+    gradleVersion = "7.3.3"
+}
 
 def asmVersion = '9.2'
 dependencies {

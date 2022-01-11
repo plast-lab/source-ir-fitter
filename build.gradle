@@ -112,6 +112,7 @@ if (project.hasProperty('artifactory_user')) {
                 }
                 //Always publish to the public releases repo
                 url "${artifactory_contextUrl}/libs-public-release-local"
+                allowInsecureProtocol true
             }
         }
     }

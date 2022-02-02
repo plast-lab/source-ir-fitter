@@ -68,21 +68,24 @@ public class Driver {
      * @param srcFile             the source file/archive/directory
      * @param debug               debug mode
      * @param synthesizeTypes     if true, attempt to synthesize erased types
+     * @param enableKotlin        if false, Kotlin sources will not be processed
+     *                            (another Kotlin metadata processor can be used instead)
      * @return                    the processed source file objects
      */
-    public Collection<SourceFile> readSources(File srcFile,
-                                              boolean debug, boolean synthesizeTypes) {
+    public Collection<SourceFile> readSources(File srcFile, boolean debug,
+                                              boolean synthesizeTypes,
+                                              boolean enableKotlin) {
         String srcName = getName(srcFile);
         if (!srcFile.isDirectory() && (srcName.endsWith(".jar") || srcName.endsWith(".zip"))) {
             try {
                 File tmpDir = extractZipToTempDir("extracted-sources", srcFile);
-                return readSources(tmpDir, tmpDir, srcName, debug, synthesizeTypes);
+                return readSources(tmpDir, tmpDir, srcName, debug, synthesizeTypes, enableKotlin);
             } catch (IOException e) {
                 e.printStackTrace();
                 return Collections.emptyList();
             }
         } else
-            return readSources(srcFile, srcFile, null, debug, synthesizeTypes);
+            return readSources(srcFile, srcFile, null, debug, synthesizeTypes, enableKotlin);
     }
 
     /**
@@ -101,7 +104,8 @@ public class Driver {
     }
 
     private Collection<SourceFile> readSources(File topDir, File srcFile, String artifact,
-                                               boolean debug, boolean synthesizeTypes) {
+                                               boolean debug, boolean synthesizeTypes,
+                                               boolean enableKotlin) {
         Collection<SourceFile> sources = new ArrayList<>();
         if (srcFile.isDirectory()) {
             File[] srcFiles = srcFile.listFiles();
@@ -109,7 +113,7 @@ public class Driver {
                 System.err.println("ERROR: could not process source directory " + srcFile.getPath());
             else
                 for (File f : srcFiles)
-                    sources.addAll(readSources(topDir, f, artifact, debug, synthesizeTypes));
+                    sources.addAll(readSources(topDir, f, artifact, debug, synthesizeTypes, enableKotlin));
         } else {
             String srcName = getName(srcFile);
             if (srcName.endsWith(".java")) {
@@ -119,8 +123,11 @@ public class Driver {
                 System.out.println("Found Groovy source: " + srcFile);
                 sources.add((new GroovyProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
             } else if (srcName.endsWith(".kt")) {
-                System.out.println("Found Kotlin source: " + srcFile);
-                sources.add((new KotlinProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
+                if (enableKotlin) {
+                    System.out.println("Found Kotlin source: " + srcFile);
+                    sources.add((new KotlinProcessor()).process(topDir, srcFile, artifact, debug, synthesizeTypes, varargIrMethods));
+                } else
+                    System.out.println("Ignoring Kotlin source: " + srcFile);
             }
         }
         return sources;

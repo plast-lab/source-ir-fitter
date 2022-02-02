@@ -97,6 +97,9 @@ public class Main {
         Option statsOpt = new Option(null, "stats", false, "Calculate statistics.");
         options.addOption(statsOpt);
 
+        Option disableKotlinOpt = new Option(null, "disable-kotlin", false, "Disable processing of Kotlin sources.");
+        options.addOption(disableKotlinOpt);
+
         if (args.length == 0) {
             printUsage(options);
             return null;
@@ -139,6 +142,7 @@ public class Main {
             boolean resolveInvocations = cli.hasOption(resolveInvocationsOpt.getLongOpt());
             boolean matchIR = cli.hasOption(matchIROpt.getLongOpt());
             boolean stats = cli.hasOption(statsOpt.getLongOpt());
+            boolean enableKotlin = !cli.hasOption(disableKotlinOpt.getLongOpt());
             String[] irs = cli.getOptionValues(irOpt.getOpt());
             String[] platforms = cli.getOptionValues(platformOpt.getLongOpt());
             String[] srcs = cli.getOptionValues(srcOpt.getOpt());
@@ -168,7 +172,7 @@ public class Main {
                     System.err.println("ERROR: path does not exist: " + s);
                     continue;
                 }
-                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes));
+                sources.addAll(driver.readSources(srcFile, debug, synthesizeTypes, enableKotlin));
             }
 
             // Match information between IR and sources.
